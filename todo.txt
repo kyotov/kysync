@@ -1,0 +1,2 @@
+- write a benchmark for the running window checksum
+-
