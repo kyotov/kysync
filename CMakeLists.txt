@@ -12,24 +12,23 @@ find_package(xxHash REQUIRED NO_MODULE)
 find_package(gflags REQUIRED NO_MODULE)
 find_package(glog REQUIRED NO_MODULE)
 
-add_library(checksums STATIC
-        checksums/wcs.cpp
-        checksums/scs.cpp)
-target_link_libraries(checksums
-        xxHash::xxhash)
-
-add_executable(tests
-        tests.cpp
+add_library(main STATIC
         readers/Reader.cpp
         readers/MemoryReader.cpp
         readers/FileReader.cpp
         commands/PrepareCommand.cpp
+        checksums/wcs.cpp
+        checksums/scs.cpp)
+target_link_libraries(main
+        glog::glog)
+
+add_executable(tests
+        tests.cpp
         metrics/ExpectationCheckMetricsVisitor.cpp
         )
 target_link_libraries(tests
-        checksums
+        main
         xxHash::xxhash
         gflags
-        glog::glog
         GTest::gtest
         GTest::gtest_main)
