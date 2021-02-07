@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/deps/Debug/src/gflags" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/deps/Debug/src/gflags/doc" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/deps/Debug/src/glog" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/deps/Debug/src/googletest" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/deps/Debug/src/xxhash" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/deps/Release/src/gflags" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/deps/Release/src/gflags/doc" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/deps/Release/src/glog" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/deps/Release/src/googletest" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/deps/Release/src/xxhash" vcs="Git" />
   </component>
 </project>

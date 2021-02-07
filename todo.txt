@@ -1,2 +1,2 @@
 - write a benchmark for the running window checksum
--
+- document readers api

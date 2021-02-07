@@ -1,5 +1,7 @@
 #include "wcs.h"
 
+// TODO: add a link to the rsync paper / algorithm
+
 uint32_t weakChecksum(const void *buffer, size_t size)
 {
   auto data = (uint8_t *)buffer;
