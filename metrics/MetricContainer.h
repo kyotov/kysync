@@ -5,7 +5,7 @@ class MetricVisitor;
 
 class MetricContainer {
 public:
-  virtual void accept(MetricVisitor &visitor) = 0;
+  virtual void accept(MetricVisitor &visitor) const = 0;
 };
 
 #endif  // KSYNC_METRICCONTAINER_H

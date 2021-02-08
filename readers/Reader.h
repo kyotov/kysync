@@ -16,7 +16,7 @@ public:
 
   virtual size_t read(void *buffer, size_t offset, size_t size) const;
 
-  void accept(MetricVisitor &visitor) override;
+  void accept(MetricVisitor &visitor) const override;
 
   static std::unique_ptr<Reader> create(const std::string &uri);
 

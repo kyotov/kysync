@@ -28,7 +28,7 @@ struct ExpectationCheckMetricVisitor::Impl {
     EXPECT_EQ(expectations.size(), 0) << s.str();
   }
 
-  void visit(const std::string &name, Metric &value)
+  void visit(const std::string &name, const Metric &value)
   {
     auto key = context + name;
 
@@ -45,7 +45,7 @@ struct ExpectationCheckMetricVisitor::Impl {
 
   void visit(
       const std::string &name,
-      MetricContainer &container,
+      const MetricContainer &container,
       ExpectationCheckMetricVisitor &host)
   {
     auto old_context = context;
@@ -67,14 +67,14 @@ ExpectationCheckMetricVisitor::~ExpectationCheckMetricVisitor() = default;
 
 void ExpectationCheckMetricVisitor::visit(
     const std::string &name,
-    Metric &value)
+    const Metric &value)
 {
   pImpl->visit(name, value);
 }
 
 void ExpectationCheckMetricVisitor::visit(
     const std::string &name,
-    MetricContainer &container)
+    const MetricContainer &container)
 {
   pImpl->visit(name, container, *this);
 }

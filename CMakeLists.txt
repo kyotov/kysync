@@ -17,6 +17,7 @@ add_library(main STATIC
         readers/MemoryReader.cpp
         readers/FileReader.cpp
         commands/PrepareCommand.cpp
+        commands/SyncCommand.cpp
         checksums/wcs.cpp
         checksums/scs.cpp)
 target_link_libraries(main

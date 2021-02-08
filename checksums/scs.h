@@ -5,6 +5,8 @@
 #include <istream>
 #include <string>
 
+// FIXME: rename header to StrongChecksum.h
+
 /**
  * A class for computing 128bit strong checksums.
  * Current implementation uses https://github.com/Cyan4973/xxHash
@@ -22,7 +24,7 @@ public:
 
   static StrongChecksum compute(std::istream &input);
 
-  bool operator==(const StrongChecksum& other) const;
+  bool operator==(const StrongChecksum &other) const;
 
   [[nodiscard]] std::string toString() const;
 };

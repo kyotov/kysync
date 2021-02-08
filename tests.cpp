@@ -10,7 +10,9 @@
 #include "checksums/scs.h"
 #include "checksums/wcs.h"
 #include "commands/PrepareCommand.h"
+#include "commands/SyncCommand.h"
 #include "commands/impl/PrepareCommandImpl.h"
+#include "commands/impl/SyncCommandImpl.h"
 #include "metrics/ExpectationCheckMetricsVisitor.h"
 #include "readers/FileReader.h"
 #include "readers/MemoryReader.h"
@@ -157,41 +159,62 @@ TEST(Readers, BadUri)
 
 class KySyncTest {
 public:
-  static const std::vector<uint32_t> &examineWeakChecksums(PrepareCommand &c)
+  static const std::vector<uint32_t> &examineWeakChecksums(
+      const PrepareCommand &c)
   {
     return c.pImpl->weakChecksums;
   }
 
   static const std::vector<StrongChecksum> &examineStrongChecksums(
-      PrepareCommand &c)
+      const PrepareCommand &c)
   {
     return c.pImpl->strongChecksums;
   }
+
+  static const std::vector<uint32_t> &examineWeakChecksums(const SyncCommand &c)
+  {
+    return c.pImpl->weakChecksums;
+  }
+
+  static const std::vector<StrongChecksum> &examineStrongChecksums(
+      const SyncCommand &c)
+  {
+    return c.pImpl->strongChecksums;
+  }
+
+  static void readMetadata(const SyncCommand &c) {
+    c.pImpl->readMetadata();
+  }
 };
 
-TEST(PrepareCommand, Simple)
+PrepareCommand prepare(std::string data, const fs::path &metadataPath)
 {
-  auto data = "0123456789";
-  auto reader = MemoryReader(data, strlen(data));
+  const size_t size = data.size();
+  auto reader = MemoryReader(data.data(), size);
 
   constexpr size_t block = 4;
+  const size_t blockCount = (size + block - 1) / block;
 
-  auto c = PrepareCommand(reader, block);
+  // FIXME: figure out how to make this close automatic... / destructor based
+  std::ofstream output(metadataPath, std::ios::binary);
+  PrepareCommand c(reader, block, output);
   c.run();
+  output.close();
 
   const auto &wcs = KySyncTest::examineWeakChecksums(c);
-  EXPECT_EQ(wcs.size(), 3);
+  EXPECT_EQ(wcs.size(), blockCount);
   EXPECT_EQ(weakChecksum("0123", block), wcs[0]);
   EXPECT_EQ(weakChecksum("4567", block), wcs[1]);
   EXPECT_EQ(weakChecksum("89\0\0", block), wcs[2]);
 
   const auto &scs = KySyncTest::examineStrongChecksums(c);
-  EXPECT_EQ(wcs.size(), 3);
+  EXPECT_EQ(wcs.size(), blockCount);
   EXPECT_EQ(StrongChecksum::compute("0123", block), scs[0]);
   EXPECT_EQ(StrongChecksum::compute("4567", block), scs[1]);
   EXPECT_EQ(StrongChecksum::compute("89\0\0", block), scs[2]);
 
-  ExpectationCheckMetricVisitor(
+  // FIXME: maybe make the expectation checking in a method??
+  ExpectationCheckMetricVisitor(  // NOLINT(bugprone-unused-raii)
       c,
       {
           {"//progressCurrentBytes", 12},
@@ -199,4 +222,58 @@ TEST(PrepareCommand, Simple)
           {"//reader/totalBytesRead", 10},
           {"//reader/totalReads", 3},
       });
+
+  return std::move(c);
+}
+
+TEST(PrepareCommand, Simple)
+{
+  auto data = "0123456789";
+  auto metadataPath = fs::temp_directory_path() / "output.ksync";
+  prepare(data, metadataPath);
+}
+
+TEST(SyncCommand, MetadataRoundtrip)
+{
+  std::string data = "0123456789";
+  auto metadataPath = fs::temp_directory_path() / "output.ksync";
+  auto pc = prepare(data, metadataPath);
+
+  // TODO: weird C++ gotcha to figure out...
+  //  when we don't create the readers outside as separate variables, haywire!!!
+  auto metadataReader = FileReader(metadataPath);
+  auto dataReader = MemoryReader(data.data(), data.size());
+  auto sc = SyncCommand(metadataReader, dataReader);
+
+  KySyncTest::readMetadata(sc);
+
+  // expect that the checksums had a successful round trip
+  EXPECT_EQ(
+      KySyncTest::examineWeakChecksums(pc),
+      KySyncTest::examineWeakChecksums(sc));
+  EXPECT_EQ(
+      KySyncTest::examineStrongChecksums(pc),
+      KySyncTest::examineStrongChecksums(sc));
+
+  ExpectationCheckMetricVisitor(  // NOLINT(bugprone-unused-raii)
+      sc,
+      {
+          {"//dataReader/totalBytesRead", 0},
+          {"//dataReader/totalReads", 0},
+          {"//metadataReader/totalBytesRead", 156},
+          {"//metadataReader/totalReads", 3},
+      });
+}
+
+TEST(SyncCommand, Simple)
+{
+  std::string data = "0123456789";
+  auto metadataPath = fs::temp_directory_path() / "output.ksync";
+  auto pc = prepare(data, metadataPath);
+
+  auto metadataReader = FileReader(metadataPath);
+  auto dataReader = MemoryReader(data.data(), data.size());
+  auto sc = SyncCommand(metadataReader, dataReader);
+
+  sc.run();
 }

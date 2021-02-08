@@ -15,9 +15,10 @@ public:
 
   ~ExpectationCheckMetricVisitor();
 
-  void visit(const std::string &name, Metric &value) override;
+  void visit(const std::string &name, const Metric &value) override;
 
-  void visit(const std::string &name, MetricContainer &container) override;
+  void visit(const std::string &name, const MetricContainer &container)
+      override;
 
 private:
   struct Impl;

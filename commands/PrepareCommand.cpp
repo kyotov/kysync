@@ -3,6 +3,16 @@
 #include "../checksums/wcs.h"
 #include "impl/PrepareCommandImpl.h"
 
+PrepareCommand::Impl::Impl(
+    const Reader &_reader,
+    size_t _block,
+    std::ostream &_output)
+    : reader(_reader),
+      block(_block),
+      output(_output)
+{
+}
+
 int PrepareCommand::Impl::run()
 {
   auto size = reader.size();
@@ -24,24 +34,46 @@ int PrepareCommand::Impl::run()
     progressCurrentBytes += block;
   }
 
+  // produce the ksync metadata output
+
+  char header[1024];
+  sprintf(
+      header,
+      "version: 1\n"
+      "size: %llu\n"
+      "block: %llu\n"
+      "eof: 1\n",
+      size,
+      block);
+
+  output.write(header, strlen(header));
+
+  output.write(
+      reinterpret_cast<const char *>(weakChecksums.data()),
+      weakChecksums.size() * sizeof(uint32_t));
+
+  output.write(
+      reinterpret_cast<const char *>(strongChecksums.data()),
+      strongChecksums.size() * sizeof(StrongChecksum));
+
   return 0;
 }
 
-void PrepareCommand::Impl::accept(MetricVisitor &visitor, PrepareCommand &host)
+void PrepareCommand::Impl::accept(
+    MetricVisitor &visitor,
+    const PrepareCommand &host)
 {
   VISIT(visitor, reader);
   VISIT(visitor, progressTotalBytes);
   VISIT(visitor, progressCurrentBytes);
 }
 
-PrepareCommand::Impl::Impl(Reader &_reader, size_t _block)
-    : reader(_reader), block(_block)
-{
-}
-
-PrepareCommand::PrepareCommand(Reader &reader, size_t block)
+PrepareCommand::PrepareCommand(
+    const Reader &reader,
+    size_t block,
+    std::ostream &output)
     // FIXME: due to the privacy declarations, we can't use std::make_unique??
-    : pImpl(new Impl(reader, block))
+    : pImpl(new Impl(reader, block, output))
 {
 }
 
@@ -52,6 +84,7 @@ int PrepareCommand::run()
   return pImpl->run();
 }
 
-void PrepareCommand::accept(MetricVisitor& visitor) {
+void PrepareCommand::accept(MetricVisitor &visitor) const
+{
   return pImpl->accept(visitor, *this);
 }

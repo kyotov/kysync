@@ -10,8 +10,11 @@
 
 class MetricVisitor {
 public:
-  virtual void visit(const std::string &name, Metric &value) = 0;
-  virtual void visit(const std::string &name, MetricContainer &container) = 0;
+  virtual void visit(const std::string &name, const Metric &value) = 0;
+
+  virtual void visit(
+      const std::string &name,
+      const MetricContainer &container) = 0;
 };
 
 #endif  // KSYNC_METRICVISITOR_H

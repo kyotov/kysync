@@ -32,7 +32,7 @@ size_t Reader::read(void *buffer, size_t offset, size_t size) const
   return size;
 }
 
-void Reader::accept(MetricVisitor &visitor)
+void Reader::accept(MetricVisitor &visitor) const
 {
   pImpl->accept(visitor);
 }

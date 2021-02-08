@@ -10,13 +10,19 @@ class KySyncTest;
 
 class PrepareCommand final : public Command {
 public:
-  explicit PrepareCommand(Reader &reader, size_t block);
+  explicit PrepareCommand(
+      const Reader &reader,
+      size_t block,
+      std::ostream &output);
+
+  PrepareCommand(PrepareCommand &&) = default;
 
   ~PrepareCommand();
 
+  // TODO: can this be const??
   int run() override;
 
-  void accept(MetricVisitor &visitor) override;
+  void accept(MetricVisitor &visitor) const override;
 
 private:
   class Impl;
