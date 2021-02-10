@@ -259,7 +259,8 @@ TEST(SyncCommand, MetadataRoundtrip)
   //  when we don't create the readers outside as separate variables, haywire!!!
   auto metadataReader = FileReader(metadataPath);
   auto dataReader = MemoryReader(data.data(), data.size());
-  auto sc = SyncCommand(metadataReader, dataReader, dataReader);
+  auto outputPath = fs::temp_directory_path() / "output";
+  auto sc = SyncCommand(metadataReader, dataReader, dataReader, outputPath);
 
   KySyncTest::readMetadata(sc);
 
@@ -281,7 +282,6 @@ TEST(SyncCommand, MetadataRoundtrip)
       });
 }
 
-// FIXME: this is not really E2E...
 void EndToEndTest(
     const std::string &sourceData,
     const std::string &seedData,
@@ -294,11 +294,20 @@ void EndToEndTest(
   auto metadataReader = FileReader(metadataPath);
   auto dataReader = MemoryReader(sourceData.data(), sourceData.size());
   auto seedReader = MemoryReader(seedData.data(), seedData.size());
-  auto sc = SyncCommand(metadataReader, dataReader, seedReader);
+  auto outputPath = fs::temp_directory_path() / "output";
+  auto sc = SyncCommand(metadataReader, dataReader, seedReader, outputPath);
 
   sc.run();
 
   EXPECT_EQ(KySyncTest::examineAnalisys(sc), expectedBlockMapping);
+
+  auto outputSize = fs::file_size(outputPath);
+  auto buffer = std::make_unique<char[]>(outputSize + 1);
+  auto output = std::ifstream(outputPath, std::ios::binary);
+  output.read(buffer.get(), outputSize);
+  buffer[outputSize] = 0;
+
+  EXPECT_EQ(sourceData, buffer.get());
 }
 
 TEST(SyncCommand, EndToEnd)
@@ -316,4 +325,9 @@ TEST(SyncCommand, EndToEnd)
       "_qrst_mnop_ijkl_abcd_efjh_uvwx_yz",
       4,
       {16, 21, 11, 6, 1, 26, 31});
+  EndToEndTest(
+      "1234234534564567567867897890",
+      "1234567890",
+      4,
+      {0, 1, 2, 3, 4, 5, 6});
 }

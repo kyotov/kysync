@@ -1,6 +1,8 @@
 #ifndef KSYNC_SYNCCOMMAND_H
 #define KSYNC_SYNCCOMMAND_H
 
+#include <filesystem>
+
 #include "../readers/Reader.h"
 #include "Command.h"
 
@@ -9,7 +11,8 @@ public:
   explicit SyncCommand(
       const Reader &metadataReader,
       const Reader &dataReader,
-      const Reader &seedReader);
+      const Reader &seedReader,
+      const std::filesystem::path &outputPath);
 
   ~SyncCommand();
 

@@ -1,5 +1,7 @@
 #include "SyncCommand.h"
 
+#include <filesystem>
+#include <fstream>
 #include <map>
 #include <sstream>
 
@@ -10,10 +12,12 @@
 SyncCommand::Impl::Impl(
     const Reader &_metadataReader,
     const Reader &_dataReader,
-    const Reader &_seedReader)
+    const Reader &_seedReader,
+    const std::filesystem::path &_outputPath)
     : metadataReader(_metadataReader),
       dataReader(_dataReader),
-      seedReader(_seedReader)
+      seedReader(_seedReader),
+      outputPath(_outputPath)
 {
 }
 
@@ -133,10 +137,47 @@ void SyncCommand::Impl::analyzeSeed()
   }
 }
 
+void SyncCommand::Impl::reconstructSource()
+{
+  auto output = std::ofstream(outputPath, std::ios::binary);
+
+  auto smartBuffer = std::make_unique<char[]>(block);
+  auto buffer = smartBuffer.get();
+
+  progressTotalBytes = size.load();
+  progressCurrentBytes = 0;
+  for (size_t i = 0; i < blockCount; i++) {
+    auto wcs = weakChecksums[i];
+    auto scs = strongChecksums[i];
+    auto data = analysis[wcs];
+
+    auto reused =
+        data.seedOffset != -1ull && scs == strongChecksums[data.index];
+
+    auto count = reused ? seedReader.read(buffer, data.seedOffset, block)
+                        : dataReader.read(buffer, i * block, block);
+
+    if (reused) {
+      reusedBytes += count;
+    }
+
+    output.write(buffer, count);
+
+    if (i < blockCount - 1 || size % block == 0) {
+      CHECK_EQ(count, block);
+    } else {
+      CHECK_EQ(count, size % block);
+    }
+
+    progressCurrentBytes += count;
+  }
+}
+
 int SyncCommand::Impl::run()
 {
   readMetadata();
   analyzeSeed();
+  reconstructSource();
 
   return 0;
 }
@@ -145,15 +186,20 @@ void SyncCommand::Impl::accept(MetricVisitor &visitor, const SyncCommand &host)
 {
   VISIT(visitor, metadataReader);
   VISIT(visitor, dataReader);
+  VISIT(visitor, seedReader);
   VISIT(visitor, progressTotalBytes);
   VISIT(visitor, progressCurrentBytes);
+  VISIT(visitor, weakChecksumMatches);
+  VISIT(visitor, weakChecksumFalsePositive);
+  VISIT(visitor, strongChecksumMatches);
 }
 
 SyncCommand::SyncCommand(
     const Reader &metadataReader,
     const Reader &dataReader,
-    const Reader &seedReader)
-    : pImpl(new Impl(metadataReader, dataReader, seedReader))
+    const Reader &seedReader,
+    const std::filesystem::path &outputPath)
+    : pImpl(new Impl(metadataReader, dataReader, seedReader, outputPath))
 {
 }
 

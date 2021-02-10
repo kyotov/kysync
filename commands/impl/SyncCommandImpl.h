@@ -13,6 +13,7 @@ class SyncCommand::Impl final {
   const Reader &metadataReader;
   const Reader &dataReader;
   const Reader &seedReader;
+  const std::filesystem::path &outputPath;
 
   Metric progressTotalBytes;
   Metric progressCurrentBytes;
@@ -20,6 +21,8 @@ class SyncCommand::Impl final {
   Metric weakChecksumMatches;
   Metric weakChecksumFalsePositive;
   Metric strongChecksumMatches;
+
+  Metric reusedBytes;
 
   Metric size;
   size_t headerSize{};
@@ -39,12 +42,14 @@ class SyncCommand::Impl final {
   Impl(
       const Reader &_metadataReader,
       const Reader &_dataReader,
-      const Reader &_seedReader);
+      const Reader &_seedReader,
+      const std::filesystem::path &_outputPath);
 
   void parseHeader();
   void readMetadata();
-  void analyzeSeed();
   void analyzeSeedCallback(const char *buffer, size_t offset, uint32_t wcs);
+  void analyzeSeed();
+  void reconstructSource();
 
   int run();
 

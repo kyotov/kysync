@@ -1,3 +1,5 @@
 - write a benchmark for the running window checksum
 - document readers api
 - make the install directory of each project different
+- make a wcs collision test
+- figure out if we can have in-memory tests without files
