@@ -1,4 +1,3 @@
-#include <glog/logging.h>
 #include <gtest/gtest.h>
 
 #include <atomic>
@@ -36,18 +35,18 @@ TEST(WeakChecksum, Rolling)
 
   std::atomic<int> count{0};
 
-  WeakChecksumCallback check = [&count](auto data, auto size, auto wcs) {
-    auto simple_wcs = weakChecksum(data, size);
+  WeakChecksumCallback check = [&count, &data, &size](auto offset, auto wcs) {
+    auto simple_wcs = weakChecksum(data + 2 * size + offset, size);
     EXPECT_EQ(wcs, simple_wcs);
     count += 1;
   };
 
   auto cs = weakChecksum(data + size, size, 0, check, true);
-  EXPECT_EQ(count, 0);
+  EXPECT_EQ(count, 1);
   EXPECT_EQ(cs, 183829005);
 
   cs = weakChecksum(data + 2 * size, size, cs, check);
-  EXPECT_EQ(count, 10);
+  EXPECT_EQ(count, 11);
   EXPECT_EQ(cs, 183829005);
 }
 
@@ -182,17 +181,31 @@ public:
     return c.pImpl->strongChecksums;
   }
 
-  static void readMetadata(const SyncCommand &c) {
+  static void readMetadata(const SyncCommand &c)
+  {
     c.pImpl->readMetadata();
+  }
+
+  static std::vector<size_t> examineAnalisys(const SyncCommand &c)
+  {
+    std::vector<size_t> result;
+
+    for (size_t i = 0; i < c.pImpl->blockCount; i++) {
+      auto wcs = c.pImpl->weakChecksums[i];
+      auto data = c.pImpl->analysis[wcs];
+      result.push_back(data.seedOffset);
+    }
+
+    return result;
   }
 };
 
-PrepareCommand prepare(std::string data, const fs::path &metadataPath)
+PrepareCommand
+prepare(std::string data, const fs::path &metadataPath, size_t block)
 {
   const size_t size = data.size();
   auto reader = MemoryReader(data.data(), size);
 
-  constexpr size_t block = 4;
   const size_t blockCount = (size + block - 1) / block;
 
   // FIXME: figure out how to make this close automatic... / destructor based
@@ -200,6 +213,27 @@ PrepareCommand prepare(std::string data, const fs::path &metadataPath)
   PrepareCommand c(reader, block, output);
   c.run();
   output.close();
+
+  // FIXME: maybe make the expectation checking in a method??
+  ExpectationCheckMetricVisitor(  // NOLINT(bugprone-unused-raii)
+      c,
+      {
+          {"//progressCurrentBytes", blockCount * block},
+          {"//progressTotalBytes", size},
+          {"//reader/totalBytesRead", size},
+          {"//reader/totalReads", blockCount},
+      });
+
+  return std::move(c);
+}
+
+TEST(PrepareCommand, Simple)
+{
+  auto data = std::string("0123456789");
+  auto block = 4;
+  auto blockCount = (data.size() + block - 1) / block;
+  auto metadataPath = fs::temp_directory_path() / "output.ksync";
+  auto c = prepare(data, metadataPath, block);
 
   const auto &wcs = KySyncTest::examineWeakChecksums(c);
   EXPECT_EQ(wcs.size(), blockCount);
@@ -212,38 +246,20 @@ PrepareCommand prepare(std::string data, const fs::path &metadataPath)
   EXPECT_EQ(StrongChecksum::compute("0123", block), scs[0]);
   EXPECT_EQ(StrongChecksum::compute("4567", block), scs[1]);
   EXPECT_EQ(StrongChecksum::compute("89\0\0", block), scs[2]);
-
-  // FIXME: maybe make the expectation checking in a method??
-  ExpectationCheckMetricVisitor(  // NOLINT(bugprone-unused-raii)
-      c,
-      {
-          {"//progressCurrentBytes", 12},
-          {"//progressTotalBytes", 10},
-          {"//reader/totalBytesRead", 10},
-          {"//reader/totalReads", 3},
-      });
-
-  return std::move(c);
-}
-
-TEST(PrepareCommand, Simple)
-{
-  auto data = "0123456789";
-  auto metadataPath = fs::temp_directory_path() / "output.ksync";
-  prepare(data, metadataPath);
 }
 
 TEST(SyncCommand, MetadataRoundtrip)
 {
+  auto block = 4;
   std::string data = "0123456789";
   auto metadataPath = fs::temp_directory_path() / "output.ksync";
-  auto pc = prepare(data, metadataPath);
+  auto pc = prepare(data, metadataPath, block);
 
   // TODO: weird C++ gotcha to figure out...
   //  when we don't create the readers outside as separate variables, haywire!!!
   auto metadataReader = FileReader(metadataPath);
   auto dataReader = MemoryReader(data.data(), data.size());
-  auto sc = SyncCommand(metadataReader, dataReader);
+  auto sc = SyncCommand(metadataReader, dataReader, dataReader);
 
   KySyncTest::readMetadata(sc);
 
@@ -265,15 +281,39 @@ TEST(SyncCommand, MetadataRoundtrip)
       });
 }
 
-TEST(SyncCommand, Simple)
+// FIXME: this is not really E2E...
+void EndToEndTest(
+    const std::string &sourceData,
+    const std::string &seedData,
+    size_t block,
+    const std::vector<size_t> &expectedBlockMapping)
 {
-  std::string data = "0123456789";
   auto metadataPath = fs::temp_directory_path() / "output.ksync";
-  auto pc = prepare(data, metadataPath);
+  auto pc = prepare(sourceData, metadataPath, block);
 
   auto metadataReader = FileReader(metadataPath);
-  auto dataReader = MemoryReader(data.data(), data.size());
-  auto sc = SyncCommand(metadataReader, dataReader);
+  auto dataReader = MemoryReader(sourceData.data(), sourceData.size());
+  auto seedReader = MemoryReader(seedData.data(), seedData.size());
+  auto sc = SyncCommand(metadataReader, dataReader, seedReader);
 
   sc.run();
+
+  EXPECT_EQ(KySyncTest::examineAnalisys(sc), expectedBlockMapping);
+}
+
+TEST(SyncCommand, EndToEnd)
+{
+  // FIXME: research if we can do parametrized testing...
+  std::string data = "0123456789";
+  EndToEndTest(data, data, 4, {0, 4, 8});
+  EndToEndTest(data, data, 6, {0, 6});
+
+  EndToEndTest("0123456789", "001234004567", 4, {1, 8, -1ull});
+  EndToEndTest("123412341234", "00123400", 4, {2, 2, 2});
+  EndToEndTest("12345678", "", 4, {-1ull, -1ull});
+  EndToEndTest(
+      "abcdefjhijklmnopqrstuvwxyz",
+      "_qrst_mnop_ijkl_abcd_efjh_uvwx_yz",
+      4,
+      {16, 21, 11, 6, 1, 26, 31});
 }

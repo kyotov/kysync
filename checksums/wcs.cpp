@@ -21,7 +21,7 @@ uint32_t weakChecksum(
     const void *buffer,
     size_t size,
     uint32_t runningChecksum,
-    const WeakChecksumCallback &callback,
+    WeakChecksumCallback callback,
     bool warmup)
 {
   auto *data = (uint8_t *)buffer;
@@ -35,8 +35,8 @@ uint32_t weakChecksum(
     b += a - size * data[i - size];
 
     // callback with the result for the current window (unless in warmup)
-    if (!warmup) {
-      callback(data + i + 1 - size, size, b << 16 | a);
+    if (!warmup || i == size - 1) {
+      callback(i + 1 - size, b << 16 | a);
     }
   }
 

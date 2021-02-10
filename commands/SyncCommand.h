@@ -1,12 +1,15 @@
 #ifndef KSYNC_SYNCCOMMAND_H
 #define KSYNC_SYNCCOMMAND_H
 
-#include "Command.h"
 #include "../readers/Reader.h"
+#include "Command.h"
 
 class SyncCommand final : public Command {
 public:
-  explicit SyncCommand(const Reader &metadataReader, const Reader &dataReader);
+  explicit SyncCommand(
+      const Reader &metadataReader,
+      const Reader &dataReader,
+      const Reader &seedReader);
 
   ~SyncCommand();
 

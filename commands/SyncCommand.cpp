@@ -3,14 +3,17 @@
 #include <map>
 #include <sstream>
 
+#include "../checksums/wcs.h"
 #include "glog/logging.h"
 #include "impl/SyncCommandImpl.h"
 
 SyncCommand::Impl::Impl(
     const Reader &_metadataReader,
-    const Reader &_dataReader)
+    const Reader &_dataReader,
+    const Reader &_seedReader)
     : metadataReader(_metadataReader),
-      dataReader(_dataReader)
+      dataReader(_dataReader),
+      seedReader(_seedReader)
 {
 }
 
@@ -72,13 +75,68 @@ void SyncCommand::Impl::readMetadata()
   strongChecksums.resize(blockCount);
   countRead = metadataReader.read(strongChecksums.data(), offset, count);
   CHECK_EQ(count, countRead) << "cannot read all strong checksums";
+
+  for (size_t index = 0; index < blockCount; index++) {
+    analysis[weakChecksums[index]] = {index, -1ull};
+  }
+}
+
+void SyncCommand::Impl::analyzeSeedCallback(
+    const char *buffer,
+    size_t offset,
+    uint32_t wcs)
+{
+  const auto &found = analysis.find(wcs);
+  if (found != analysis.end()) {
+    weakChecksumMatches++;
+    auto &data = found->second;
+
+    auto sourceDigest = strongChecksums[data.index];
+    auto seedDigest = StrongChecksum::compute(buffer + offset, block);
+
+    if (sourceDigest == seedDigest) {
+      strongChecksumMatches++;
+      data.seedOffset = progressCurrentBytes + offset;
+    } else {
+      weakChecksumFalsePositive++;
+    }
+  }
+}
+
+void SyncCommand::Impl::analyzeSeed()
+{
+  auto smartBuffer = std::make_unique<char[]>(2 * block);
+  auto buffer = smartBuffer.get() + block;
+  memset(buffer, 0, block);
+
+  auto seedSize = seedReader.size();
+  auto seedBlockCount = (seedSize + block - 1) / block;
+
+  uint32_t wcs = 0;
+
+  progressTotalBytes = seedSize;
+  for (size_t i = 0; i < seedBlockCount; i++) {
+    memcpy(buffer - block, buffer, block);
+    memset(buffer, 0, block);
+    seedReader.read(buffer, i * block, block);
+
+    wcs = weakChecksum(
+        (const void *)buffer,
+        block,
+        wcs,
+        // FIXME: is there a way to avoid this lambda???
+        [this, &buffer](auto offset, auto wcs) {
+          analyzeSeedCallback(buffer, offset, wcs);
+        },
+        i == 0);
+    progressCurrentBytes += block;
+  }
 }
 
 int SyncCommand::Impl::run()
 {
   readMetadata();
-
-  //TODO: finish implementation
+  analyzeSeed();
 
   return 0;
 }
@@ -91,8 +149,11 @@ void SyncCommand::Impl::accept(MetricVisitor &visitor, const SyncCommand &host)
   VISIT(visitor, progressCurrentBytes);
 }
 
-SyncCommand::SyncCommand(const Reader &metadataReader, const Reader &dataReader)
-    : pImpl(new Impl(metadataReader, dataReader))
+SyncCommand::SyncCommand(
+    const Reader &metadataReader,
+    const Reader &dataReader,
+    const Reader &seedReader)
+    : pImpl(new Impl(metadataReader, dataReader, seedReader))
 {
 }
 

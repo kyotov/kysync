@@ -17,12 +17,12 @@ uint32_t weakChecksum(const void *buffer, size_t size);
  * call back function type used by rolling window checksum
  * this is called after each byte of data is processed
  * parameters passed are:
- * - the window pointer
- * - the window size
+ * - the window offset from the original buffer (always negative!)
  * - the checksum of the data in the window
+ * NOTE: the window size is assumed to be known to the user...
  */
 using WeakChecksumCallback =
-    std::function<void(const void *window, size_t size, uint32_t wcs)>;
+    std::function<void(size_t offset, uint32_t wcs)>;
 
 /**
  * computes a running window checksum ala rsync
@@ -52,7 +52,7 @@ uint32_t weakChecksum(
     const void *buffer,
     size_t size,
     uint32_t runningChecksum,
-    const WeakChecksumCallback& callback,
+    WeakChecksumCallback callback,
     bool warmup = false);
 
 #endif  // KSYNC_WCS_H
