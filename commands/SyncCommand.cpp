@@ -1,9 +1,7 @@
 #include "SyncCommand.h"
 
-#include <filesystem>
 #include <fstream>
 #include <map>
-#include <sstream>
 
 #include "../checksums/wcs.h"
 #include "glog/logging.h"
@@ -91,6 +89,8 @@ void SyncCommand::Impl::analyzeSeedCallback(
     size_t offset,
     uint32_t wcs)
 {
+  //  NOTE: (slower) alternative but taking less space:
+  //
   //  const auto &found = analysis.find(wcs);
   //  if (found != analysis.end()) {
   //    auto &data = found->second;
@@ -171,10 +171,10 @@ void SyncCommand::Impl::reconstructSource()
 
     output.write(buffer, count);
 
-    if (i < blockCount - 1 || progressTotalBytes % block == 0) {
+    if (i < blockCount - 1 || size % block == 0) {
       CHECK_EQ(count, block);
     } else {
-      CHECK_EQ(count, progressTotalBytes % block);
+      CHECK_EQ(count, size % block);
     }
 
     progressCurrentBytes += count;
@@ -183,9 +183,13 @@ void SyncCommand::Impl::reconstructSource()
 
 int SyncCommand::Impl::run()
 {
+  progressPhase++;
   readMetadata();
+  progressPhase++;
   analyzeSeed();
+  progressPhase++;
   reconstructSource();
+  progressPhase++;
 
   return 0;
 }
@@ -194,7 +198,7 @@ void SyncCommand::Impl::accept(MetricVisitor &visitor, const SyncCommand &host)
 {
   VISIT(visitor, *metadataReader);
   VISIT(visitor, *dataReader);
-  //  VISIT(visitor, seedReader);
+  VISIT(visitor, progressPhase);
   VISIT(visitor, progressTotalBytes);
   VISIT(visitor, progressCurrentBytes);
   VISIT(visitor, weakChecksumMatches);

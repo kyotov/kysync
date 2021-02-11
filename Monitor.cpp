@@ -18,6 +18,9 @@ struct Monitor::Impl : public MetricVisitor {
 
   Command& command;
 
+  uint64_t oldPhase = 0;
+  uint64_t newPhase = 0;
+
   decltype(std::chrono::high_resolution_clock::now()) ts_begin;
 
   explicit Impl(Command& _command) : command(_command)
@@ -48,22 +51,31 @@ struct Monitor::Impl : public MetricVisitor {
 
   void update(bool last)
   {
-    auto position = metrics["//progressCurrentBytes"]->load();
     auto size = metrics["//progressTotalBytes"]->load();
+    auto position = metrics["//progressCurrentBytes"]->load();
 
     auto duration = std::chrono::high_resolution_clock::now() - ts_begin;
     auto s = duration_cast<std::chrono::milliseconds>(duration).count() / 100;
     auto percent = size == 0 ? 0 : 100 * position / size;
     auto mbps = s == 0 ? 0 : 10.0 * position / s / (1ll << 20);
 
-    std::cout << "\r" << (last ? "done!     " : "working...");
-    std::cout << " | " << position / (1ll << 20) << "MB";
-    std::cout << " | " << s / 10.0 << "s";
-    std::cout << " | " << percent << "%";
-    std::cout << " | " << mbps << " MB/s\r";
+    if (oldPhase > 0) {
+      std::cout << "phase " << oldPhase;
+      std::cout << " | " << position / (1ll << 20) << "MB";
+      std::cout << " | " << s / 10.0 << "s";
+      std::cout << " | " << percent << "%";
+      std::cout << " | " << mbps << " MB/s\t\r";
+    }
+
+    newPhase = metrics["//progressPhase"]->load();
+    if (newPhase != oldPhase) {
+      std::cout << std::endl;
+      ts_begin = std::chrono::high_resolution_clock::now();
+      oldPhase = newPhase;
+    }
 
     if (last) {
-      std::cout << std::endl;
+      LOG(INFO) << "done!";
       dump();
     }
   }
@@ -73,6 +85,7 @@ struct Monitor::Impl : public MetricVisitor {
     visit("", command);
 
     ts_begin = std::chrono::high_resolution_clock::now();
+
     auto result = std::async([this]() { return command.run(); });
 
     std::chrono::milliseconds period(100);

@@ -15,6 +15,8 @@ PrepareCommand::Impl::Impl(
 
 int PrepareCommand::Impl::run()
 {
+  progressPhase++;
+
   auto unique_buffer = std::make_unique<char[]>(block);
   auto buffer = unique_buffer.get();
 
@@ -34,6 +36,7 @@ int PrepareCommand::Impl::run()
   }
 
   // produce the ksync metadata output
+  progressPhase++;
 
   char header[1024];
   sprintf(
@@ -55,6 +58,7 @@ int PrepareCommand::Impl::run()
       reinterpret_cast<const char *>(strongChecksums.data()),
       strongChecksums.size() * sizeof(StrongChecksum));
 
+  progressPhase++;
   return 0;
 }
 
@@ -62,6 +66,7 @@ void PrepareCommand::Impl::accept(
     MetricVisitor &visitor,
     const PrepareCommand &host)
 {
+  VISIT(visitor, progressPhase);
   VISIT(visitor, progressTotalBytes);
   VISIT(visitor, progressCurrentBytes);
 }

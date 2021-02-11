@@ -20,6 +20,7 @@ class PrepareCommand::Impl final {
   std::vector<uint32_t> weakChecksums;
   std::vector<StrongChecksum> strongChecksums;
 
+  Metric progressPhase;
   Metric progressTotalBytes;
   Metric progressCurrentBytes;
 

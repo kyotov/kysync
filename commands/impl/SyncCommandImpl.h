@@ -15,6 +15,7 @@ class SyncCommand::Impl final {
   std::istream &input;
   std::ostream &output;
 
+  Metric progressPhase;
   Metric progressTotalBytes;
   Metric progressCurrentBytes;
 
@@ -24,7 +25,7 @@ class SyncCommand::Impl final {
 
   Metric reusedBytes;
 
-  size_t size;
+  size_t size{};
   size_t headerSize{};
   size_t block{};
   size_t blockCount{};
