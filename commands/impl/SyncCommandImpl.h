@@ -12,7 +12,7 @@ class SyncCommand::Impl final {
 
   std::unique_ptr<Reader> dataReader;
   std::unique_ptr<Reader> metadataReader;
-  std::istream &input;
+  std::string seedUri;
   std::ostream &output;
 
   Metric progressPhase;
@@ -44,12 +44,13 @@ class SyncCommand::Impl final {
   Impl(
       const std::string &data_uri,
       const std::string &metadata_uri,
-      std::istream &_input,
+      std::string seed_uri,
       std::ostream &_output);
 
   void parseHeader();
   void readMetadata();
   void analyzeSeedCallback(const char *buffer, size_t offset, uint32_t wcs);
+  void analyzeSeedChunk(size_t startOffset, size_t endOffset);
   void analyzeSeed();
   void reconstructSource();
 

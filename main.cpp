@@ -44,11 +44,14 @@ int main(int argc, char **argv)
       FLAGS_metadata_uri = FLAGS_data_uri + ".ksync";
     }
 
-    auto input = std::ifstream(FLAGS_input_filename, std::ios::binary);
     auto output = std::ofstream(FLAGS_output_filename, std::ios::binary);
     CHECK(output) << "unable to write to " << FLAGS_output_filename;
 
-    auto c = SyncCommand(FLAGS_data_uri, FLAGS_metadata_uri, input, output);
+    auto c = SyncCommand(
+        FLAGS_data_uri,
+        FLAGS_metadata_uri,
+        "file://" + FLAGS_input_filename,
+        output);
     return Monitor(c).run();
   }
 

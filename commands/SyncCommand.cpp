@@ -1,7 +1,10 @@
 #include "SyncCommand.h"
 
 #include <fstream>
+#include <future>
+#include <iostream>
 #include <map>
+#include <utility>
 
 #include "../checksums/wcs.h"
 #include "glog/logging.h"
@@ -10,11 +13,11 @@
 SyncCommand::Impl::Impl(
     const std::string &data_uri,
     const std::string &metadata_uri,
-    std::istream &_input,
+    std::string seed_uri,
     std::ostream &_output)
     : dataReader(Reader::create(data_uri)),
       metadataReader(Reader::create(metadata_uri)),
-      input(_input),
+      seedUri(std::move(seed_uri)),
       output(_output)
 {
 }
@@ -60,23 +63,29 @@ void SyncCommand::Impl::parseHeader()
 
 void SyncCommand::Impl::readMetadata()
 {
-  parseHeader();
+  progressPhase++;
+  progressTotalBytes = metadataReader->size();
+  progressCurrentBytes = 0;
 
-  size_t offset;
+  auto &offset = progressCurrentBytes;
+
+  parseHeader();
+  offset = headerSize;
+
   size_t count;
   size_t countRead;
 
-  offset = headerSize;
   count = blockCount * sizeof(uint32_t);
   weakChecksums.resize(blockCount);
   countRead = metadataReader->read(weakChecksums.data(), offset, count);
   CHECK_EQ(count, countRead) << "cannot read all weak checksums";
-
   offset += count;
+
   count = blockCount * sizeof(StrongChecksum);
   strongChecksums.resize(blockCount);
   countRead = metadataReader->read(strongChecksums.data(), offset, count);
   CHECK_EQ(count, countRead) << "cannot read all strong checksums";
+  offset += count;
 
   for (size_t index = 0; index < blockCount; index++) {
     set[weakChecksums[index]] = true;
@@ -111,23 +120,21 @@ void SyncCommand::Impl::analyzeSeedCallback(
   }
 }
 
-void SyncCommand::Impl::analyzeSeed()
+void SyncCommand::Impl::analyzeSeedChunk(size_t startOffset, size_t endOffset)
 {
   auto smartBuffer = std::make_unique<char[]>(2 * block);
   auto buffer = smartBuffer.get() + block;
   memset(buffer, 0, block);
 
-  input.seekg(0, std::ios_base::end);
-  progressTotalBytes = input.tellg();
+  auto seedReader = Reader::create(seedUri);
 
   uint32_t wcs = 0;
 
   bool warmup = true;
 
-  input.seekg(0);
-  while (input) {
+  for (size_t offset = startOffset; offset < endOffset; offset += block) {
     memcpy(buffer - block, buffer, block);
-    auto count = input.read(buffer, block).gcount();
+    auto count = seedReader->read(buffer, offset, block);
     memset(buffer + count, 0, block - count);
 
     wcs = weakChecksum(
@@ -145,13 +152,59 @@ void SyncCommand::Impl::analyzeSeed()
   }
 }
 
+void SyncCommand::Impl::analyzeSeed()
+{
+  auto seedReader = Reader::create(seedUri);
+
+  auto seedDataSize = seedReader->size();
+  progressPhase++;
+  progressTotalBytes = seedDataSize;
+  progressCurrentBytes = 0;
+
+  if (seedDataSize < 128 * block) {
+    LOG(INFO) << "using single-threaded version";
+    analyzeSeedChunk(0, seedDataSize);
+  } else {
+    auto threads = 32;
+    auto blocks = (seedDataSize + block - 1) / block;
+    auto chunk = (blocks + threads - 1) / threads;
+
+    std::vector<std::future<void>> f;
+
+    for (int i = 0; i < threads; i++) {
+      auto beg = i * chunk * block;
+      auto end = (i + 1) * chunk * block + block;
+      LOG(INFO) << "[" << beg << ", " << end << ")";
+
+      f.push_back(std::async(
+          [this](auto beg, auto end) { analyzeSeedChunk(beg, end); },
+          beg,
+          end));
+    }
+
+    std::chrono::milliseconds chill(100);
+    auto done = false;
+    while (!done) {
+      done = true;
+      for (auto &ff : f) {
+        if (ff.wait_for(chill) != std::future_status::ready) {
+          done = false;
+        }
+      }
+    }
+  }
+}
+
 void SyncCommand::Impl::reconstructSource()
 {
+  progressPhase++;
+  progressTotalBytes = dataReader->size();
+  progressCurrentBytes = 0;
+
   auto smartBuffer = std::make_unique<char[]>(block);
   auto buffer = smartBuffer.get();
 
-  progressTotalBytes = size;
-  progressCurrentBytes = 0;
+  auto seedReader = Reader::create(seedUri);
 
   for (size_t i = 0; i < blockCount; i++) {
     auto wcs = weakChecksums[i];
@@ -161,9 +214,7 @@ void SyncCommand::Impl::reconstructSource()
     size_t count;
 
     if (data.seedOffset != -1ull && scs == strongChecksums[data.index]) {
-      input.clear();
-      input.seekg(data.seedOffset);
-      count = input.read(buffer, block).gcount();
+      count = seedReader->read(buffer, data.seedOffset, block);
       reusedBytes += count;
     } else {
       count = dataReader->read(buffer, i * block, block);
@@ -185,9 +236,7 @@ int SyncCommand::Impl::run()
 {
   progressPhase++;
   readMetadata();
-  progressPhase++;
   analyzeSeed();
-  progressPhase++;
   reconstructSource();
   progressPhase++;
 
@@ -209,9 +258,9 @@ void SyncCommand::Impl::accept(MetricVisitor &visitor, const SyncCommand &host)
 SyncCommand::SyncCommand(
     const std::string &data_uri,
     const std::string &metadata_uri,
-    std::istream &input,
+    std::string seed_uri,
     std::ostream &output)
-    : pImpl(new Impl(data_uri, metadata_uri, input, output))
+    : pImpl(new Impl(data_uri, metadata_uri, std::move(seed_uri), output))
 {
 }
 

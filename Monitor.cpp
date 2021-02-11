@@ -59,19 +59,18 @@ struct Monitor::Impl : public MetricVisitor {
     auto percent = size == 0 ? 0 : 100 * position / size;
     auto mbps = s == 0 ? 0 : 10.0 * position / s / (1ll << 20);
 
+    newPhase = metrics["//progressPhase"]->load();
+    if (newPhase != oldPhase) {
+      ts_begin = std::chrono::high_resolution_clock::now();
+      oldPhase = newPhase;
+    }
+
     if (oldPhase > 0) {
       std::cout << "phase " << oldPhase;
       std::cout << " | " << position / (1ll << 20) << "MB";
       std::cout << " | " << s / 10.0 << "s";
       std::cout << " | " << percent << "%";
       std::cout << " | " << mbps << " MB/s\t\r";
-    }
-
-    newPhase = metrics["//progressPhase"]->load();
-    if (newPhase != oldPhase) {
-      std::cout << std::endl;
-      ts_begin = std::chrono::high_resolution_clock::now();
-      oldPhase = newPhase;
     }
 
     if (last) {

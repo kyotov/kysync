@@ -288,7 +288,7 @@ TEST(SyncCommand, MetadataRoundtrip)
   std::stringstream metadata;
   auto pc = prepare(data, metadata, block);
 
-  auto input = createInputStream(data);
+  auto input = createMemoryReaderUri(data);
   std::stringstream output;
 
   auto metadataStr = metadata.str();
@@ -328,9 +328,9 @@ void EndToEndTest(
   std::stringstream metadata;
   auto pc = prepare(sourceData, metadata, block);
 
-  auto input = createInputStream(seedData);
-//  std::stringstream output;
-  std::ofstream output(fs::temp_directory_path() / "t", std::ios::binary);
+  auto input = createMemoryReaderUri(seedData);
+  std::stringstream output;
+//  std::ofstream output(fs::temp_directory_path() / "t", std::ios::binary);
 
   auto metadataStr = metadata.str();
 
@@ -344,7 +344,7 @@ void EndToEndTest(
 
   EXPECT_EQ(KySyncTest::examineAnalisys(sc), expectedBlockMapping);
 
-//  EXPECT_EQ(sourceData, output.str());
+  EXPECT_EQ(sourceData, output.str());
 }
 
 TEST(SyncCommand, EndToEnd)
@@ -371,7 +371,7 @@ TEST(SyncCommand, EndToEnd)
   std::string chunk = "1234";
   std::stringstream input;
   std::vector<size_t> expected;
-  for (auto i = 0; i < 256 * 1024; i++) {
+  for (auto i = 0; i < 1024; i++) {
     input << chunk;
     expected.push_back(0);
   }

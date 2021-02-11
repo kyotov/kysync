@@ -11,7 +11,7 @@ public:
   explicit SyncCommand(
       const std::string &data_uri,
       const std::string &metadata_uri,
-      std::istream &input,
+      std::string seed_uri,
       std::ostream &output);
 
   ~SyncCommand();
