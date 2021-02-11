@@ -10,14 +10,14 @@
 #include "impl/SyncCommandImpl.h"
 
 SyncCommand::Impl::Impl(
-    const Reader &_metadataReader,
-    const Reader &_dataReader,
-    const Reader &_seedReader,
-    const std::filesystem::path &_outputPath)
-    : metadataReader(_metadataReader),
-      dataReader(_dataReader),
-      seedReader(_seedReader),
-      outputPath(_outputPath)
+    const std::string &data_uri,
+    const std::string &metadata_uri,
+    std::istream &_input,
+    std::ostream &_output)
+    : dataReader(Reader::create(data_uri)),
+      metadataReader(Reader::create(metadata_uri)),
+      input(_input),
+      output(_output)
 {
 }
 
@@ -26,7 +26,7 @@ void SyncCommand::Impl::parseHeader()
   constexpr size_t MAX_HEADER_SIZE = 1024;
   char buffer[MAX_HEADER_SIZE];
 
-  metadataReader.read(buffer, 0, MAX_HEADER_SIZE);
+  metadataReader->read(buffer, 0, MAX_HEADER_SIZE);
 
   std::stringstream header;
   header.write(buffer, MAX_HEADER_SIZE);
@@ -71,16 +71,17 @@ void SyncCommand::Impl::readMetadata()
   offset = headerSize;
   count = blockCount * sizeof(uint32_t);
   weakChecksums.resize(blockCount);
-  countRead = metadataReader.read(weakChecksums.data(), offset, count);
+  countRead = metadataReader->read(weakChecksums.data(), offset, count);
   CHECK_EQ(count, countRead) << "cannot read all weak checksums";
 
   offset += count;
   count = blockCount * sizeof(StrongChecksum);
   strongChecksums.resize(blockCount);
-  countRead = metadataReader.read(strongChecksums.data(), offset, count);
+  countRead = metadataReader->read(strongChecksums.data(), offset, count);
   CHECK_EQ(count, countRead) << "cannot read all strong checksums";
 
   for (size_t index = 0; index < blockCount; index++) {
+    set[weakChecksums[index]] = true;
     analysis[weakChecksums[index]] = {index, -1ull};
   }
 }
@@ -90,10 +91,13 @@ void SyncCommand::Impl::analyzeSeedCallback(
     size_t offset,
     uint32_t wcs)
 {
-  const auto &found = analysis.find(wcs);
-  if (found != analysis.end()) {
+  //  const auto &found = analysis.find(wcs);
+  //  if (found != analysis.end()) {
+  //    auto &data = found->second;
+  if (set[wcs]) {
+    auto &data = analysis[wcs];
+
     weakChecksumMatches++;
-    auto &data = found->second;
 
     auto sourceDigest = strongChecksums[data.index];
     auto seedDigest = StrongChecksum::compute(buffer + offset, block);
@@ -113,16 +117,18 @@ void SyncCommand::Impl::analyzeSeed()
   auto buffer = smartBuffer.get() + block;
   memset(buffer, 0, block);
 
-  auto seedSize = seedReader.size();
-  auto seedBlockCount = (seedSize + block - 1) / block;
+  input.seekg(0, std::ios_base::end);
+  progressTotalBytes = input.tellg();
 
   uint32_t wcs = 0;
 
-  progressTotalBytes = seedSize;
-  for (size_t i = 0; i < seedBlockCount; i++) {
+  bool warmup = true;
+
+  input.seekg(0);
+  while (input) {
     memcpy(buffer - block, buffer, block);
-    memset(buffer, 0, block);
-    seedReader.read(buffer, i * block, block);
+    auto count = input.read(buffer, block).gcount();
+    memset(buffer + count, 0, block - count);
 
     wcs = weakChecksum(
         (const void *)buffer,
@@ -132,41 +138,43 @@ void SyncCommand::Impl::analyzeSeed()
         [this, &buffer](auto offset, auto wcs) {
           analyzeSeedCallback(buffer, offset, wcs);
         },
-        i == 0);
+        warmup);
+
+    warmup = false;
     progressCurrentBytes += block;
   }
 }
 
 void SyncCommand::Impl::reconstructSource()
 {
-  auto output = std::ofstream(outputPath, std::ios::binary);
-
   auto smartBuffer = std::make_unique<char[]>(block);
   auto buffer = smartBuffer.get();
 
-  progressTotalBytes = size.load();
+  progressTotalBytes = size;
   progressCurrentBytes = 0;
+
   for (size_t i = 0; i < blockCount; i++) {
     auto wcs = weakChecksums[i];
     auto scs = strongChecksums[i];
     auto data = analysis[wcs];
 
-    auto reused =
-        data.seedOffset != -1ull && scs == strongChecksums[data.index];
+    size_t count;
 
-    auto count = reused ? seedReader.read(buffer, data.seedOffset, block)
-                        : dataReader.read(buffer, i * block, block);
-
-    if (reused) {
+    if (data.seedOffset != -1ull && scs == strongChecksums[data.index]) {
+      input.clear();
+      input.seekg(data.seedOffset);
+      count = input.read(buffer, block).gcount();
       reusedBytes += count;
+    } else {
+      count = dataReader->read(buffer, i * block, block);
     }
 
     output.write(buffer, count);
 
-    if (i < blockCount - 1 || size % block == 0) {
+    if (i < blockCount - 1 || progressTotalBytes % block == 0) {
       CHECK_EQ(count, block);
     } else {
-      CHECK_EQ(count, size % block);
+      CHECK_EQ(count, progressTotalBytes % block);
     }
 
     progressCurrentBytes += count;
@@ -184,9 +192,9 @@ int SyncCommand::Impl::run()
 
 void SyncCommand::Impl::accept(MetricVisitor &visitor, const SyncCommand &host)
 {
-  VISIT(visitor, metadataReader);
-  VISIT(visitor, dataReader);
-  VISIT(visitor, seedReader);
+  VISIT(visitor, *metadataReader);
+  VISIT(visitor, *dataReader);
+  //  VISIT(visitor, seedReader);
   VISIT(visitor, progressTotalBytes);
   VISIT(visitor, progressCurrentBytes);
   VISIT(visitor, weakChecksumMatches);
@@ -195,11 +203,11 @@ void SyncCommand::Impl::accept(MetricVisitor &visitor, const SyncCommand &host)
 }
 
 SyncCommand::SyncCommand(
-    const Reader &metadataReader,
-    const Reader &dataReader,
-    const Reader &seedReader,
-    const std::filesystem::path &outputPath)
-    : pImpl(new Impl(metadataReader, dataReader, seedReader, outputPath))
+    const std::string &data_uri,
+    const std::string &metadata_uri,
+    std::istream &input,
+    std::ostream &output)
+    : pImpl(new Impl(data_uri, metadata_uri, input, output))
 {
 }
 

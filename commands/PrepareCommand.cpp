@@ -4,34 +4,33 @@
 #include "impl/PrepareCommandImpl.h"
 
 PrepareCommand::Impl::Impl(
-    const Reader &_reader,
-    size_t _block,
-    std::ostream &_output)
-    : reader(_reader),
-      block(_block),
-      output(_output)
+    std::istream &_input,
+    std::ostream &_output,
+    size_t _block)
+    : input(_input),
+      output(_output),
+      block(_block)
 {
 }
 
 int PrepareCommand::Impl::run()
 {
-  auto size = reader.size();
-  auto blockCount = (size + block - 1) / block;
-
-  auto unique_buffer = std::make_unique<uint8_t[]>(block);
+  auto unique_buffer = std::make_unique<char[]>(block);
   auto buffer = unique_buffer.get();
 
-  progressTotalBytes = size;
+  input.seekg(0, std::ios_base::end);
+  progressTotalBytes = input.tellg();
+
   progressCurrentBytes = 0;
 
-  for (size_t i = 0; i < blockCount; i++) {
-    auto count = reader.read(buffer, i * block, block);
+  input.seekg(0);
+  while (auto count = input.read(buffer, block).gcount()) {
     memset(buffer + count, 0, block - count);
 
     weakChecksums.push_back(weakChecksum(buffer, block));
     strongChecksums.push_back(StrongChecksum::compute(buffer, block));
 
-    progressCurrentBytes += block;
+    progressCurrentBytes += count;
   }
 
   // produce the ksync metadata output
@@ -43,7 +42,7 @@ int PrepareCommand::Impl::run()
       "size: %llu\n"
       "block: %llu\n"
       "eof: 1\n",
-      size,
+      progressCurrentBytes.load(),
       block);
 
   output.write(header, strlen(header));
@@ -63,17 +62,16 @@ void PrepareCommand::Impl::accept(
     MetricVisitor &visitor,
     const PrepareCommand &host)
 {
-  VISIT(visitor, reader);
   VISIT(visitor, progressTotalBytes);
   VISIT(visitor, progressCurrentBytes);
 }
 
 PrepareCommand::PrepareCommand(
-    const Reader &reader,
-    size_t block,
-    std::ostream &output)
+    std::istream &input,
+    std::ostream &output,
+    size_t block)
     // FIXME: due to the privacy declarations, we can't use std::make_unique??
-    : pImpl(new Impl(reader, block, output))
+    : pImpl(new Impl(input, output, block))
 {
 }
 

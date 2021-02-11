@@ -1,19 +1,19 @@
 #ifndef KSYNC_PREPARECOMMAND_H
 #define KSYNC_PREPARECOMMAND_H
 
+#include <filesystem>
 #include <memory>
 
 #include "../readers/Reader.h"
 #include "Command.h"
 
+namespace fs = std::filesystem;
+
 class KySyncTest;
 
 class PrepareCommand final : public Command {
 public:
-  explicit PrepareCommand(
-      const Reader &reader,
-      size_t block,
-      std::ostream &output);
+  PrepareCommand(std::istream &input, std::ostream &output, size_t block);
 
   PrepareCommand(PrepareCommand &&) = default;
 

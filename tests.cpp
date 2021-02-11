@@ -112,6 +112,18 @@ void testReader(Reader &reader, size_t expectedSize)
        {"//totalBytesRead", 5}});
 }
 
+std::string createMemoryReaderUri(const void *address, size_t size)
+{
+  std::stringstream result;
+  result << "memory://" << address << ":" << std::hex << size;
+  return result.str();
+}
+
+std::string createMemoryReaderUri(const std::string &data)
+{
+  return createMemoryReaderUri(data.data(), data.size());
+}
+
 TEST(Readers, MemoryReaderSimple)
 {
   auto data = "0123456789";
@@ -119,10 +131,8 @@ TEST(Readers, MemoryReaderSimple)
   auto reader = MemoryReader(data, strlen(data));
   testReader(reader, strlen(data));
 
-  std::stringstream s;
-  s << "memory://" << (void *)data << ":" << std::hex << strlen(data);
-
-  testReader(*Reader::create(s.str()), strlen(data));
+  auto uri = createMemoryReaderUri(data, strlen(data));
+  testReader(*Reader::create(uri), strlen(data));
 }
 
 TEST(Readers, FileReaderSimple)
@@ -200,28 +210,28 @@ public:
   }
 };
 
-PrepareCommand
-prepare(std::string data, const fs::path &metadataPath, size_t block)
+std::stringstream createInputStream(const std::string &data) {
+  std::stringstream result;
+  result.write(data.data(), data.size());
+  result.seekg(0);
+  return result;
+}
+
+PrepareCommand prepare(std::string data, std::ostream &output, size_t block)
 {
-  const size_t size = data.size();
-  auto reader = MemoryReader(data.data(), size);
+  const auto size = data.size();
+  const auto blockCount = (size + block - 1) / block;
 
-  const size_t blockCount = (size + block - 1) / block;
-
-  // FIXME: figure out how to make this close automatic... / destructor based
-  std::ofstream output(metadataPath, std::ios::binary);
-  PrepareCommand c(reader, block, output);
+  auto input = createInputStream(data);
+  PrepareCommand c(input, output, block);
   c.run();
-  output.close();
 
   // FIXME: maybe make the expectation checking in a method??
   ExpectationCheckMetricVisitor(  // NOLINT(bugprone-unused-raii)
       c,
       {
-          {"//progressCurrentBytes", blockCount * block},
+          {"//progressCurrentBytes", size},
           {"//progressTotalBytes", size},
-          {"//reader/totalBytesRead", size},
-          {"//reader/totalReads", blockCount},
       });
 
   return std::move(c);
@@ -232,8 +242,9 @@ TEST(PrepareCommand, Simple)
   auto data = std::string("0123456789");
   auto block = 4;
   auto blockCount = (data.size() + block - 1) / block;
-  auto metadataPath = fs::temp_directory_path() / "output.ksync";
-  auto c = prepare(data, metadataPath, block);
+
+  std::stringstream output;
+  auto c = prepare(data, output, block);
 
   const auto &wcs = KySyncTest::examineWeakChecksums(c);
   EXPECT_EQ(wcs.size(), blockCount);
@@ -248,19 +259,45 @@ TEST(PrepareCommand, Simple)
   EXPECT_EQ(StrongChecksum::compute("89\0\0", block), scs[2]);
 }
 
+TEST(PrepareCommand, Simple2)
+{
+  auto data = std::string("123412341234");
+  auto block = 4;
+  auto blockCount = (data.size() + block - 1) / block;
+
+  std::stringstream output;
+  auto c = prepare(data, output, block);
+
+  const auto &wcs = KySyncTest::examineWeakChecksums(c);
+  EXPECT_EQ(wcs.size(), blockCount);
+  EXPECT_EQ(weakChecksum("1234", block), wcs[0]);
+  EXPECT_EQ(weakChecksum("1234", block), wcs[1]);
+  EXPECT_EQ(weakChecksum("1234", block), wcs[2]);
+
+  const auto &scs = KySyncTest::examineStrongChecksums(c);
+  EXPECT_EQ(wcs.size(), blockCount);
+  EXPECT_EQ(StrongChecksum::compute("1234", block), scs[0]);
+  EXPECT_EQ(StrongChecksum::compute("1234", block), scs[1]);
+  EXPECT_EQ(StrongChecksum::compute("1234", block), scs[2]);
+}
+
 TEST(SyncCommand, MetadataRoundtrip)
 {
   auto block = 4;
   std::string data = "0123456789";
-  auto metadataPath = fs::temp_directory_path() / "output.ksync";
-  auto pc = prepare(data, metadataPath, block);
+  std::stringstream metadata;
+  auto pc = prepare(data, metadata, block);
 
-  // TODO: weird C++ gotcha to figure out...
-  //  when we don't create the readers outside as separate variables, haywire!!!
-  auto metadataReader = FileReader(metadataPath);
-  auto dataReader = MemoryReader(data.data(), data.size());
-  auto outputPath = fs::temp_directory_path() / "output";
-  auto sc = SyncCommand(metadataReader, dataReader, dataReader, outputPath);
+  auto input = createInputStream(data);
+  std::stringstream output;
+
+  auto metadataStr = metadata.str();
+
+  auto sc = SyncCommand(
+      createMemoryReaderUri(data),
+      createMemoryReaderUri(metadataStr),
+      input,
+      output);
 
   KySyncTest::readMetadata(sc);
 
@@ -275,10 +312,10 @@ TEST(SyncCommand, MetadataRoundtrip)
   ExpectationCheckMetricVisitor(  // NOLINT(bugprone-unused-raii)
       sc,
       {
-          {"//dataReader/totalBytesRead", 0},
-          {"//dataReader/totalReads", 0},
-          {"//metadataReader/totalBytesRead", 156},
-          {"//metadataReader/totalReads", 3},
+          {"//*dataReader/totalBytesRead", 0},
+          {"//*dataReader/totalReads", 0},
+          {"//*metadataReader/totalBytesRead", 156},
+          {"//*metadataReader/totalReads", 3},
       });
 }
 
@@ -288,26 +325,25 @@ void EndToEndTest(
     size_t block,
     const std::vector<size_t> &expectedBlockMapping)
 {
-  auto metadataPath = fs::temp_directory_path() / "output.ksync";
-  auto pc = prepare(sourceData, metadataPath, block);
+  std::stringstream metadata;
+  auto pc = prepare(sourceData, metadata, block);
 
-  auto metadataReader = FileReader(metadataPath);
-  auto dataReader = MemoryReader(sourceData.data(), sourceData.size());
-  auto seedReader = MemoryReader(seedData.data(), seedData.size());
-  auto outputPath = fs::temp_directory_path() / "output";
-  auto sc = SyncCommand(metadataReader, dataReader, seedReader, outputPath);
+  auto input = createInputStream(seedData);
+  std::stringstream output;
+
+  auto metadataStr = metadata.str();
+
+  auto sc = SyncCommand(
+      createMemoryReaderUri(sourceData),
+      createMemoryReaderUri(metadataStr),
+      input,
+      output);
 
   sc.run();
 
   EXPECT_EQ(KySyncTest::examineAnalisys(sc), expectedBlockMapping);
 
-  auto outputSize = fs::file_size(outputPath);
-  auto buffer = std::make_unique<char[]>(outputSize + 1);
-  auto output = std::ifstream(outputPath, std::ios::binary);
-  output.read(buffer.get(), outputSize);
-  buffer[outputSize] = 0;
-
-  EXPECT_EQ(sourceData, buffer.get());
+  EXPECT_EQ(sourceData, output.str());
 }
 
 TEST(SyncCommand, EndToEnd)

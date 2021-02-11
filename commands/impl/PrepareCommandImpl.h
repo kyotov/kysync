@@ -13,9 +13,9 @@ class PrepareCommand::Impl final {
   friend class PrepareCommand;
   friend class KySyncTest;
 
-  const Reader &reader;
+  std::istream& input;
+  std::ostream& output;
   const size_t block;
-  std::ostream &output;
 
   std::vector<uint32_t> weakChecksums;
   std::vector<StrongChecksum> strongChecksums;
@@ -23,11 +23,11 @@ class PrepareCommand::Impl final {
   Metric progressTotalBytes;
   Metric progressCurrentBytes;
 
-  Impl(const Reader &_reader, size_t _block, std::ostream &output);
+  Impl(std::istream& _input, std::ostream& _output, size_t _block);
 
   int run();
 
-  void accept(MetricVisitor &visitor, const PrepareCommand &host);
+  void accept(MetricVisitor& visitor, const PrepareCommand& host);
 };
 
 #endif  // KSYNC_PREPARECOMMANDIMPL_H

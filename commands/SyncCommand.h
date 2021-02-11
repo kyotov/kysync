@@ -9,10 +9,10 @@
 class SyncCommand final : public Command {
 public:
   explicit SyncCommand(
-      const Reader &metadataReader,
-      const Reader &dataReader,
-      const Reader &seedReader,
-      const std::filesystem::path &outputPath);
+      const std::string &data_uri,
+      const std::string &metadata_uri,
+      std::istream &input,
+      std::ostream &output);
 
   ~SyncCommand();
 

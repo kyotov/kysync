@@ -10,10 +10,10 @@ class SyncCommand::Impl final {
   friend class SyncCommand;
   friend class KySyncTest;
 
-  const Reader &metadataReader;
-  const Reader &dataReader;
-  const Reader &seedReader;
-  const std::filesystem::path &outputPath;
+  std::unique_ptr<Reader> dataReader;
+  std::unique_ptr<Reader> metadataReader;
+  std::istream &input;
+  std::ostream &output;
 
   Metric progressTotalBytes;
   Metric progressCurrentBytes;
@@ -24,7 +24,7 @@ class SyncCommand::Impl final {
 
   Metric reusedBytes;
 
-  Metric size;
+  size_t size;
   size_t headerSize{};
   size_t block{};
   size_t blockCount{};
@@ -37,13 +37,14 @@ class SyncCommand::Impl final {
     size_t seedOffset{-1ull};
   };
 
+  std::bitset<0x100000000ull> set;
   std::unordered_map<uint32_t, WcsMapData> analysis;
 
   Impl(
-      const Reader &_metadataReader,
-      const Reader &_dataReader,
-      const Reader &_seedReader,
-      const std::filesystem::path &_outputPath);
+      const std::string &data_uri,
+      const std::string &metadata_uri,
+      std::istream &_input,
+      std::ostream &_output);
 
   void parseHeader();
   void readMetadata();

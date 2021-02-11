@@ -19,17 +19,24 @@ add_library(main STATIC
         commands/PrepareCommand.cpp
         commands/SyncCommand.cpp
         checksums/wcs.cpp
-        checksums/scs.cpp)
+        checksums/scs.cpp
+        monitor.cpp)
 target_link_libraries(main
         glog::glog)
 
+add_executable(kysync
+        main.cpp)
+target_link_libraries(kysync
+        main
+        glog::glog
+        gflags
+        xxHash::xxhash)
+
 add_executable(tests
         tests.cpp
-        metrics/ExpectationCheckMetricsVisitor.cpp
-        )
+        metrics/ExpectationCheckMetricsVisitor.cpp)
 target_link_libraries(tests
         main
         xxHash::xxhash
-        gflags
         GTest::gtest
         GTest::gtest_main)
