@@ -1,5 +1,6 @@
 #include "PrepareCommand.h"
 
+#include "../checksums/StrongChecksumBuilder.h"
 #include "../checksums/wcs.h"
 #include "impl/PrepareCommandImpl.h"
 
@@ -23,11 +24,15 @@ int PrepareCommand::Impl::run()
   input.seekg(0, std::ios_base::end);
   progressTotalBytes = input.tellg();
 
+  StrongChecksumBuilder hash;
+
   progressCurrentBytes = 0;
 
   input.seekg(0);
   while (auto count = input.read(buffer, block).gcount()) {
     memset(buffer + count, 0, block - count);
+
+    hash.update(buffer, count);
 
     weakChecksums.push_back(weakChecksum(buffer, block));
     strongChecksums.push_back(StrongChecksum::compute(buffer, block));
@@ -44,9 +49,11 @@ int PrepareCommand::Impl::run()
       "version: 1\n"
       "size: %llu\n"
       "block: %llu\n"
+      "hash: %s\n"
       "eof: 1\n",
       progressCurrentBytes.load(),
-      block);
+      block,
+      hash.digest().toString().c_str());
 
   output.write(header, strlen(header));
 

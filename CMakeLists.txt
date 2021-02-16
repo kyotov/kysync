@@ -19,7 +19,8 @@ add_library(main STATIC
         commands/PrepareCommand.cpp
         commands/SyncCommand.cpp
         checksums/wcs.cpp
-        checksums/scs.cpp
+        checksums/StrongChecksum.cpp
+        checksums/StrongChecksumBuilder.cpp
         monitor.cpp)
 target_link_libraries(main
         glog::glog)

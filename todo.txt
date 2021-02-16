@@ -3,3 +3,6 @@
 - make the install directory of each project different
 - make a wcs collision test
 - figure out if we can have in-memory tests without files
+- make StrongChecksumBuilder a real streambuf
+- stable monitor row (no shortening)
+- show total time and phase time

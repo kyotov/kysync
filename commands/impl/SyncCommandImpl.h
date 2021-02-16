@@ -3,7 +3,7 @@
 
 #include <bitset>
 
-#include "../../checksums/scs.h"
+#include "../../checksums/StrongChecksum.h"
 #include "../SyncCommand.h"
 
 class SyncCommand::Impl final {
@@ -30,6 +30,8 @@ class SyncCommand::Impl final {
   size_t block{};
   size_t blockCount{};
 
+  std::string hash;
+
   std::vector<uint32_t> weakChecksums;
   std::vector<StrongChecksum> strongChecksums;
 
@@ -49,7 +51,13 @@ class SyncCommand::Impl final {
 
   void parseHeader();
   void readMetadata();
-  void analyzeSeedCallback(const char *buffer, size_t offset, uint32_t wcs);
+  //TODO: decide if we want to keep this signature... reader is only for debug
+  void analyzeSeedCallback(
+      const char *buffer,
+      size_t offset,
+      uint32_t wcs,
+      size_t seedOffset,
+      const Reader &seedReader);
   void analyzeSeedChunk(size_t startOffset, size_t endOffset);
   void analyzeSeed();
   void reconstructSource();

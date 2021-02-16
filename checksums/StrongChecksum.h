@@ -1,5 +1,5 @@
-#ifndef KSYNC_SCS_H
-#define KSYNC_SCS_H
+#ifndef KSYNC_STRONGCHECKSUM_H
+#define KSYNC_STRONGCHECKSUM_H
 
 #include <cstdint>
 #include <istream>
@@ -29,4 +29,4 @@ public:
   [[nodiscard]] std::string toString() const;
 };
 
-#endif  // KSYNC_SCS_H
+#endif  // KSYNC_STRONGCHECKSUM_H

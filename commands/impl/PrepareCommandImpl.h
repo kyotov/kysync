@@ -3,7 +3,9 @@
 
 #include <vector>
 
-#include "../../checksums/scs.h"
+//TODO: this should be moved to the cpp file
+#include "../../checksums/StrongChecksum.h"
+
 #include "../../metrics/Metric.h"
 #include "../../metrics/MetricVisitor.h"
 #include "../../readers/Reader.h"

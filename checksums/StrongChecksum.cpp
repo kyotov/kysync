@@ -1,4 +1,4 @@
-#include "scs.h"
+#include "StrongChecksum.h"
 
 #include <xxhash.h>
 

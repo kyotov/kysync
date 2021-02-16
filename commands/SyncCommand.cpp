@@ -2,13 +2,15 @@
 
 #include <fstream>
 #include <future>
-#include <iostream>
 #include <map>
 #include <utility>
 
+#include "../checksums/StrongChecksumBuilder.h"
 #include "../checksums/wcs.h"
 #include "glog/logging.h"
 #include "impl/SyncCommandImpl.h"
+
+constexpr auto VERIFY = false;
 
 SyncCommand::Impl::Impl(
     const std::string &data_uri,
@@ -47,11 +49,13 @@ void SyncCommand::Impl::parseHeader()
     } else if (key == "block:") {
       block = strtoull(value.c_str(), nullptr, 10);
       blockCount = (size + block - 1) / block;
+    } else if (key == "hash:") {
+      hash = value;
     } else if (key == "eof:") {
       CHECK(value == "1") << "bad eof marker (1)";
       break;
     } else {
-      CHECK(false) << "invalid header key" << key;
+      CHECK(false) << "invalid header key `" << key << "`";
     }
   }
 
@@ -96,7 +100,9 @@ void SyncCommand::Impl::readMetadata()
 void SyncCommand::Impl::analyzeSeedCallback(
     const char *buffer,
     size_t offset,
-    uint32_t wcs)
+    uint32_t wcs,
+    size_t seedOffset,
+    const Reader &seedReader)
 {
   //  NOTE: (slower) alternative but taking less space:
   //
@@ -104,6 +110,10 @@ void SyncCommand::Impl::analyzeSeedCallback(
   //  if (found != analysis.end()) {
   //    auto &data = found->second;
   if (set[wcs]) {
+    // don't let the matches linger past the end of the seed file
+    if (seedOffset + offset + block > progressTotalBytes)
+      return;
+
     auto &data = analysis[wcs];
 
     weakChecksumMatches++;
@@ -112,8 +122,16 @@ void SyncCommand::Impl::analyzeSeedCallback(
     auto seedDigest = StrongChecksum::compute(buffer + offset, block);
 
     if (sourceDigest == seedDigest) {
+      set[wcs] = false;
       strongChecksumMatches++;
-      data.seedOffset = progressCurrentBytes + offset;
+      data.seedOffset = seedOffset + offset;
+
+      if (VERIFY) {
+        auto b = std::make_unique<char[]>(block);
+        seedReader.read(b.get(), data.seedOffset, block);
+        LOG_ASSERT(wcs == weakChecksum(b.get(), block));
+        LOG_ASSERT(seedDigest == StrongChecksum::compute(b.get(), block));
+      }
     } else {
       weakChecksumFalsePositive++;
     }
@@ -132,9 +150,12 @@ void SyncCommand::Impl::analyzeSeedChunk(size_t startOffset, size_t endOffset)
 
   bool warmup = true;
 
-  for (size_t offset = startOffset; offset < endOffset; offset += block) {
+  for (size_t seedOffset = startOffset;  //
+       seedOffset < endOffset;
+       seedOffset += block)
+  {
     memcpy(buffer - block, buffer, block);
-    auto count = seedReader->read(buffer, offset, block);
+    auto count = seedReader->read(buffer, seedOffset, block);
     memset(buffer + count, 0, block - count);
 
     wcs = weakChecksum(
@@ -142,8 +163,8 @@ void SyncCommand::Impl::analyzeSeedChunk(size_t startOffset, size_t endOffset)
         block,
         wcs,
         // FIXME: is there a way to avoid this lambda???
-        [this, &buffer](auto offset, auto wcs) {
-          analyzeSeedCallback(buffer, offset, wcs);
+        [this, &buffer, &seedOffset, &seedReader](auto offset, auto wcs) {
+          analyzeSeedCallback(buffer, offset, wcs, seedOffset, *seedReader);
         },
         warmup);
 
@@ -165,7 +186,7 @@ void SyncCommand::Impl::analyzeSeed()
     LOG(INFO) << "using single-threaded version";
     analyzeSeedChunk(0, seedDataSize);
   } else {
-    auto threads = 32;
+    auto threads = 24;
     auto blocks = (seedDataSize + block - 1) / block;
     auto chunk = (blocks + threads - 1) / threads;
 
@@ -201,6 +222,8 @@ void SyncCommand::Impl::reconstructSource()
   progressTotalBytes = dataReader->size();
   progressCurrentBytes = 0;
 
+  StrongChecksumBuilder outputHash;
+
   auto smartBuffer = std::make_unique<char[]>(block);
   auto buffer = smartBuffer.get();
 
@@ -220,7 +243,18 @@ void SyncCommand::Impl::reconstructSource()
       count = dataReader->read(buffer, i * block, block);
     }
 
+    outputHash.update(buffer, count);
     output.write(buffer, count);
+
+    if (VERIFY) {
+      LOG_IF(ERROR, wcs != weakChecksums[data.index]);
+      if (data.seedOffset != -1ull && scs == strongChecksums[data.index]) {
+      }
+      LOG_IF(ERROR, weakChecksums[i] != weakChecksum(buffer, count));
+      LOG_IF(
+          ERROR,
+          strongChecksums[i] != StrongChecksum::compute(buffer, count));
+    }
 
     if (i < blockCount - 1 || size % block == 0) {
       CHECK_EQ(count, block);
@@ -230,6 +264,9 @@ void SyncCommand::Impl::reconstructSource()
 
     progressCurrentBytes += count;
   }
+
+  LOG(INFO) << hash;
+  LOG(INFO) << outputHash.digest().toString();
 }
 
 int SyncCommand::Impl::run()
