@@ -13,14 +13,16 @@
 constexpr auto VERIFY = false;
 
 SyncCommand::Impl::Impl(
-    const std::string &data_uri,
+    std::string data_uri,
     const std::string &metadata_uri,
     std::string seed_uri,
-    std::ostream &_output)
-    : dataReader(Reader::create(data_uri)),
+    std::filesystem::path output_path,
+    int _threads)
+    : dataUri(std::move(data_uri)),
       metadataReader(Reader::create(metadata_uri)),
       seedUri(std::move(seed_uri)),
-      output(_output)
+      outputPath(std::move(output_path)),
+      threads(_threads)
 {
 }
 
@@ -138,7 +140,10 @@ void SyncCommand::Impl::analyzeSeedCallback(
   }
 }
 
-void SyncCommand::Impl::analyzeSeedChunk(size_t startOffset, size_t endOffset)
+void SyncCommand::Impl::analyzeSeedChunk(
+    int id,
+    size_t startOffset,
+    size_t endOffset)
 {
   auto smartBuffer = std::make_unique<char[]>(2 * block);
   auto buffer = smartBuffer.get() + block;
@@ -173,6 +178,50 @@ void SyncCommand::Impl::analyzeSeedChunk(size_t startOffset, size_t endOffset)
   }
 }
 
+int parallelize(
+    size_t dataSize,
+    size_t blockSize,
+    size_t overlapSize,
+    int threads,
+    std::function<void(int i, size_t startOffset, size_t endOffset)> f)
+{
+  auto blocks = (dataSize + blockSize - 1) / blockSize;
+  auto chunk = (blocks + threads - 1) / threads;
+
+  if (chunk < 2) {
+    LOG(INFO) << "size too small... not using parallelization";
+    threads = 1;
+    chunk = blocks;
+  }
+
+  VLOG(1) << "parallelize size=" << dataSize  //
+          << " block=" << blockSize           //
+          << " threads=" << threads;
+
+  std::vector<std::future<void>> fs;
+
+  for (int id = 0; id < threads; id++) {
+    auto beg = id * chunk * blockSize;
+    auto end = (id + 1) * chunk * blockSize + overlapSize;
+    VLOG(2) << "thread=" << id << " [" << beg << ", " << end << ")";
+
+    fs.push_back(std::async(f, id, beg, end));
+  }
+
+  std::chrono::milliseconds chill(100);
+  auto done = false;
+  while (!done) {
+    done = true;
+    for (auto &ff : fs) {
+      if (ff.wait_for(chill) != std::future_status::ready) {
+        done = false;
+      }
+    }
+  }
+
+  return threads;
+}
+
 void SyncCommand::Impl::analyzeSeed()
 {
   auto seedReader = Reader::create(seedUri);
@@ -182,54 +231,38 @@ void SyncCommand::Impl::analyzeSeed()
   progressTotalBytes = seedDataSize;
   progressCurrentBytes = 0;
 
-  if (seedDataSize < 128 * block) {
-    LOG(INFO) << "using single-threaded version";
-    analyzeSeedChunk(0, seedDataSize);
-  } else {
-    auto threads = 24;
-    auto blocks = (seedDataSize + block - 1) / block;
-    auto chunk = (blocks + threads - 1) / threads;
-
-    std::vector<std::future<void>> f;
-
-    for (int i = 0; i < threads; i++) {
-      auto beg = i * chunk * block;
-      auto end = (i + 1) * chunk * block + block;
-      LOG(INFO) << "[" << beg << ", " << end << ")";
-
-      f.push_back(std::async(
-          [this](auto beg, auto end) { analyzeSeedChunk(beg, end); },
-          beg,
-          end));
-    }
-
-    std::chrono::milliseconds chill(100);
-    auto done = false;
-    while (!done) {
-      done = true;
-      for (auto &ff : f) {
-        if (ff.wait_for(chill) != std::future_status::ready) {
-          done = false;
-        }
-      }
-    }
-  }
+  parallelize(
+      seedDataSize,
+      block,
+      block,
+      threads,
+      [this](auto id, auto beg, auto end) { analyzeSeedChunk(id, beg, end); });
 }
 
-void SyncCommand::Impl::reconstructSource()
+std::filesystem::path getChunkPath(std::filesystem::path p, int i)
 {
-  progressPhase++;
-  progressTotalBytes = dataReader->size();
-  progressCurrentBytes = 0;
+  std::stringstream t;
+  t << "." << i;
+  return p.concat(t.str());
+}
 
-  StrongChecksumBuilder outputHash;
+void SyncCommand::Impl::reconstructSourceChunk(
+    int id,
+    size_t begOffset,
+    size_t endOffset)
+{
+  LOG_ASSERT(begOffset % block == 0);
 
   auto smartBuffer = std::make_unique<char[]>(block);
   auto buffer = smartBuffer.get();
 
   auto seedReader = Reader::create(seedUri);
+  auto dataReader = Reader::create(dataUri);
 
-  for (size_t i = 0; i < blockCount; i++) {
+  std::ofstream output(getChunkPath(outputPath, id), std::ios::binary);
+
+  for (auto offset = begOffset; offset < endOffset; offset += block) {
+    auto i = offset / block;
     auto wcs = weakChecksums[i];
     auto scs = strongChecksums[i];
     auto data = analysis[wcs];
@@ -241,15 +274,13 @@ void SyncCommand::Impl::reconstructSource()
       reusedBytes += count;
     } else {
       count = dataReader->read(buffer, i * block, block);
+      downloadedBytes += count;
     }
 
-    outputHash.update(buffer, count);
     output.write(buffer, count);
 
     if (VERIFY) {
       LOG_IF(ERROR, wcs != weakChecksums[data.index]);
-      if (data.seedOffset != -1ull && scs == strongChecksums[data.index]) {
-      }
       LOG_IF(ERROR, weakChecksums[i] != weakChecksum(buffer, count));
       LOG_IF(
           ERROR,
@@ -264,40 +295,89 @@ void SyncCommand::Impl::reconstructSource()
 
     progressCurrentBytes += count;
   }
+}
 
-  LOG(INFO) << hash;
-  LOG(INFO) << outputHash.digest().toString();
+void SyncCommand::Impl::reconstructSource()
+{
+  auto dataReader = Reader::create(dataUri);
+  auto dataSize = dataReader->size();
+
+  progressPhase++;
+  progressTotalBytes = dataSize;
+  progressCurrentBytes = 0;
+
+  auto actualThreads = parallelize(
+      dataSize,
+      block,
+      0,
+      threads,
+      [this](auto id, auto beg, auto end) {
+        reconstructSourceChunk(id, beg, end);
+      });
+
+  progressPhase++;
+  progressTotalBytes = dataSize;
+  progressCurrentBytes = 0;
+
+  constexpr auto bufferSize = 1024 * 1024;
+  auto smartBuffer = std::make_unique<char[]>(bufferSize);
+  auto buffer = smartBuffer.get();
+
+  StrongChecksumBuilder outputHash;
+
+  std::ofstream output(outputPath, std::ios::binary);
+
+  for (int id = 0; id < actualThreads; id++) {
+    auto chunkPath = getChunkPath(outputPath, id);
+    {
+      std::ifstream chunk(chunkPath, std::ios::binary);
+      while (chunk) {
+        auto count = chunk.read(buffer, bufferSize).gcount();
+        output.write(buffer, count);
+        outputHash.update(buffer, count);
+        progressCurrentBytes += count;
+      }
+    }
+    std::filesystem::remove(chunkPath);
+  }
+
+  CHECK_EQ(hash, outputHash.digest().toString())
+      << "mismatch in hash of reconstructed data";
 }
 
 int SyncCommand::Impl::run()
 {
-  progressPhase++;
   readMetadata();
   analyzeSeed();
   reconstructSource();
-  progressPhase++;
-
   return 0;
 }
 
 void SyncCommand::Impl::accept(MetricVisitor &visitor, const SyncCommand &host)
 {
   VISIT(visitor, *metadataReader);
-  VISIT(visitor, *dataReader);
   VISIT(visitor, progressPhase);
   VISIT(visitor, progressTotalBytes);
   VISIT(visitor, progressCurrentBytes);
   VISIT(visitor, weakChecksumMatches);
   VISIT(visitor, weakChecksumFalsePositive);
   VISIT(visitor, strongChecksumMatches);
+  VISIT(visitor, reusedBytes);
+  VISIT(visitor, downloadedBytes);
 }
 
 SyncCommand::SyncCommand(
     const std::string &data_uri,
     const std::string &metadata_uri,
     std::string seed_uri,
-    std::ostream &output)
-    : pImpl(new Impl(data_uri, metadata_uri, std::move(seed_uri), output))
+    std::filesystem::path output_path,
+    int threads)
+    : pImpl(new Impl(
+          data_uri,
+          metadata_uri,
+          std::move(seed_uri),
+          std::move(output_path),
+          threads))
 {
 }
 

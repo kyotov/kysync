@@ -24,6 +24,9 @@ add_library(main STATIC
         monitor.cpp)
 target_link_libraries(main
         glog::glog)
+#FIXME: this is not portable and also not clear it works well for debug...
+set_target_properties(main PROPERTIES COMPILE_FLAGS /GL)
+set_target_properties(main PROPERTIES LINK_FLAGS /LTCG)
 
 add_executable(kysync
         main.cpp)
@@ -32,6 +35,8 @@ target_link_libraries(kysync
         glog::glog
         gflags
         xxHash::xxhash)
+set_target_properties(kysync PROPERTIES COMPILE_FLAGS /GL)
+set_target_properties(kysync PROPERTIES LINK_FLAGS /LTCG)
 
 add_executable(tests
         tests.cpp

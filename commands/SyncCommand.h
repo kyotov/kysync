@@ -12,7 +12,8 @@ public:
       const std::string &data_uri,
       const std::string &metadata_uri,
       std::string seed_uri,
-      std::ostream &output);
+      std::filesystem::path output_path,
+      int threads);
 
   ~SyncCommand();
 

@@ -11,10 +11,12 @@ namespace fs = std::filesystem;
 
 DEFINE_string(command, "", "prepare, sync, ...");   // NOLINT(cert-err58-cpp)
 DEFINE_string(input_filename, "", "input file");    // NOLINT(cert-err58-cpp)
+//TODO: maybe output_path? it is used elsewhere...
 DEFINE_string(output_filename, "", "output file");  // NOLINT(cert-err58-cpp)
 DEFINE_string(data_uri, "", "data uri");            // NOLINT(cert-err58-cpp)
 DEFINE_string(metadata_uri, "", "data uri");        // NOLINT(cert-err58-cpp)
 DEFINE_uint32(block, 1024, "block size");           // NOLINT(cert-err58-cpp)
+DEFINE_uint32(threads, 32, "number of threads");    // NOLINT(cert-err58-cpp)
 
 int main(int argc, char **argv)
 {
@@ -51,7 +53,8 @@ int main(int argc, char **argv)
         FLAGS_data_uri,
         FLAGS_metadata_uri,
         "file://" + FLAGS_input_filename,
-        output);
+        FLAGS_output_filename,
+        FLAGS_threads);
     return Monitor(c).run();
   }
 

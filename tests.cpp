@@ -1,3 +1,4 @@
+#include <glog/logging.h>
 #include <gtest/gtest.h>
 
 #include <atomic>
@@ -290,7 +291,8 @@ TEST(SyncCommand, MetadataRoundtrip)
   auto pc = prepare(data, metadata, block);
 
   auto input = createMemoryReaderUri(data);
-  std::stringstream output;
+  // std::stringstream output;
+  auto outputPath = fs::temp_directory_path() / "kysync.temp";
 
   auto metadataStr = metadata.str();
 
@@ -298,7 +300,8 @@ TEST(SyncCommand, MetadataRoundtrip)
       createMemoryReaderUri(data),
       createMemoryReaderUri(metadataStr),
       input,
-      output);
+      outputPath,
+      1);
 
   KySyncTest::readMetadata(sc);
 
@@ -313,8 +316,6 @@ TEST(SyncCommand, MetadataRoundtrip)
   ExpectationCheckMetricVisitor(  // NOLINT(bugprone-unused-raii)
       sc,
       {
-          {"//*dataReader/totalBytesRead", 0},
-          {"//*dataReader/totalReads", 0},
           {"//*metadataReader/totalBytesRead", 195},
           {"//*metadataReader/totalReads", 3},
       });
@@ -326,12 +327,18 @@ void EndToEndTest(
     size_t block,
     const std::vector<size_t> &expectedBlockMapping)
 {
+  LOG(INFO) << "E2E for " << sourceData.substr(0, 40);
+
   std::stringstream metadata;
   auto pc = prepare(sourceData, metadata, block);
 
   auto input = createMemoryReaderUri(seedData);
-  std::stringstream output;
-  //  std::ofstream output(fs::temp_directory_path() / "t", std::ios::binary);
+  // std::stringstream output;
+  // std::ofstream output(fs::temp_directory_path() / "t", std::ios::binary);
+  auto outputPath = fs::temp_directory_path() / "kysync.temp";
+  if (fs::exists(outputPath)) {
+    fs::remove(outputPath);
+  }
 
   auto metadataStr = metadata.str();
 
@@ -339,13 +346,22 @@ void EndToEndTest(
       createMemoryReaderUri(sourceData),
       createMemoryReaderUri(metadataStr),
       input,
-      output);
+      outputPath,
+      1);
 
   sc.run();
 
   EXPECT_EQ(KySyncTest::examineAnalisys(sc), expectedBlockMapping);
 
-  EXPECT_EQ(sourceData, output.str());
+  size_t outputSize = fs::file_size(outputPath);
+  EXPECT_EQ(sourceData.size(), outputSize);
+
+  auto output = std::ifstream(outputPath, std::ios::binary);
+  auto buffer = std::make_unique<char[]>(outputSize + 1);
+  output.read(buffer.get(), outputSize);
+  buffer.get()[outputSize] = '\0';
+
+  EXPECT_EQ(sourceData, buffer.get());
 }
 
 TEST(SyncCommand, EndToEnd)

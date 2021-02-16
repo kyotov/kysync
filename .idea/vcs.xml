@@ -7,6 +7,11 @@
     <mapping directory="$PROJECT_DIR$/deps/Debug/src/glog" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/deps/Debug/src/googletest" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/deps/Debug/src/xxhash" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/deps/RelWithDebInfo/src/gflags" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/deps/RelWithDebInfo/src/gflags/doc" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/deps/RelWithDebInfo/src/glog" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/deps/RelWithDebInfo/src/googletest" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/deps/RelWithDebInfo/src/xxhash" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/deps/Release/src/gflags" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/deps/Release/src/gflags/doc" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/deps/Release/src/glog" vcs="Git" />

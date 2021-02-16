@@ -6,3 +6,6 @@
 - make StrongChecksumBuilder a real streambuf
 - stable monitor row (no shortening)
 - show total time and phase time
+- write while analyzing...
+- make parallelize a member function
+- make sure the final stats of each phase are shown?

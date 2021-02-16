@@ -38,6 +38,6 @@ bool StrongChecksum::operator==(const StrongChecksum &other) const
 std::string StrongChecksum::toString() const
 {
   std::stringstream s;
-  s << std::hex << std::setw(16) << hi << lo;
+  s << std::hex << std::setw(16) << std::setfill('0') << hi << lo;
   return s.str();
 }
