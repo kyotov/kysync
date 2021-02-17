@@ -21,7 +21,7 @@ uint32_t weakChecksum(
     const void *buffer,
     size_t size,
     uint32_t runningChecksum,
-    WeakChecksumCallback callback)
+    const WeakChecksumCallback &callback)
 {
   auto *data = (uint8_t *)buffer;
 

@@ -9,10 +9,10 @@
 class SyncCommand final : public Command {
 public:
   explicit SyncCommand(
-      const std::string &data_uri,
-      const std::string &metadata_uri,
-      std::string seed_uri,
-      std::filesystem::path output_path,
+      std::string dataUri,
+      std::string metadataUri,
+      std::string seedUri,
+      std::filesystem::path outputPath,
       int threads);
 
   ~SyncCommand();

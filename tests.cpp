@@ -1,11 +1,8 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 
-#include <atomic>
-#include <cstdio>
 #include <filesystem>
 #include <fstream>
-#include <utility>
 
 #include "checksums/StrongChecksum.h"
 #include "checksums/wcs.h"
@@ -35,7 +32,7 @@ TEST(WeakChecksum, Rolling)
   auto size = strlen(data) / 3;
   memset(data, 0, size);
 
-  std::atomic<int> count{0};
+  std::atomic<int> count = 0;
 
   int64_t warmup = size - 1;
 
@@ -227,7 +224,6 @@ std::stringstream createInputStream(const std::string &data)
 PrepareCommand prepare(std::string data, std::ostream &output, size_t block)
 {
   const auto size = data.size();
-  const auto blockCount = (size + block - 1) / block;
 
   auto input = createInputStream(data);
   PrepareCommand c(input, output, block);
@@ -321,8 +317,9 @@ TEST(SyncCommand, MetadataRoundtrip)
   ExpectationCheckMetricVisitor(  // NOLINT(bugprone-unused-raii)
       sc,
       {
-          {"//*metadataReader/totalBytesRead", 195},
-          {"//*metadataReader/totalReads", 3},
+          {"//progressPhase", 1},
+          {"//progressTotalBytes", 135},
+          {"//progressCurrentBytes", 135},
       });
 }
 

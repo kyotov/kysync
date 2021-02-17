@@ -1,10 +1,6 @@
 #include "FileReader.h"
 
-#include <glog/logging.h>
-
-#include <filesystem>
 #include <fstream>
-#include <utility>
 
 namespace fs = std::filesystem;
 

@@ -3,7 +3,6 @@
 #include <glog/logging.h>
 
 #include <filesystem>
-#include <sstream>
 
 #include "FileReader.h"
 #include "MemoryReader.h"
@@ -14,7 +13,7 @@ struct Reader::Impl {
   Metric totalReads;
   Metric totalBytesRead;
 
-  void accept(MetricVisitor &visitor)
+  void accept(MetricVisitor &visitor) const
   {
     VISIT(visitor, totalReads);
     VISIT(visitor, totalBytesRead);
@@ -25,7 +24,7 @@ Reader::Reader() : pImpl(std::make_unique<Impl>()) {}
 
 Reader::~Reader() = default;
 
-size_t Reader::read(void *buffer, size_t offset, size_t size) const
+size_t Reader::read(void * /*buffer*/, size_t /*offset*/, size_t size) const
 {
   pImpl->totalReads++;
   pImpl->totalBytesRead += size;

@@ -3,7 +3,6 @@
 #include <fstream>
 #include <future>
 #include <map>
-#include <utility>
 
 #include "../Config.h"
 #include "../checksums/StrongChecksumBuilder.h"
@@ -12,25 +11,25 @@
 #include "impl/SyncCommandImpl.h"
 
 SyncCommand::Impl::Impl(
-    std::string data_uri,
-    const std::string &metadata_uri,
-    std::string seed_uri,
-    std::filesystem::path output_path,
+    std::string _dataUri,
+    std::string _metadataUri,
+    std::string _seedUri,
+    std::filesystem::path _outputPath,
     int _threads)
-    : dataUri(std::move(data_uri)),
-      metadataReader(Reader::create(metadata_uri)),
-      seedUri(std::move(seed_uri)),
-      outputPath(std::move(output_path)),
+    : dataUri(std::move(_dataUri)),
+      metadataUri(std::move(_metadataUri)),
+      seedUri(std::move(_seedUri)),
+      outputPath(std::move(_outputPath)),
       threads(_threads)
 {
 }
 
-void SyncCommand::Impl::parseHeader()
+void SyncCommand::Impl::parseHeader(const Reader &metadataReader)
 {
   constexpr size_t MAX_HEADER_SIZE = 1024;
   char buffer[MAX_HEADER_SIZE];
 
-  metadataReader->read(buffer, 0, MAX_HEADER_SIZE);
+  metadataReader.read(buffer, 0, MAX_HEADER_SIZE);
 
   std::stringstream header;
   header.write(buffer, MAX_HEADER_SIZE);
@@ -68,13 +67,15 @@ void SyncCommand::Impl::parseHeader()
 
 void SyncCommand::Impl::readMetadata()
 {
+  auto metadataReader = Reader::create(metadataUri);
+
   progressPhase++;
   progressTotalBytes = metadataReader->size();
   progressCurrentBytes = 0;
 
   auto &offset = progressCurrentBytes;
 
-  parseHeader();
+  parseHeader(*metadataReader);
   offset = headerSize;
 
   size_t count;
@@ -99,7 +100,7 @@ void SyncCommand::Impl::readMetadata()
 }
 
 void SyncCommand::Impl::analyzeSeedChunk(
-    int id,
+    int /*id*/,
     size_t startOffset,
     size_t endOffset)
 {
@@ -111,9 +112,6 @@ void SyncCommand::Impl::analyzeSeedChunk(
   auto seedSize = seedReader->size();
 
   uint32_t _wcs = 0;
-
-  uint16_t a = 0;
-  uint16_t b = 0;
 
   int64_t warmup = block - 1;
 
@@ -169,12 +167,13 @@ void SyncCommand::Impl::analyzeSeedChunk(
   }
 }
 
+// TODO: make this a member function
 int parallelize(
     size_t dataSize,
     size_t blockSize,
     size_t overlapSize,
     int threads,
-    std::function<void(int i, size_t startOffset, size_t endOffset)> f)
+    std::function<void(int /*id*/, size_t /*beg*/, size_t /*end*/)> f)
 {
   auto blocks = (dataSize + blockSize - 1) / blockSize;
   auto chunk = (blocks + threads - 1) / threads;
@@ -346,7 +345,6 @@ int SyncCommand::Impl::run()
 
 void SyncCommand::Impl::accept(MetricVisitor &visitor, const SyncCommand &host)
 {
-  VISIT(visitor, *metadataReader);
   VISIT(visitor, progressPhase);
   VISIT(visitor, progressTotalBytes);
   VISIT(visitor, progressCurrentBytes);
@@ -358,16 +356,16 @@ void SyncCommand::Impl::accept(MetricVisitor &visitor, const SyncCommand &host)
 }
 
 SyncCommand::SyncCommand(
-    const std::string &data_uri,
-    const std::string &metadata_uri,
-    std::string seed_uri,
-    std::filesystem::path output_path,
+    std::string dataUri,
+    std::string metadataUri,
+    std::string seedUri,
+    std::filesystem::path outputPath,
     int threads)
     : pImpl(new Impl(
-          data_uri,
-          metadata_uri,
-          std::move(seed_uri),
-          std::move(output_path),
+          std::move(dataUri),
+          std::move(metadataUri),
+          std::move(seedUri),
+          std::move(outputPath),
           threads))
 {
 }

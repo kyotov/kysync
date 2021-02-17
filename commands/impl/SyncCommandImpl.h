@@ -10,11 +10,10 @@ class SyncCommand::Impl final {
   friend class SyncCommand;
   friend class KySyncTest;
 
-  std::string dataUri;
-  //  std::unique_ptr<Reader> dataReader;
-  std::unique_ptr<Reader> metadataReader;
-  std::string seedUri;
-  std::filesystem::path outputPath;
+  const std::string dataUri;
+  const std::string metadataUri;
+  const std::string seedUri;
+  const std::filesystem::path outputPath;
 
   Metric progressPhase;
   Metric progressTotalBytes;
@@ -48,13 +47,13 @@ class SyncCommand::Impl final {
   std::unordered_map<uint32_t, WcsMapData> analysis;
 
   Impl(
-      std::string data_uri,
-      const std::string &metadata_uri,
-      std::string seed_uri,
-      std::filesystem::path output_path,
+      std::string _dataUri,
+      std::string _metadataUri,
+      std::string _seedUri,
+      std::filesystem::path _outputPath,
       int _threads);
 
-  void parseHeader();
+  void parseHeader(const Reader &metadataReader);
   void readMetadata();
   void analyzeSeedChunk(int id, size_t startOffset, size_t endOffset);
   void analyzeSeed();
