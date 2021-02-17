@@ -62,7 +62,8 @@ class SyncCommand::Impl final {
       size_t offset,
       uint32_t wcs,
       size_t seedOffset,
-      const Reader &seedReader);
+      const Reader &seedReader,
+      int64_t &warmup);
   void analyzeSeedChunk(int id, size_t startOffset, size_t endOffset);
   void analyzeSeed();
   void reconstructSourceChunk(int id, size_t startOffset, size_t endOffset);

@@ -5,6 +5,7 @@
 #include <map>
 #include <utility>
 
+#include "../Config.h"
 #include "../checksums/StrongChecksumBuilder.h"
 #include "../checksums/wcs.h"
 #include "glog/logging.h"
@@ -105,7 +106,8 @@ void SyncCommand::Impl::analyzeSeedCallback(
     size_t offset,
     uint32_t wcs,
     size_t seedOffset,
-    const Reader &seedReader)
+    const Reader &seedReader,
+    int64_t &warmup)
 {
   //  NOTE: (slower) alternative but taking less space:
   //
@@ -127,6 +129,9 @@ void SyncCommand::Impl::analyzeSeedCallback(
 
     if (sourceDigest == seedDigest) {
       set[wcs] = false;
+      if (WARMUP_AFTER_MATCH) {
+        warmup = block - 1;
+      }
       strongChecksumMatches++;
       data.seedOffset = seedOffset + offset;
 
@@ -159,7 +164,7 @@ void SyncCommand::Impl::analyzeSeedChunk(
   uint16_t a = 0;
   uint16_t b = 0;
 
-  bool warmup = true;
+  int64_t warmup = block - 1;
 
   for (size_t seedOffset = startOffset;  //
        seedOffset < endOffset;
@@ -175,13 +180,19 @@ void SyncCommand::Impl::analyzeSeedChunk(
           block,
           wcs,
           // FIXME: is there a way to avoid this lambda???
-          [this, &buffer, &seedOffset, &seedReader](auto offset, auto wcs) {
-            analyzeSeedCallback(buffer, offset, wcs, seedOffset, *seedReader);
+          [&](auto offset, auto wcs) {
+            analyzeSeedCallback(
+                buffer,
+                offset,
+                wcs,
+                seedOffset,
+                *seedReader,
+                warmup);
           },
           warmup);
     } else {
       auto cb = [&](size_t i) {
-        if (!warmup || i == block - 1) {
+        if (--warmup < 0) {
           uint32_t wcs = b << 16 | a;
           if (set[wcs]) {
             auto offset = i + 1 - block;
@@ -195,6 +206,9 @@ void SyncCommand::Impl::analyzeSeedChunk(
 
             if (sourceDigest == seedDigest) {
               set[wcs] = false;
+              if (WARMUP_AFTER_MATCH) {
+                warmup = block - 1;
+              }
               strongChecksumMatches++;
               data.seedOffset = seedOffset + offset;
 
@@ -220,19 +234,18 @@ void SyncCommand::Impl::analyzeSeedChunk(
         }
       };
 
-      for (auto i = 0; i < block; i += 8) {
+      for (auto i = 0; i < block; i += 1) {
         iteration(i + 0);
-        iteration(i + 1);
-        iteration(i + 2);
-        iteration(i + 3);
-        iteration(i + 4);
-        iteration(i + 5);
-        iteration(i + 6);
-        iteration(i + 7);
+        //        iteration(i + 1);
+        //        iteration(i + 2);
+        //        iteration(i + 3);
+        //        iteration(i + 4);
+        //        iteration(i + 5);
+        //        iteration(i + 6);
+        //        iteration(i + 7);
       }
     }
 
-    warmup = false;
     progressCurrentBytes += block;
   }
 }

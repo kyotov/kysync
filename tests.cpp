@@ -16,6 +16,7 @@
 #include "metrics/ExpectationCheckMetricsVisitor.h"
 #include "readers/FileReader.h"
 #include "readers/MemoryReader.h"
+#include "Config.h"
 
 namespace fs = std::filesystem;
 
@@ -42,11 +43,12 @@ TEST(WeakChecksum, Rolling)
     count += 1;
   };
 
-  auto cs = weakChecksum(data + size, size, 0, check, true);
+  int64_t warmup = size - 1;
+  auto cs = weakChecksum(data + size, size, 0, check, warmup);
   EXPECT_EQ(count, 1);
   EXPECT_EQ(cs, 183829005);
 
-  cs = weakChecksum(data + 2 * size, size, cs, check);
+  cs = weakChecksum(data + 2 * size, size, cs, check, warmup);
   EXPECT_EQ(count, 11);
   EXPECT_EQ(cs, 183829005);
 }
@@ -379,11 +381,20 @@ TEST(SyncCommand, EndToEnd)
       "_qrst_mnop_ijkl_abcd_efjh_uvwx_yz",
       4,
       {16, 21, 11, 6, 1, 26, -1ull /*31*/});
-  EndToEndTest(
-      "1234234534564567567867897890",
-      "1234567890",
-      4,
-      {0, 1, 2, 3, 4, 5, 6});
+
+  if (WARMUP_AFTER_MATCH) {
+    EndToEndTest(
+        "1234234534564567567867897890",
+        "1234567890",
+        4,
+        {0, -1ull, -1ull, -1ull, 4, -1ull, -1ull});
+  } else {
+    EndToEndTest(
+        "1234234534564567567867897890",
+        "1234567890",
+        4,
+        {0, 1, 2, 3, 4, 5, 6});
+  }
 
   std::string chunk = "1234";
   std::stringstream input;

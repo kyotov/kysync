@@ -53,6 +53,6 @@ uint32_t weakChecksum(
     size_t size,
     uint32_t runningChecksum,
     WeakChecksumCallback callback,
-    bool warmup = false);
+    int64_t &warmup);
 
 #endif  // KSYNC_WCS_H
