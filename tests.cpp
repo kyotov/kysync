@@ -37,18 +37,21 @@ TEST(WeakChecksum, Rolling)
 
   std::atomic<int> count{0};
 
-  WeakChecksumCallback check = [&count, &data, &size](auto offset, auto wcs) {
-    auto simple_wcs = weakChecksum(data + 2 * size + offset, size);
-    EXPECT_EQ(wcs, simple_wcs);
-    count += 1;
+  int64_t warmup = size - 1;
+
+  auto check = [&](auto offset, auto wcs) {
+    if (--warmup < 0) {
+      auto simple_wcs = weakChecksum(data + 2 * size + offset, size);
+      EXPECT_EQ(wcs, simple_wcs);
+      count += 1;
+    }
   };
 
-  int64_t warmup = size - 1;
-  auto cs = weakChecksum(data + size, size, 0, check, warmup);
+  auto cs = weakChecksum(data + size, size, 0, check);
   EXPECT_EQ(count, 1);
   EXPECT_EQ(cs, 183829005);
 
-  cs = weakChecksum(data + 2 * size, size, cs, check, warmup);
+  cs = weakChecksum(data + 2 * size, size, cs, check);
   EXPECT_EQ(count, 11);
   EXPECT_EQ(cs, 183829005);
 }

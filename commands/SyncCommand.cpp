@@ -12,7 +12,7 @@
 #include "impl/SyncCommandImpl.h"
 
 constexpr auto VERIFY = false;
-constexpr auto CONCISE_AND_SLOW = false;
+constexpr auto CONCISE_AND_SLOW = true;
 
 SyncCommand::Impl::Impl(
     std::string data_uri,
@@ -101,52 +101,6 @@ void SyncCommand::Impl::readMetadata()
   }
 }
 
-void SyncCommand::Impl::analyzeSeedCallback(
-    const uint8_t *buffer,
-    size_t offset,
-    uint32_t wcs,
-    size_t seedOffset,
-    const Reader &seedReader,
-    int64_t &warmup)
-{
-  //  NOTE: (slower) alternative but taking less space:
-  //
-  //  const auto &found = analysis.find(wcs);
-  //  if (found != analysis.end()) {
-  //    auto &data = found->second;
-  if (set[wcs]) {
-    // don't let the matches linger past the end of the seed file
-    if (seedOffset + offset + block > progressTotalBytes) {
-      return;
-    }
-
-    auto &data = analysis[wcs];
-
-    weakChecksumMatches++;
-
-    auto sourceDigest = strongChecksums[data.index];
-    auto seedDigest = StrongChecksum::compute(buffer + offset, block);
-
-    if (sourceDigest == seedDigest) {
-      set[wcs] = false;
-      if (WARMUP_AFTER_MATCH) {
-        warmup = block - 1;
-      }
-      strongChecksumMatches++;
-      data.seedOffset = seedOffset + offset;
-
-      if (VERIFY) {
-        auto b = std::make_unique<char[]>(block);
-        seedReader.read(b.get(), data.seedOffset, block);
-        LOG_ASSERT(wcs == weakChecksum(b.get(), block));
-        LOG_ASSERT(seedDigest == StrongChecksum::compute(b.get(), block));
-      }
-    } else {
-      weakChecksumFalsePositive++;
-    }
-  }
-}
-
 void SyncCommand::Impl::analyzeSeedChunk(
     int id,
     size_t startOffset,
@@ -159,7 +113,7 @@ void SyncCommand::Impl::analyzeSeedChunk(
   auto seedReader = Reader::create(seedUri);
   auto seedSize = seedReader->size();
 
-  uint32_t wcs = 0;
+  uint32_t _wcs = 0;
 
   uint16_t a = 0;
   uint16_t b = 0;
@@ -170,26 +124,45 @@ void SyncCommand::Impl::analyzeSeedChunk(
        seedOffset < endOffset;
        seedOffset += block)
   {
+    auto callback = [&](size_t offset, uint32_t wcs) {
+      //  NOTE: (slower) alternative but taking less space:
+      //
+      //  const auto &found = analysis.find(wcs);
+      //  if (found != analysis.end()) {
+      //    auto &data = found->second;
+      if (--warmup < 0 && seedOffset + offset + block <= seedSize && set[wcs]) {
+        weakChecksumMatches++;
+        auto &data = analysis[wcs];
+
+        auto sourceDigest = strongChecksums[data.index];
+        auto seedDigest = StrongChecksum::compute(buffer + offset, block);
+
+        if (sourceDigest == seedDigest) {
+          set[wcs] = false;
+          if (WARMUP_AFTER_MATCH) {
+            warmup = block - 1;
+          }
+          strongChecksumMatches++;
+          data.seedOffset = seedOffset + offset;
+
+          if (VERIFY) {
+            auto t = std::make_unique<char[]>(block);
+            seedReader->read(t.get(), data.seedOffset, block);
+            LOG_ASSERT(wcs == weakChecksum(t.get(), block));
+            LOG_ASSERT(seedDigest == StrongChecksum::compute(t.get(), block));
+          }
+        } else {
+          weakChecksumFalsePositive++;
+        }
+      }
+    };
+
     memcpy(buffer - block, buffer, block);
     auto count = seedReader->read(buffer, seedOffset, block);
     memset(buffer + count, 0, block - count);
 
     if (CONCISE_AND_SLOW) {
-      wcs = weakChecksum(
-          (const void *)buffer,
-          block,
-          wcs,
-          // FIXME: is there a way to avoid this lambda???
-          [&](auto offset, auto wcs) {
-            analyzeSeedCallback(
-                buffer,
-                offset,
-                wcs,
-                seedOffset,
-                *seedReader,
-                warmup);
-          },
-          warmup);
+      _wcs = weakChecksum((const void *)buffer, block, _wcs, callback);
     } else {
       auto cb = [&](size_t i) {
         if (--warmup < 0) {

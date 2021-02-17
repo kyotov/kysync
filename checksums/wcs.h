@@ -32,10 +32,9 @@ using WeakChecksumCallback =
  *
  * - call this function repeatedly on successive blocks of data
  * - pass the result of the previous call to the runningChecksum parameter
- * - use warmup==true for the first block of a sequence
  * - use runningChecksum==0 for the first block of a sequence
  *
- * - the callback is called after each byte is processed unless in warmup mode
+ * - the callback is called after each byte is processed
  *
  * - NOTE: the function accesses buffer[-size + 1]..buffer[size - 1]
  *   even if it is the first block!
@@ -45,14 +44,12 @@ using WeakChecksumCallback =
  * @param size
  * @param runningChecksum
  * @param callback
- * @param wormup
  * @return
  */
 uint32_t weakChecksum(
     const void *buffer,
     size_t size,
     uint32_t runningChecksum,
-    WeakChecksumCallback callback,
-    int64_t &warmup);
+    WeakChecksumCallback callback);
 
 #endif  // KSYNC_WCS_H
