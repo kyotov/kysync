@@ -2,6 +2,8 @@
 
 this is a rewrite of http://zsync.moria.org.uk/ or at least my understanding of it.
 
+there is a rough list of remaining items to do [here](todo.md)
+
 detailed info at http://zsync.moria.org.uk/papers
 
 more links:
