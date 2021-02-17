@@ -11,9 +11,6 @@
 #include "glog/logging.h"
 #include "impl/SyncCommandImpl.h"
 
-constexpr auto VERIFY = false;
-constexpr auto CONCISE_AND_SLOW = true;
-
 SyncCommand::Impl::Impl(
     std::string data_uri,
     const std::string &metadata_uri,
@@ -125,11 +122,9 @@ void SyncCommand::Impl::analyzeSeedChunk(
        seedOffset += block)
   {
     auto callback = [&](size_t offset, uint32_t wcs) {
-      //  NOTE: (slower) alternative but taking less space:
-      //
-      //  const auto &found = analysis.find(wcs);
-      //  if (found != analysis.end()) {
-      //    auto &data = found->second;
+      /* The `set` seems to improve performance. Previously the code was:
+       * https://github.com/kyotov/ksync/blob/2d98f83cd1516066416e8319fbfa995e3f49f3dd/commands/SyncCommand.cpp#L128-L132
+       */
       if (--warmup < 0 && seedOffset + offset + block <= seedSize && set[wcs]) {
         weakChecksumMatches++;
         auto &data = analysis[wcs];
@@ -161,63 +156,14 @@ void SyncCommand::Impl::analyzeSeedChunk(
     auto count = seedReader->read(buffer, seedOffset, block);
     memset(buffer + count, 0, block - count);
 
-    if (CONCISE_AND_SLOW) {
-      _wcs = weakChecksum((const void *)buffer, block, _wcs, callback);
-    } else {
-      auto cb = [&](size_t i) {
-        if (--warmup < 0) {
-          uint32_t wcs = b << 16 | a;
-          if (set[wcs]) {
-            auto offset = i + 1 - block;
-
-            auto &data = analysis[wcs];
-
-            weakChecksumMatches++;
-
-            auto sourceDigest = strongChecksums[data.index];
-            auto seedDigest = StrongChecksum::compute(buffer + offset, block);
-
-            if (sourceDigest == seedDigest) {
-              set[wcs] = false;
-              if (WARMUP_AFTER_MATCH) {
-                warmup = block - 1;
-              }
-              strongChecksumMatches++;
-              data.seedOffset = seedOffset + offset;
-
-              if (VERIFY) {
-                auto t = std::make_unique<char[]>(block);
-                seedReader->read(t.get(), data.seedOffset, block);
-                LOG_ASSERT(wcs == weakChecksum(t.get(), block));
-                LOG_ASSERT(
-                    seedDigest == StrongChecksum::compute(t.get(), block));
-              }
-            } else {
-              weakChecksumFalsePositive++;
-            }
-          }
-        }
-      };
-
-      auto iteration = [&](size_t i) {
-        if (i < block && seedOffset + i < seedSize) {
-          a += buffer[i] - buffer[i - block];
-          b += a - block * buffer[i - block];
-          cb(i);
-        }
-      };
-
-      for (auto i = 0; i < block; i += 1) {
-        iteration(i + 0);
-        //        iteration(i + 1);
-        //        iteration(i + 2);
-        //        iteration(i + 3);
-        //        iteration(i + 4);
-        //        iteration(i + 5);
-        //        iteration(i + 6);
-        //        iteration(i + 7);
-      }
-    }
+    /* I tried to "optimize" the following by manually inlining `weakChecksum`
+     * and then unrolling the inner loop. To my surprise this did not help...
+     * The MSVC compiler must be already doing it...
+     * We should verify that other compilers do reasonably well before we
+     * abandon the idea completely.
+     * https://github.com/kyotov/ksync/blob/2d98f83cd1516066416e8319fbfa995e3f49f3dd/commands/SyncCommand.cpp#L166-L220
+     */
+    _wcs = weakChecksum((const void *)buffer, block, _wcs, callback);
 
     progressCurrentBytes += block;
   }
@@ -325,11 +271,11 @@ void SyncCommand::Impl::reconstructSourceChunk(
     output.write(buffer, count);
 
     if (VERIFY) {
-      LOG_IF(ERROR, wcs != weakChecksums[data.index]);
-      LOG_IF(ERROR, weakChecksums[i] != weakChecksum(buffer, count));
-      LOG_IF(
-          ERROR,
-          strongChecksums[i] != StrongChecksum::compute(buffer, count));
+      LOG_ASSERT(wcs == weakChecksums[data.index]);
+      if (count == block) {
+        LOG_ASSERT(wcs == weakChecksum(buffer, count));
+        LOG_ASSERT(scs == StrongChecksum::compute(buffer, count));
+      }
     }
 
     if (i < blockCount - 1 || size % block == 0) {
