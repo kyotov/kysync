@@ -11,6 +11,7 @@
 #include "impl/SyncCommandImpl.h"
 
 constexpr auto VERIFY = false;
+constexpr auto CONCISE_AND_SLOW = false;
 
 SyncCommand::Impl::Impl(
     std::string data_uri,
@@ -100,7 +101,7 @@ void SyncCommand::Impl::readMetadata()
 }
 
 void SyncCommand::Impl::analyzeSeedCallback(
-    const char *buffer,
+    const uint8_t *buffer,
     size_t offset,
     uint32_t wcs,
     size_t seedOffset,
@@ -113,8 +114,9 @@ void SyncCommand::Impl::analyzeSeedCallback(
   //    auto &data = found->second;
   if (set[wcs]) {
     // don't let the matches linger past the end of the seed file
-    if (seedOffset + offset + block > progressTotalBytes)
+    if (seedOffset + offset + block > progressTotalBytes) {
       return;
+    }
 
     auto &data = analysis[wcs];
 
@@ -145,13 +147,17 @@ void SyncCommand::Impl::analyzeSeedChunk(
     size_t startOffset,
     size_t endOffset)
 {
-  auto smartBuffer = std::make_unique<char[]>(2 * block);
+  auto smartBuffer = std::make_unique<uint8_t[]>(2 * block);
   auto buffer = smartBuffer.get() + block;
   memset(buffer, 0, block);
 
   auto seedReader = Reader::create(seedUri);
+  auto seedSize = seedReader->size();
 
   uint32_t wcs = 0;
+
+  uint16_t a = 0;
+  uint16_t b = 0;
 
   bool warmup = true;
 
@@ -163,15 +169,68 @@ void SyncCommand::Impl::analyzeSeedChunk(
     auto count = seedReader->read(buffer, seedOffset, block);
     memset(buffer + count, 0, block - count);
 
-    wcs = weakChecksum(
-        (const void *)buffer,
-        block,
-        wcs,
-        // FIXME: is there a way to avoid this lambda???
-        [this, &buffer, &seedOffset, &seedReader](auto offset, auto wcs) {
-          analyzeSeedCallback(buffer, offset, wcs, seedOffset, *seedReader);
-        },
-        warmup);
+    if (CONCISE_AND_SLOW) {
+      wcs = weakChecksum(
+          (const void *)buffer,
+          block,
+          wcs,
+          // FIXME: is there a way to avoid this lambda???
+          [this, &buffer, &seedOffset, &seedReader](auto offset, auto wcs) {
+            analyzeSeedCallback(buffer, offset, wcs, seedOffset, *seedReader);
+          },
+          warmup);
+    } else {
+      auto cb = [&](size_t i) {
+        if (!warmup || i == block - 1) {
+          uint32_t wcs = b << 16 | a;
+          if (set[wcs]) {
+            auto offset = i + 1 - block;
+
+            auto &data = analysis[wcs];
+
+            weakChecksumMatches++;
+
+            auto sourceDigest = strongChecksums[data.index];
+            auto seedDigest = StrongChecksum::compute(buffer + offset, block);
+
+            if (sourceDigest == seedDigest) {
+              set[wcs] = false;
+              strongChecksumMatches++;
+              data.seedOffset = seedOffset + offset;
+
+              if (VERIFY) {
+                auto t = std::make_unique<char[]>(block);
+                seedReader->read(t.get(), data.seedOffset, block);
+                LOG_ASSERT(wcs == weakChecksum(t.get(), block));
+                LOG_ASSERT(
+                    seedDigest == StrongChecksum::compute(t.get(), block));
+              }
+            } else {
+              weakChecksumFalsePositive++;
+            }
+          }
+        }
+      };
+
+      auto iteration = [&](size_t i) {
+        if (i < block && seedOffset + i < seedSize) {
+          a += buffer[i] - buffer[i - block];
+          b += a - block * buffer[i - block];
+          cb(i);
+        }
+      };
+
+      for (auto i = 0; i < block; i += 8) {
+        iteration(i + 0);
+        iteration(i + 1);
+        iteration(i + 2);
+        iteration(i + 3);
+        iteration(i + 4);
+        iteration(i + 5);
+        iteration(i + 6);
+        iteration(i + 7);
+      }
+    }
 
     warmup = false;
     progressCurrentBytes += block;

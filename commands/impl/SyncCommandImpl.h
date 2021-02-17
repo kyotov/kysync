@@ -11,7 +11,7 @@ class SyncCommand::Impl final {
   friend class KySyncTest;
 
   std::string dataUri;
-//  std::unique_ptr<Reader> dataReader;
+  //  std::unique_ptr<Reader> dataReader;
   std::unique_ptr<Reader> metadataReader;
   std::string seedUri;
   std::filesystem::path outputPath;
@@ -56,9 +56,9 @@ class SyncCommand::Impl final {
 
   void parseHeader();
   void readMetadata();
-  //TODO: decide if we want to keep this signature... reader is only for debug
+  // TODO: decide if we want to keep this signature... reader is only for debug
   void analyzeSeedCallback(
-      const char *buffer,
+      const uint8_t *buffer,
       size_t offset,
       uint32_t wcs,
       size_t seedOffset,
