@@ -14,6 +14,8 @@ The below experiments use 128 threads on:
 This is the Ubuntu 20.04.01 DVD reconstructing itself over an identical copy with 16kb chunks:
 
 ```
+> kysync.exe -command sync -data-uri="file://c:\Users\Kamen Yotov\Downloads\ubuntu-20.04.1-desktop-amd64.iso" -input-filename="C:\Users\Kamen Yotov\Downloads\ubuntu-20.04.1-desktop-amd64.iso" -output-filename=x.iso -threads=128
+
 O0217 20:30:54.898490 16168 main.cpp:29] ksync v0.1                                                                     
 O0217 20:30:56.792490 16168 Monitor.cpp:71] phase 2 |  2533 MB |   1.4s |  1866.8 MB/s |  95% |   1.5s total            
 O0217 20:30:57.993489 16168 Monitor.cpp:71] phase 3 |  2458 MB |   1.1s |  2249.5 MB/s |  92% |   2.7s total            
@@ -30,6 +32,8 @@ O0217 20:31:01.766489 16168 Monitor.cpp:49] //downloadedBytes=81920
 
 This is the Ubuntu 20.04.01 DVD reconstructing itself over 20.10 DVD (6 months apart) with 16kb chunks:
 ```
+> kysync.exe -command sync -data-uri="file://c:\Users\Kamen Yotov\Downloads\ubuntu-20.04.1-desktop-amd64.iso" -input-filename="C:\Users\Kamen Yotov\Downloads\ubuntu-20.10-desktop-amd64.iso" -output-filename=x.iso -threads=128
+
 O0217 20:30:18.109661  3920 main.cpp:29] ksync v0.1                                                                     
 O0217 20:30:25.272665  3920 Monitor.cpp:71] phase 2 |  2806 MB |   6.6s |   424.9 MB/s | 100% |   6.7s total            
 O0217 20:30:26.147660  3920 Monitor.cpp:71] phase 3 |  2408 MB |   0.8s |  3144.1 MB/s |  90% |   7.6s total            
