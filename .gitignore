@@ -3,3 +3,6 @@
 /cmake-build-release/
 /cmake-build-relwithdebinfo/
 /.idea/
+/deps/Debug
+/deps/Release
+/deps/RelWithDebInfo
