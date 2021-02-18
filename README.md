@@ -6,6 +6,11 @@ there is a rough list of remaining items to do [here](todo.md)
 
 # pitch
 
+The below experiments use 128 threads on:
+* Processor	Intel(R) Core(TM) i9-7940X CPU @ 3.10GHz, 3096 Mhz, 14 Core(s), 28 Logical Processor(s)
+* BaseBoard Product	TUF X299 MARK 2
+* Samsung SSD 970 EVO 2TB
+
 This is the Ubuntu 20.04.01 DVD reconstructing itself over an identical copy with 16kb chunks:
 
 ```
@@ -40,11 +45,6 @@ O0217 20:30:29.908663  3920 Monitor.cpp:49] //downloadedBytes=1763770368
 ```
 Note that about 1GB got reused and about 1.7GB got downloaded.
 For this experiment the download speed is not factored in... just the computational overhead.
-
-Both of the above experiments use 128 threads on:
-* Processor	Intel(R) Core(TM) i9-7940X CPU @ 3.10GHz, 3096 Mhz, 14 Core(s), 28 Logical Processor(s)
-* BaseBoard Product	TUF X299 MARK 2
-* Samsung SSD 970 EVO 2TB
 
 # reference
 
