@@ -6,6 +6,7 @@
 
 #include "FileReader.h"
 #include "MemoryReader.h"
+#include "HttpReader.h"
 
 namespace fs = std::filesystem;
 
@@ -38,6 +39,10 @@ void Reader::accept(MetricVisitor &visitor) const
 
 std::unique_ptr<Reader> Reader::create(const std::string &uri)
 {
+  if (uri.starts_with("http://") || uri.starts_with("https://")) {
+    return std::make_unique<HttpReader>(uri);
+  }
+
   std::string file = "file://";
   if (uri.starts_with(file)) {
     auto path = uri.substr(file.size());

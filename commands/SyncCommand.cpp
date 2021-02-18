@@ -195,7 +195,7 @@ int parallelize(
     auto end = (id + 1) * chunk * blockSize + overlapSize;
     VLOG(2) << "thread=" << id << " [" << beg << ", " << end << ")";
 
-    fs.push_back(std::async(f, id, beg, end));
+    fs.push_back(std::async(f, id, beg, std::min(end, dataSize)));
   }
 
   std::chrono::milliseconds chill(100);
@@ -226,6 +226,7 @@ void SyncCommand::Impl::analyzeSeed()
       block,
       block,
       threads,
+      // TODO: fold this function in here so we would not need the lambda
       [this](auto id, auto beg, auto end) { analyzeSeedChunk(id, beg, end); });
 }
 
@@ -337,8 +338,11 @@ void SyncCommand::Impl::reconstructSource()
 
 int SyncCommand::Impl::run()
 {
+  LOG(INFO) << "reading metadata...";
   readMetadata();
+  LOG(INFO) << "analyzing seed data...";
   analyzeSeed();
+  LOG(INFO) << "reconstructing target...";
   reconstructSource();
   return 0;
 }

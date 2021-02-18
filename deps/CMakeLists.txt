@@ -38,6 +38,18 @@ function(install NAME GIT_REPO GIT_TAG)
     )
 endfunction()
 
+ExternalProject_Add(
+        openssl
+        URL https://github.com/CristiFati/Prebuilt-Binaries/raw/master/OpenSSL/v1.1.1/OpenSSL-1.1.1i-Win-pc064.zip
+        PREFIX ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}
+        CONFIGURE_COMMAND ""
+        BUILD_COMMAND ""
+        INSTALL_COMMAND ${CMAKE_COMMAND} -E echo installing from `<SOURCE_DIR>/OpenSSL/1.1.1i` to `${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/install`
+        COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/include ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/install/include
+        COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/lib ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/install/lib
+        COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/bin ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/install/bin
+)
+
 install(gflags
         https://github.com/gflags/gflags.git
         v2.2.0
@@ -73,3 +85,12 @@ install(xxhash
         -DBUILD_SHARED_LIBS=FALSE
         -DXXHASH_BUILD_XXHSUM=FALSE
         -DXXHASH_BUILD_ENABLE_INLINE_API=FALSE)
+
+install(httplib
+        https://github.com/yhirose/cpp-httplib.git
+        v0.8.4
+
+        DEPENDS openssl
+
+        CMAKE_ARGS
+        -DOPENSSL_USE_STATIC_LIBS=TRUE)

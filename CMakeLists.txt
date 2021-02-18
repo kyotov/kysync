@@ -7,15 +7,21 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/deps/${CMAKE_BUILD_TYPE}/install)
 
+link_directories(${CMAKE_PREFIX_PATH}/lib)
+
+message(${CMAKE_PREFIX_PATH})
+
 find_package(GTest REQUIRED NO_MODULE)
 find_package(xxHash REQUIRED NO_MODULE)
 find_package(gflags REQUIRED NO_MODULE)
 find_package(glog REQUIRED NO_MODULE)
+find_package(httplib REQUIRED NO_MODULE PATHS ${CMAKE_PREFIX_PATH}/CMake/httplib)
 
 add_library(main STATIC
         readers/Reader.cpp
         readers/MemoryReader.cpp
         readers/FileReader.cpp
+        readers/HttpReader.cpp
         commands/PrepareCommand.cpp
         commands/SyncCommand.cpp
         checksums/wcs.cpp
@@ -23,6 +29,8 @@ add_library(main STATIC
         checksums/StrongChecksumBuilder.cpp
         monitor.cpp)
 target_link_libraries(main
+        libssl_static
+        libcrypto_static
         glog::glog)
 #FIXME: this is not portable and also not clear it works well for debug...
 set_target_properties(main PROPERTIES COMPILE_FLAGS /GL)
@@ -32,6 +40,7 @@ add_executable(kysync
         main.cpp)
 target_link_libraries(kysync
         main
+        httplib::httplib
         glog::glog
         gflags
         xxHash::xxhash)
