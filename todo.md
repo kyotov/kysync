@@ -13,3 +13,4 @@
 - fails... kysync.exe -command sync -data-uri="file://c:\Users\Kamen Yotov\Downloads\ubuntu-20.04.1-desktop-amd64.iso" -input-filename="C:\Users\Kamen Yotov\Downloads\ubuntu-20.10-desktop-amd64.iso" -output-filename=x.iso -threads=24
 * make the code build on mac / linux (i have only done windows so far)
 * add compression (currently only does uncompressed files)
+* implement http 1.1 reader
