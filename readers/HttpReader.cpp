@@ -36,6 +36,7 @@ struct HttpReader::Impl {
     auto range = httplib::make_range_header({{begOffset, endOffset}});
     auto res = cli.Get(path.c_str(), {range});
 
+    CHECK_EQ(res.error(), httplib::Success);
     CHECK_EQ(res->status, 206) << begOffset << "-" << endOffset;
 
     auto count = res->body.size();
