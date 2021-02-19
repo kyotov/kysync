@@ -1,5 +1,7 @@
 # ksync
 
+intro presentation is WIP [here](https://www.icloud.com/keynote/0xYX50qkePJ4hi4nuu4fmyNPQ#Untitled)
+
 NOTE: this is a rewrite of http://zsync.moria.org.uk/ or at least my understanding of it.
 
 there is a rough list of remaining items to do [here](todo.md)
