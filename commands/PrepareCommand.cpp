@@ -7,26 +7,28 @@
 PrepareCommand::Impl::Impl(
     std::istream &_input,
     std::ostream &_output,
-    size_t _block)
+    size_t _block,
+    Command::Impl &_baseImpl)
     : input(_input),
       output(_output),
-      block(_block)
+      block(_block),
+      baseImpl(_baseImpl)
 {
 }
 
 int PrepareCommand::Impl::run()
 {
-  progressPhase++;
+  baseImpl.progressPhase++;
 
   auto unique_buffer = std::make_unique<char[]>(block);
   auto buffer = unique_buffer.get();
 
   input.seekg(0, std::ios_base::end);
-  progressTotalBytes = input.tellg();
+  baseImpl.progressTotalBytes = input.tellg();
 
   StrongChecksumBuilder hash;
 
-  progressCurrentBytes = 0;
+  baseImpl.progressCurrentBytes = 0;
 
   input.seekg(0);
   while (auto count = input.read(buffer, block).gcount()) {
@@ -37,11 +39,11 @@ int PrepareCommand::Impl::run()
     weakChecksums.push_back(weakChecksum(buffer, block));
     strongChecksums.push_back(StrongChecksum::compute(buffer, block));
 
-    progressCurrentBytes += count;
+    baseImpl.progressCurrentBytes += count;
   }
 
   // produce the ksync metadata output
-  progressPhase++;
+  baseImpl.progressPhase++;
 
   char header[1024];
   sprintf(
@@ -51,7 +53,7 @@ int PrepareCommand::Impl::run()
       "block: %llu\n"
       "hash: %s\n"
       "eof: 1\n",
-      progressCurrentBytes.load(),
+      baseImpl.progressCurrentBytes.load(),
       block,
       hash.digest().toString().c_str());
 
@@ -65,7 +67,7 @@ int PrepareCommand::Impl::run()
       reinterpret_cast<const char *>(strongChecksums.data()),
       strongChecksums.size() * sizeof(StrongChecksum));
 
-  progressPhase++;
+  baseImpl.progressPhase++;
   return 0;
 }
 
@@ -73,9 +75,6 @@ void PrepareCommand::Impl::accept(
     MetricVisitor &visitor,
     const PrepareCommand &host)
 {
-  VISIT(visitor, progressPhase);
-  VISIT(visitor, progressTotalBytes);
-  VISIT(visitor, progressCurrentBytes);
 }
 
 PrepareCommand::PrepareCommand(
@@ -83,9 +82,11 @@ PrepareCommand::PrepareCommand(
     std::ostream &output,
     size_t block)
     // FIXME: due to the privacy declarations, we can't use std::make_unique??
-    : pImpl(new Impl(input, output, block))
+    : pImpl(new Impl(input, output, block, *Command::pImpl))
 {
 }
+
+PrepareCommand::PrepareCommand(PrepareCommand &&) noexcept = default;
 
 PrepareCommand::~PrepareCommand() = default;
 
@@ -96,5 +97,6 @@ int PrepareCommand::run()
 
 void PrepareCommand::accept(MetricVisitor &visitor) const
 {
-  return pImpl->accept(visitor, *this);
+  Command::accept(visitor);
+  pImpl->accept(visitor, *this);
 }

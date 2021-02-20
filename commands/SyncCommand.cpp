@@ -15,12 +15,14 @@ SyncCommand::Impl::Impl(
     std::string _metadataUri,
     std::string _seedUri,
     std::filesystem::path _outputPath,
-    int _threads)
+    int _threads,
+    Command::Impl &_baseImpl)
     : dataUri(std::move(_dataUri)),
       metadataUri(std::move(_metadataUri)),
       seedUri(std::move(_seedUri)),
       outputPath(std::move(_outputPath)),
-      threads(_threads)
+      threads(_threads),
+      baseImpl(_baseImpl)
 {
 }
 
@@ -69,11 +71,11 @@ void SyncCommand::Impl::readMetadata()
 {
   auto metadataReader = Reader::create(metadataUri);
 
-  progressPhase++;
-  progressTotalBytes = metadataReader->size();
-  progressCurrentBytes = 0;
+  baseImpl.progressPhase++;
+  baseImpl.progressTotalBytes = metadataReader->size();
+  baseImpl.progressCurrentBytes = 0;
 
-  auto &offset = progressCurrentBytes;
+  auto &offset = baseImpl.progressCurrentBytes;
 
   parseHeader(*metadataReader);
   offset = headerSize;
@@ -163,7 +165,7 @@ void SyncCommand::Impl::analyzeSeedChunk(
      */
     _wcs = weakChecksum((const void *)buffer, block, _wcs, callback);
 
-    progressCurrentBytes += block;
+    baseImpl.progressCurrentBytes += block;
   }
 }
 
@@ -217,9 +219,9 @@ void SyncCommand::Impl::analyzeSeed()
   auto seedReader = Reader::create(seedUri);
 
   auto seedDataSize = seedReader->size();
-  progressPhase++;
-  progressTotalBytes = seedDataSize;
-  progressCurrentBytes = 0;
+  baseImpl.progressPhase++;
+  baseImpl.progressTotalBytes = seedDataSize;
+  baseImpl.progressCurrentBytes = 0;
 
   parallelize(
       seedDataSize,
@@ -284,7 +286,7 @@ void SyncCommand::Impl::reconstructSourceChunk(
       CHECK_EQ(count, size % block);
     }
 
-    progressCurrentBytes += count;
+    baseImpl.progressCurrentBytes += count;
   }
 }
 
@@ -293,9 +295,9 @@ void SyncCommand::Impl::reconstructSource()
   auto dataReader = Reader::create(dataUri);
   auto dataSize = dataReader->size();
 
-  progressPhase++;
-  progressTotalBytes = dataSize;
-  progressCurrentBytes = 0;
+  baseImpl.progressPhase++;
+  baseImpl.progressTotalBytes = dataSize;
+  baseImpl.progressCurrentBytes = 0;
 
   auto actualThreads = parallelize(
       dataSize,
@@ -306,9 +308,9 @@ void SyncCommand::Impl::reconstructSource()
         reconstructSourceChunk(id, beg, end);
       });
 
-  progressPhase++;
-  progressTotalBytes = dataSize;
-  progressCurrentBytes = 0;
+  baseImpl.progressPhase++;
+  baseImpl.progressTotalBytes = dataSize;
+  baseImpl.progressCurrentBytes = 0;
 
   constexpr auto bufferSize = 1024 * 1024;
   auto smartBuffer = std::make_unique<char[]>(bufferSize);
@@ -326,7 +328,7 @@ void SyncCommand::Impl::reconstructSource()
         auto count = chunk.read(buffer, bufferSize).gcount();
         output.write(buffer, count);
         outputHash.update(buffer, count);
-        progressCurrentBytes += count;
+        baseImpl.progressCurrentBytes += count;
       }
     }
     std::filesystem::remove(chunkPath);
@@ -349,9 +351,6 @@ int SyncCommand::Impl::run()
 
 void SyncCommand::Impl::accept(MetricVisitor &visitor, const SyncCommand &host)
 {
-  VISIT(visitor, progressPhase);
-  VISIT(visitor, progressTotalBytes);
-  VISIT(visitor, progressCurrentBytes);
   VISIT(visitor, weakChecksumMatches);
   VISIT(visitor, weakChecksumFalsePositive);
   VISIT(visitor, strongChecksumMatches);
@@ -370,7 +369,8 @@ SyncCommand::SyncCommand(
           std::move(metadataUri),
           std::move(seedUri),
           std::move(outputPath),
-          threads))
+          threads,
+          *Command::pImpl))
 {
 }
 
@@ -383,5 +383,6 @@ int SyncCommand::run()
 
 void SyncCommand::accept(MetricVisitor &visitor) const
 {
+  Command::accept(visitor);
   pImpl->accept(visitor, *this);
 }

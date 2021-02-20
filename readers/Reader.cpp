@@ -60,6 +60,9 @@ std::unique_ptr<Reader> Reader::create(const std::string &uri)
     auto s = uri.substr(memory.size());
     char *current;
 
+    // should this be necessary!? at some point it just started failing without
+    errno = 0;
+
     auto buffer = (void *)strtoull(s.c_str(), &current, 16);
     if (errno != 0 || *current != ':') {
       LOG(ERROR) << "errno=" << errno << " current=" << (int)*current

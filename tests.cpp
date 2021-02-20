@@ -221,7 +221,7 @@ std::stringstream createInputStream(const std::string &data)
   return result;
 }
 
-PrepareCommand prepare(std::string data, std::ostream &output, size_t block)
+PrepareCommand prepare(const std::string& data, std::ostream &output, size_t block)
 {
   const auto size = data.size();
 

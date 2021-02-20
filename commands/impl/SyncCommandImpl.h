@@ -5,6 +5,7 @@
 
 #include "../../checksums/StrongChecksum.h"
 #include "../SyncCommand.h"
+#include "CommandImpl.h"
 
 class SyncCommand::Impl final {
   friend class SyncCommand;
@@ -15,9 +16,7 @@ class SyncCommand::Impl final {
   const std::string seedUri;
   const std::filesystem::path outputPath;
 
-  Metric progressPhase;
-  Metric progressTotalBytes;
-  Metric progressCurrentBytes;
+  Command::Impl &baseImpl;
 
   Metric weakChecksumMatches;
   Metric weakChecksumFalsePositive;
@@ -51,7 +50,8 @@ class SyncCommand::Impl final {
       std::string _metadataUri,
       std::string _seedUri,
       std::filesystem::path _outputPath,
-      int _threads);
+      int _threads,
+      Command::Impl &_baseImpl);
 
   void parseHeader(const Reader &metadataReader);
   void readMetadata();

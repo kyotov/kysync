@@ -13,11 +13,14 @@ class KySyncTest;
 
 class PrepareCommand final : public Command {
 public:
-  PrepareCommand(std::istream &input, std::ostream &output, size_t block);
+  PrepareCommand(
+      std::istream &input,
+      std::ostream &output,
+      size_t block);
 
-  PrepareCommand(PrepareCommand &&) = default;
+  PrepareCommand(PrepareCommand &&) noexcept;
 
-  ~PrepareCommand();
+  ~PrepareCommand() override;
 
   // TODO: can this be const??
   int run() override;

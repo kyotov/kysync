@@ -13,11 +13,13 @@
 * create a wcs collision test
 * make the install directory of each project different
 * write benchmarks (e.g. for the running window checksum)
+* write tests for HttpReader
 
 ## improvements
 * improve algorithm to use http reader with bigger blocks or more blocks...
 * make the code build on mac / linux (i have only done windows so far)
 * write while analyzing...
+* maybe reconstruct the file fully in memory??
 
 ## new features
 * add compression (currently only does uncompressed files)

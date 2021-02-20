@@ -22,6 +22,7 @@ add_library(main STATIC
         readers/MemoryReader.cpp
         readers/FileReader.cpp
         readers/HttpReader.cpp
+        commands/Command.cpp
         commands/PrepareCommand.cpp
         commands/SyncCommand.cpp
         checksums/wcs.cpp

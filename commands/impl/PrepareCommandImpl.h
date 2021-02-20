@@ -3,13 +3,13 @@
 
 #include <vector>
 
-//TODO: this should be moved to the cpp file
+// TODO: this should be moved to the cpp file
 #include "../../checksums/StrongChecksum.h"
-
 #include "../../metrics/Metric.h"
 #include "../../metrics/MetricVisitor.h"
 #include "../../readers/Reader.h"
 #include "../PrepareCommand.h"
+#include "CommandImpl.h"
 
 class PrepareCommand::Impl final {
   friend class PrepareCommand;
@@ -22,11 +22,13 @@ class PrepareCommand::Impl final {
   std::vector<uint32_t> weakChecksums;
   std::vector<StrongChecksum> strongChecksums;
 
-  Metric progressPhase;
-  Metric progressTotalBytes;
-  Metric progressCurrentBytes;
+  Command::Impl &baseImpl;
 
-  Impl(std::istream& _input, std::ostream& _output, size_t _block);
+  Impl(
+      std::istream& _input,
+      std::ostream& _output,
+      size_t _block,
+      Command::Impl& _baseImpl);
 
   int run();
 

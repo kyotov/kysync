@@ -15,7 +15,7 @@ public:
       std::filesystem::path outputPath,
       int threads);
 
-  ~SyncCommand();
+  ~SyncCommand() override;
 
   int run() override;
 
