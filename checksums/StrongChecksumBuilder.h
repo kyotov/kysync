@@ -2,6 +2,7 @@
 #define KSYNC_STRONGCHECKSUMBUILDER_H
 
 #include "StrongChecksum.h"
+#include <memory>
 
 class StrongChecksumBuilder {
 public:

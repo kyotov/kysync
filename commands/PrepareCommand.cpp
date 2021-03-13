@@ -1,5 +1,7 @@
 #include "PrepareCommand.h"
 
+#include <cstring>
+
 #include "../checksums/StrongChecksumBuilder.h"
 #include "../checksums/wcs.h"
 #include "impl/PrepareCommandImpl.h"
@@ -49,8 +51,8 @@ int PrepareCommand::Impl::run()
   sprintf(
       header,
       "version: 1\n"
-      "size: %llu\n"
-      "block: %llu\n"
+      "size: %lu\n" // "size: %llu\n"
+      "block: %lu\n" // "block: %llu\n"
       "hash: %s\n"
       "eof: 1\n",
       baseImpl.progressCurrentBytes.load(),

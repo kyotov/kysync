@@ -1,7 +1,7 @@
 #include "HttpReader.h"
 
 // TODO: do we need this!?
-#define CPPHTTPLIB_OPENSSL_SUPPORT
+//#define CPPHTTPLIB_OPENSSL_SUPPORT
 
 #include <glog/logging.h>
 #include <httplib.h>
