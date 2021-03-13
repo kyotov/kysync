@@ -5,3 +5,5 @@
 /deps/Debug
 /deps/Release
 /deps/RelWithDebInfo
+build/
+.vscode/
