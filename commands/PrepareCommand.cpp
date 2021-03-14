@@ -2,20 +2,26 @@
 
 #include <cstring>
 
+#include <glog/logging.h>
+#include <zstd.h>
 #include "../checksums/StrongChecksumBuilder.h"
 #include "../checksums/wcs.h"
 #include "impl/PrepareCommandImpl.h"
 
 PrepareCommand::Impl::Impl(
     std::istream &_input,
-    std::ostream &_output,
+    std::ostream &_output_ksync,
+    std::ostream &_output_compressed,
     size_t _block,
     Command::Impl &_baseImpl)
     : input(_input),
-      output(_output),
+      output_ksync_(_output_ksync),
+      output_compressed_(_output_compressed),
       block(_block),
       baseImpl(_baseImpl)
-{
+{  
+  compression_buffer_size_ = ZSTD_compressBound(block);
+  compression_buffer_ = new char[compression_buffer_size_];
 }
 
 int PrepareCommand::Impl::run()
@@ -38,8 +44,24 @@ int PrepareCommand::Impl::run()
 
     hash.update(buffer, count);
 
+    // TODO: Ensure that it's a conscious perf tradeoff to have
+    // 3 vectors instead of a single vector of (weakchecksum, strongchecksum, compressoffset) tuples
     weakChecksums.push_back(weakChecksum(buffer, block));
     strongChecksums.push_back(StrongChecksum::compute(buffer, block));
+
+    size_t compressed_size = ZSTD_compress(
+      compression_buffer_, 
+      compression_buffer_size_, 
+      buffer, 
+      count, 
+      compression_level_);
+    if (ZSTD_isError(compressed_size)) {
+      LOG(ERROR) << "Error when performing zstd compression: " << ZSTD_getErrorName(compressed_size);
+    }
+    CHECK(!ZSTD_isError(compressed_size));
+    LOG_ASSERT(compressed_size <= compression_buffer_size_);
+    output_compressed_.write(compression_buffer_, compressed_size);
+    compression_sizes_.push_back(compressed_size);
 
     baseImpl.progressCurrentBytes += count;
   }
@@ -59,15 +81,22 @@ int PrepareCommand::Impl::run()
       block,
       hash.digest().toString().c_str());
 
-  output.write(header, strlen(header));
+  output_ksync_.write(header, strlen(header));
 
-  output.write(
+  output_ksync_.write(
       reinterpret_cast<const char *>(weakChecksums.data()),
       weakChecksums.size() * sizeof(uint32_t));
 
-  output.write(
+  output_ksync_.write(
       reinterpret_cast<const char *>(strongChecksums.data()),
       strongChecksums.size() * sizeof(StrongChecksum));
+
+  // TODO: This will be enabled after the read logic has been updated
+  /*
+  output_ksync_.write(
+      reinterpret_cast<const char *>(compression_sizes_.data()),
+      compression_sizes_.size() * sizeof(compression_sizes_));
+  */
 
   baseImpl.progressPhase++;
   return 0;
@@ -81,16 +110,21 @@ void PrepareCommand::Impl::accept(
 
 PrepareCommand::PrepareCommand(
     std::istream &input,
-    std::ostream &output,
+    std::ostream &output_ksync,
+    std::ostream &output_compressed,
     size_t block)
     // FIXME: due to the privacy declarations, we can't use std::make_unique??
-    : pImpl(new Impl(input, output, block, *Command::pImpl))
+    : pImpl(new Impl(input, output_ksync, output_compressed, block, *Command::pImpl))
 {
 }
 
 PrepareCommand::PrepareCommand(PrepareCommand &&) noexcept = default;
 
-PrepareCommand::~PrepareCommand() = default;
+PrepareCommand::~PrepareCommand()
+{
+  // TODO: Confirm whether this should be a part of Impl destructor
+  delete[] pImpl->compression_buffer_;
+}
 
 int PrepareCommand::run()
 {

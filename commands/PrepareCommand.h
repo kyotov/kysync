@@ -15,7 +15,8 @@ class PrepareCommand final : public Command {
 public:
   PrepareCommand(
       std::istream &input,
-      std::ostream &output,
+      std::ostream &output_ksync,
+      std::ostream &output_compressed,
       size_t block);
 
   PrepareCommand(PrepareCommand &&) noexcept;

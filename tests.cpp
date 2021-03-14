@@ -221,12 +221,12 @@ std::stringstream createInputStream(const std::string &data)
   return result;
 }
 
-PrepareCommand prepare(const std::string& data, std::ostream &output, size_t block)
+PrepareCommand prepare(const std::string& data, std::ostream &output_ksync, std::ostream &output_compressed, size_t block)
 {
   const auto size = data.size();
 
   auto input = createInputStream(data);
-  PrepareCommand c(input, output, block);
+  PrepareCommand c(input, output_ksync, output_compressed, block);
   c.run();
 
   // FIXME: maybe make the expectation checking in a method??
@@ -237,7 +237,8 @@ PrepareCommand prepare(const std::string& data, std::ostream &output, size_t blo
           {"//progressTotalBytes", size},
       });
 
-  return std::move(c);
+  // TODO: A move instead of a copy causes a seg fault. To be investigated and fixed
+  return c; // std::move(c);
 }
 
 TEST(PrepareCommand, Simple)
@@ -246,8 +247,9 @@ TEST(PrepareCommand, Simple)
   auto block = 4;
   auto blockCount = (data.size() + block - 1) / block;
 
-  std::stringstream output;
-  auto c = prepare(data, output, block);
+  std::stringstream output_ksync;
+  std::stringstream output_compressed;
+  auto c = prepare(data, output_ksync, output_compressed, block);
 
   const auto &wcs = KySyncTest::examineWeakChecksums(c);
   EXPECT_EQ(wcs.size(), blockCount);
@@ -268,8 +270,9 @@ TEST(PrepareCommand, Simple2)
   auto block = 4;
   auto blockCount = (data.size() + block - 1) / block;
 
-  std::stringstream output;
-  auto c = prepare(data, output, block);
+  std::stringstream output_ksync;
+  std::stringstream output_compressed;
+  auto c = prepare(data, output_ksync, output_compressed, block);
 
   const auto &wcs = KySyncTest::examineWeakChecksums(c);
   EXPECT_EQ(wcs.size(), blockCount);
@@ -289,7 +292,8 @@ TEST(SyncCommand, MetadataRoundtrip)
   auto block = 4;
   std::string data = "0123456789";
   std::stringstream metadata;
-  auto pc = prepare(data, metadata, block);
+  std::stringstream compressed;
+  auto pc = prepare(data, metadata, compressed, block);
 
   auto input = createMemoryReaderUri(data);
   // std::stringstream output;
@@ -332,7 +336,8 @@ void EndToEndTest(
   LOG(INFO) << "E2E for " << sourceData.substr(0, 40);
 
   std::stringstream metadata;
-  auto pc = prepare(sourceData, metadata, block);
+  std::stringstream compressed;
+  auto pc = prepare(sourceData, metadata, compressed, block);
 
   auto input = createMemoryReaderUri(seedData);
   // std::stringstream output;

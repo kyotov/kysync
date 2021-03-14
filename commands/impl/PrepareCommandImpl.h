@@ -16,17 +16,24 @@ class PrepareCommand::Impl final {
   friend class KySyncTest;
 
   std::istream& input;
-  std::ostream& output;
+  std::ostream& output_ksync_;
+  std::ostream& output_compressed_;
   const size_t block;
 
   std::vector<uint32_t> weakChecksums;
   std::vector<StrongChecksum> strongChecksums;
+  // NOTE: This attempts to use the new style despite inconsistency
+  std::vector<uint64_t> compression_sizes_;
+  size_t compression_buffer_size_;
+  char *compression_buffer_;
+  const int compression_level_ = 1;
 
   Command::Impl &baseImpl;
 
   Impl(
       std::istream& _input,
-      std::ostream& _output,
+      std::ostream& _output_ksync,
+      std::ostream& _output_compressed,
       size_t _block,
       Command::Impl& _baseImpl);
 
