@@ -30,8 +30,8 @@ add_library(main STATIC
         checksums/StrongChecksumBuilder.cpp
         Monitor.cpp)
 target_link_libraries(main
-        #libssl_static
-        #libcrypto_static
+        ssl
+        crypto
         glog::glog)
 #FIXME: this is not portable and also not clear it works well for debug...
 #set_target_properties(main PROPERTIES COMPILE_FLAGS /GL)
