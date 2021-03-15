@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/deps/${CMAKE_BUILD_TYPE}/install)
 
+include(CTest)
+enable_testing()
+
 link_directories(${CMAKE_PREFIX_PATH}/lib)
 
 message(${CMAKE_PREFIX_PATH})
@@ -56,3 +59,8 @@ target_link_libraries(tests
         xxHash::xxhash
         GTest::gtest
         GTest::gtest_main)
+
+add_test(
+    NAME tests
+    COMMAND tests
+)
