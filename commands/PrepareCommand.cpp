@@ -55,10 +55,7 @@ int PrepareCommand::Impl::run()
       buffer, 
       count, 
       compression_level_);
-    if (ZSTD_isError(compressed_size)) {
-      LOG(ERROR) << "Error when performing zstd compression: " << ZSTD_getErrorName(compressed_size);
-    }
-    CHECK(!ZSTD_isError(compressed_size));
+    CHECK(!ZSTD_isError(compressed_size)) << "Error when performing zstd compression: " << ZSTD_getErrorName(compressed_size);
     LOG_ASSERT(compressed_size <= compression_buffer_size_);
     output_compressed_.write(compression_buffer_, compressed_size);
     compression_sizes_.push_back(compressed_size);
@@ -95,7 +92,7 @@ int PrepareCommand::Impl::run()
   /*
   output_ksync_.write(
       reinterpret_cast<const char *>(compression_sizes_.data()),
-      compression_sizes_.size() * sizeof(compression_sizes_));
+      compression_sizes_.size() * sizeof(char));
   */
 
   baseImpl.progressPhase++;
