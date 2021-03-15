@@ -92,7 +92,7 @@ int PrepareCommand::Impl::run()
   /*
   output_ksync_.write(
       reinterpret_cast<const char *>(compression_sizes_.data()),
-      compression_sizes_.size() * sizeof(char));
+      compression_sizes_.size() * sizeof(uint64_t));
   */
 
   baseImpl.progressPhase++;
