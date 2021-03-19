@@ -1,4 +1,4 @@
-#!/bin/bash -ox
+#!/bin/bash
 
 export TYPE=Debug
 
