@@ -45,10 +45,12 @@ IF (WIN32)
             PREFIX ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}
             CONFIGURE_COMMAND ""
             BUILD_COMMAND ""
-            INSTALL_COMMAND ${CMAKE_COMMAND} -E echo installing from `<SOURCE_DIR>/OpenSSL/1.1.1i` to `${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/install`
-            COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/include ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/install/include
-            COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/lib ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/install/lib
-            COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/bin ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/install/bin
+            INSTALL_COMMAND ${CMAKE_COMMAND} -E echo installing from `<SOURCE_DIR>/OpenSSL/1.1.1i` to `<INSTALL_DIR>/install`
+            COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/include <INSTALL_DIR>/install/include
+            #COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/lib <INSTALL_DIR>/install/lib
+            COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/OpenSSL/1.1.1i/lib/libssl_static.lib <INSTALL_DIR>/install/lib/ssl.lib
+            COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/OpenSSL/1.1.1i/lib/libcrypto_static.lib <INSTALL_DIR>/install/lib/crypto.lib
+            COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/bin <INSTALL_DIR>/install/bin
     )
 ELSE()
     ExternalProject_Add(
