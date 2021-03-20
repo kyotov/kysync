@@ -1,5 +1,8 @@
 #include "PrepareCommand.h"
 
+#include <cstring>
+#include <cinttypes>
+
 #include "../checksums/StrongChecksumBuilder.h"
 #include "../checksums/wcs.h"
 #include "impl/PrepareCommandImpl.h"
@@ -46,11 +49,12 @@ int PrepareCommand::Impl::run()
   baseImpl.progressPhase++;
 
   char header[1024];
+
   sprintf(
       header,
       "version: 1\n"
-      "size: %llu\n"
-      "block: %llu\n"
+      "size: %" PRIu64 "\n"
+      "block: %" PRIu64 "\n"
       "hash: %s\n"
       "eof: 1\n",
       baseImpl.progressCurrentBytes.load(),

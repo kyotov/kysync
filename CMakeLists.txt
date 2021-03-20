@@ -23,6 +23,9 @@ set(CMAKE_PREFIX_PATH ${DEPS_DIR}/install)
 
 #set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
+include(CTest)
+enable_testing()
+
 link_directories(${CMAKE_PREFIX_PATH}/lib)
 
 find_package(GTest REQUIRED NO_MODULE)
@@ -42,14 +45,15 @@ add_library(main STATIC
         checksums/wcs.cpp
         checksums/StrongChecksum.cpp
         checksums/StrongChecksumBuilder.cpp
-        monitor.cpp)
+        Monitor.cpp)
 target_link_libraries(main
-        libssl_static
-        libcrypto_static
+        ssl
+        crypto
         glog::glog)
+
 #FIXME: this is not portable and also not clear it works well for debug...
-set_target_properties(main PROPERTIES COMPILE_FLAGS /GL)
-set_target_properties(main PROPERTIES LINK_FLAGS /LTCG)
+#set_target_properties(main PROPERTIES COMPILE_FLAGS /GL)
+#set_target_properties(main PROPERTIES LINK_FLAGS /LTCG)
 
 add_executable(kysync
         main.cpp)
@@ -59,8 +63,9 @@ target_link_libraries(kysync
         glog::glog
         gflags
         xxHash::xxhash)
-set_target_properties(kysync PROPERTIES COMPILE_FLAGS /GL)
-set_target_properties(kysync PROPERTIES LINK_FLAGS /LTCG)
+
+#set_target_properties(kysync PROPERTIES COMPILE_FLAGS /GL)
+#set_target_properties(kysync PROPERTIES LINK_FLAGS /LTCG)
 
 add_executable(tests
         tests.cpp
@@ -70,3 +75,8 @@ target_link_libraries(tests
         xxHash::xxhash
         GTest::gtest
         GTest::gtest_main)
+
+add_test(
+    NAME tests
+    COMMAND tests
+)
