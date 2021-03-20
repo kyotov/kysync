@@ -95,6 +95,15 @@ void SyncCommand::Impl::readMetadata()
   CHECK_EQ(count, countRead) << "cannot read all strong checksums";
   offset += count;
 
+  // NOTE: The current logic reads all metadata information regardless of whether it is actually used
+  // Furthermore, it reads this information up front. This can potentially be optimized so as to
+  // read only when reconstructing source chunk
+  count = blockCount * sizeof(uint64_t);
+  compressed_sizes_.resize(blockCount);
+  countRead = metadataReader->read(compressed_sizes_.data(), offset, count);
+  CHECK_EQ(count, countRead) << "cannot read all sizes for compressed blocks";
+  offset += count;
+
   for (size_t index = 0; index < blockCount; index++) {
     set[weakChecksums[index]] = true;
     analysis[weakChecksums[index]] = {index, -1ull};

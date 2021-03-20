@@ -34,6 +34,8 @@ class SyncCommand::Impl final {
 
   std::vector<uint32_t> weakChecksums;
   std::vector<StrongChecksum> strongChecksums;
+  // NOTE: This attempts to use the new style despite inconsistency
+  std::vector<uint64_t> compressed_sizes_;
 
   const int threads;
 

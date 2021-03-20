@@ -58,7 +58,7 @@ int PrepareCommand::Impl::run()
     CHECK(!ZSTD_isError(compressed_size)) << "Error when performing zstd compression: " << ZSTD_getErrorName(compressed_size);
     LOG_ASSERT(compressed_size <= compression_buffer_size_);
     output_compressed_.write(compression_buffer_, compressed_size);
-    compression_sizes_.push_back(compressed_size);
+    compressed_sizes_.push_back(compressed_size);
 
     baseImpl.progressCurrentBytes += count;
   }
@@ -88,12 +88,9 @@ int PrepareCommand::Impl::run()
       reinterpret_cast<const char *>(strongChecksums.data()),
       strongChecksums.size() * sizeof(StrongChecksum));
 
-  // TODO: This will be enabled after the read logic has been updated
-  /*
   output_ksync_.write(
-      reinterpret_cast<const char *>(compression_sizes_.data()),
-      compression_sizes_.size() * sizeof(uint64_t));
-  */
+      reinterpret_cast<const char *>(compressed_sizes_.data()),
+      compressed_sizes_.size() * sizeof(uint64_t));
 
   baseImpl.progressPhase++;
   return 0;
