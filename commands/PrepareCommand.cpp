@@ -118,6 +118,7 @@ PrepareCommand::~PrepareCommand()
 {
   // TODO: Confirm whether this should be a part of Impl destructor
   delete[] pImpl->compression_buffer_;
+  pImpl->compression_buffer_ = nullptr;
 }
 
 int PrepareCommand::run()

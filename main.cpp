@@ -59,7 +59,7 @@ int main(int argc, char **argv)
       CHECK(output) << "unable to write to " << FLAGS_output_filename;
 
       auto c = SyncCommand(
-          FLAGS_data_uri,
+          FLAGS_data_uri + ".pzst",
           FLAGS_metadata_uri,
           "file://" + FLAGS_input_filename,
           FLAGS_output_filename,

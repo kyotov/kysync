@@ -3,6 +3,7 @@
 #include <fstream>
 #include <future>
 #include <map>
+#include <zstd.h>
 
 #include "../Config.h"
 #include "../checksums/StrongChecksumBuilder.h"
@@ -264,6 +265,9 @@ void SyncCommand::Impl::reconstructSourceChunk(
   auto smartBuffer = std::make_unique<char[]>(block);
   auto buffer = smartBuffer.get();
 
+  auto smart_decompression_buffer = std::make_unique<char[]>(block);
+  auto decompression_buffer = smart_decompression_buffer.get();
+
   auto seedReader = Reader::create(seedUri);
   auto dataReader = Reader::create(dataUri);
 
@@ -281,8 +285,19 @@ void SyncCommand::Impl::reconstructSourceChunk(
       count = seedReader->read(buffer, data.seedOffset, block);
       reusedBytes += count;
     } else {
-      count = dataReader->read(buffer, i * block, block);
-      downloadedBytes += count;
+      auto size_to_read = compressed_sizes_[i];
+      auto offset_to_read_from = compressed_file_offsets_[i];
+      CHECK(size_to_read <= block) << "Unexpected compressed size larger than block size";
+      count = dataReader->read(decompression_buffer, offset_to_read_from, size_to_read);
+      downloadedBytes += count;      
+      auto const expected_size_after_decompression = ZSTD_getFrameContentSize(decompression_buffer, count);
+      CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_ERROR) << "Offset starting " << offset_to_read_from << " not compressed by zstd!";
+      CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_UNKNOWN) << "Original size unknown when decompressing from offset " << offset_to_read_from;
+      CHECK(expected_size_after_decompression <= block) << "Expected decompressed size is greater than block size. Starting offset " << offset_to_read_from;
+      auto decompressed_size = ZSTD_decompress(buffer, block, decompression_buffer, count);
+      CHECK(!ZSTD_isError(decompressed_size)) << "Error when performing zstd decompression: " << ZSTD_getErrorName(decompressed_size);
+      LOG_ASSERT(decompressed_size <= block);
+      count = decompressed_size;
     }
 
     output.write(buffer, count);
@@ -308,7 +323,7 @@ void SyncCommand::Impl::reconstructSourceChunk(
 void SyncCommand::Impl::reconstructSource()
 {
   auto dataReader = Reader::create(dataUri);
-  auto dataSize = dataReader->size();
+  auto dataSize = size;
 
   baseImpl.progressPhase++;
   baseImpl.progressTotalBytes = dataSize;
