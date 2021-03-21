@@ -265,7 +265,8 @@ void SyncCommand::Impl::reconstructSourceChunk(
   auto smartBuffer = std::make_unique<char[]>(block);
   auto buffer = smartBuffer.get();
 
-  auto smart_decompression_buffer = std::make_unique<char[]>(block);
+  auto decompression_buffer_size = std::max(block, min_decompression_buffer_size);
+  auto smart_decompression_buffer = std::make_unique<char[]>(decompression_buffer_size);
   auto decompression_buffer = smart_decompression_buffer.get();
 
   auto seedReader = Reader::create(seedUri);
@@ -287,7 +288,7 @@ void SyncCommand::Impl::reconstructSourceChunk(
     } else {
       auto size_to_read = compressed_sizes_[i];
       auto offset_to_read_from = compressed_file_offsets_[i];
-      CHECK(size_to_read <= block) << "Unexpected compressed size larger than block size";
+      CHECK(size_to_read <= decompression_buffer_size) << "Unexpected compressed size larger than block size";
       count = dataReader->read(decompression_buffer, offset_to_read_from, size_to_read);
       downloadedBytes += count;      
       auto const expected_size_after_decompression = ZSTD_getFrameContentSize(decompression_buffer, count);

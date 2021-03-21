@@ -322,8 +322,8 @@ TEST(SyncCommand, MetadataRoundtrip)
       sc,
       {
           {"//progressPhase", 1},
-          {"//progressTotalBytes", 135},
-          {"//progressCurrentBytes", 135},
+          {"//progressTotalBytes", 159},
+          {"//progressCurrentBytes", 159},
       });
 }
 
@@ -348,9 +348,10 @@ void EndToEndTest(
   }
 
   auto metadataStr = metadata.str();
+  auto compressedStr = compressed.str();
 
   auto sc = SyncCommand(
-      createMemoryReaderUri(sourceData),
+      createMemoryReaderUri(compressedStr),
       createMemoryReaderUri(metadataStr),
       input,
       outputPath,
