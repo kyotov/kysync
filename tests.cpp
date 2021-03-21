@@ -412,3 +412,149 @@ TEST(SyncCommand, EndToEnd)
   auto inputData = input.str();
   EndToEndTest(inputData, "1234", 4, expected);
 }
+
+// NOTE: This attempts to use the new style despite inconsistency
+int PrepareFile(const std::string &source_file_name, size_t block_size, const std::string &output_metadata_file_name, const std::string &output_compressed_file_name)
+{
+  auto output_metadata = std::ofstream(output_metadata_file_name, std::ios::binary);
+  CHECK(output_metadata) << "unable to write to " << output_metadata_file_name;
+  auto output_compressed = std::ofstream(output_compressed_file_name, std::ios::binary);
+  CHECK(output_compressed) << "unable to write to " << output_compressed_file_name;
+  auto input = std::ifstream(source_file_name, std::ios::binary);
+  CHECK(input) << "unable to read from " << source_file_name;
+  return PrepareCommand(input, output_metadata, output_compressed, block_size).run();
+}
+
+bool DoFilesMatch(const std::string &first_file_name, const std::string &second_file_name) 
+{
+  if (std::filesystem::file_size(first_file_name) != std::filesystem::file_size(second_file_name)) {
+    return false;
+  }
+    
+  std::ifstream first(first_file_name, std::ifstream::binary);
+  CHECK(first) << "Could not open " << first_file_name;
+
+  std::ifstream second(second_file_name, std::ifstream::binary);
+  CHECK(second) << "Could not open " << second_file_name;
+
+  // TODO: This may not be necessary
+  first.seekg(0, std::ifstream::beg);
+  second.seekg(0, std::ifstream::beg);
+  return std::equal(
+    std::istreambuf_iterator<char>(first.rdbuf()),
+    std::istreambuf_iterator<char>(),
+    std::istreambuf_iterator<char>(second.rdbuf()));
+}
+
+void SyncFromCompressedFile(
+    const std::string &compressed_file_name,
+    const std::string &metadata_file_name,    
+    const std::string &seed_data_file_name,
+    size_t block_size,
+    const std::string &temp_path_name,
+    const std::string &expected_output_file_name)
+{
+  std::string file_uri_prefix = "file://";
+  std::string output_file_name = temp_path_name + "/syncd_output_file";
+  auto sync_command = SyncCommand(
+    file_uri_prefix + compressed_file_name,
+    file_uri_prefix + metadata_file_name,
+    file_uri_prefix + seed_data_file_name,
+    output_file_name,
+    32);
+  auto return_code = sync_command.run();
+  CHECK(return_code == 0) << "Sync command failed for " + compressed_file_name;
+  EXPECT_TRUE(DoFilesMatch(expected_output_file_name, output_file_name)) << "Sync'd output file does not match expectations";
+}
+
+std::filesystem::path CreateAndGetTempDir()
+{
+  // NOTE: We can use a temporary/random dirname to enable multiple test runs
+  // on the same machine. We currently use the same name mostly for convenience.
+  std::filesystem::path temp_path = fs::temp_directory_path() / "ksync_files_test";
+  if (fs::exists(temp_path)) 
+  {
+    fs::remove_all(temp_path);
+  }
+  fs::create_directories(temp_path);
+  return std::move(temp_path);
+}
+
+void ClearTempDir(const std::filesystem::path &temp_path)
+{
+  fs::remove_all(temp_path);
+}
+
+void EndToEndFilesTest(
+    const std::string &source_file_name,
+    const std::string &seed_data_file_name,
+    size_t block_size,
+    const std::string &expected_metadata_file_name,
+    const std::string &expected_compressed_file_name,
+    const std::string &expected_output_file_name)
+{
+  LOG(INFO) << "E2E Files Test for " << source_file_name;
+  LOG(INFO) << "Using seed file " << seed_data_file_name;
+
+  std::filesystem::path temp_path = CreateAndGetTempDir();
+  std::string temp_path_name = temp_path.string();
+  std::string metadata_file_name = temp_path_name + "/i.ksync";
+  std::string compressed_file_name = temp_path_name + "/i.pzst";
+  auto return_code = PrepareFile(
+    source_file_name, 
+    block_size,
+    metadata_file_name,
+    compressed_file_name);
+  CHECK(return_code == 0) << "Prepare command failed for " + source_file_name;
+  EXPECT_TRUE(DoFilesMatch(expected_metadata_file_name, metadata_file_name)) << "Generated metadata files does not match expectations";
+  EXPECT_TRUE(DoFilesMatch(expected_compressed_file_name, compressed_file_name)) << "Generated compressed file does not match expectations";
+  EXPECT_FALSE(DoFilesMatch(expected_metadata_file_name, compressed_file_name)) << "Unexpected match of metadata and compressed files";
+
+  SyncFromCompressedFile(
+    compressed_file_name,
+    metadata_file_name,
+    source_file_name,
+    block_size,
+    temp_path_name,
+    expected_output_file_name);
+
+  ClearTempDir(temp_path);
+}
+
+void RunEndToEndFilesTestFor(const std::string &file_name)
+{
+  EndToEndFilesTest(
+    file_name, 
+    file_name,
+    1024,
+    file_name + ".ksync",
+    file_name + ".pzst",
+    file_name);
+}
+
+TEST(SyncCommand, EndToEndFiles)
+{
+  // NOTE: This currently assumes that a test data dir exists one 
+  // level above the test's working directory
+  std::string test_data_path = "../test_data";
+  RunEndToEndFilesTestFor(test_data_path + "/test_file_small.txt");
+  RunEndToEndFilesTestFor(test_data_path + "/test_file.txt");
+}
+
+TEST(SyncCommand, SyncFileFromSeed)
+{
+  // NOTE: This currently assumes that a test data dir exists one 
+  // level above the test's working directory
+  std::string test_data_path = "../test_data";
+  std::string sync_file_name = test_data_path + "/test_file_v2.txt";
+  std::string seed_file_name = test_data_path + "/test_file.txt";
+  std::filesystem::path temp_path = CreateAndGetTempDir();
+  SyncFromCompressedFile(
+    sync_file_name + ".pzst",
+    sync_file_name + ".ksync",
+    seed_file_name,
+    1024,
+    temp_path.string(),
+    sync_file_name);  
+  ClearTempDir(temp_path);
+}

@@ -39,7 +39,7 @@ class SyncCommand::Impl final {
   std::vector<uint64_t> compressed_file_offsets_;
   // For really small block sizes (e.g. 4 bytes as used in tests), 
   // the compressed size can be larger than the original size.
-  const size_t min_decompression_buffer_size = 1024;
+  const size_t min_decompression_buffer_size_ = 1024;
 
   const int threads;
 
