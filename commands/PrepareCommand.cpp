@@ -20,8 +20,6 @@ PrepareCommand::Impl::Impl(
       block(_block),
       baseImpl(_baseImpl)
 {  
-  compression_buffer_size_ = ZSTD_compressBound(block);
-  compression_buffer_ = new char[compression_buffer_size_];
 }
 
 int PrepareCommand::Impl::run()
@@ -30,6 +28,10 @@ int PrepareCommand::Impl::run()
 
   auto unique_buffer = std::make_unique<char[]>(block);
   auto buffer = unique_buffer.get();
+
+  auto compression_buffer_size = ZSTD_compressBound(block);
+  auto unique_compression_buffer = std::make_unique<char[]>(compression_buffer_size);
+  auto compression_buffer = unique_compression_buffer.get();
 
   input.seekg(0, std::ios_base::end);
   baseImpl.progressTotalBytes = input.tellg();
@@ -50,14 +52,14 @@ int PrepareCommand::Impl::run()
     strongChecksums.push_back(StrongChecksum::compute(buffer, block));
 
     size_t compressed_size = ZSTD_compress(
-      compression_buffer_, 
-      compression_buffer_size_, 
+      compression_buffer, 
+      compression_buffer_size,
       buffer, 
       count, 
       compression_level_);
     CHECK(!ZSTD_isError(compressed_size)) << "Error when performing zstd compression: " << ZSTD_getErrorName(compressed_size);
-    LOG_ASSERT(compressed_size <= compression_buffer_size_);
-    output_compressed_.write(compression_buffer_, compressed_size);
+    LOG_ASSERT(compressed_size <= compression_buffer_size);
+    output_compressed_.write(compression_buffer, compressed_size);
     compressed_sizes_.push_back(compressed_size);
 
     baseImpl.progressCurrentBytes += count;
@@ -114,12 +116,7 @@ PrepareCommand::PrepareCommand(
 
 PrepareCommand::PrepareCommand(PrepareCommand &&) noexcept = default;
 
-PrepareCommand::~PrepareCommand()
-{
-  // TODO: Confirm whether this should be a part of Impl destructor
-  delete[] pImpl->compression_buffer_;
-  pImpl->compression_buffer_ = nullptr;
-}
+PrepareCommand::~PrepareCommand() = default;
 
 int PrepareCommand::run()
 {

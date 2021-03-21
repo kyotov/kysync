@@ -237,8 +237,7 @@ PrepareCommand prepare(const std::string& data, std::ostream &output_ksync, std:
           {"//progressTotalBytes", size},
       });
 
-  // TODO: A move instead of a copy causes a seg fault. To be investigated and fixed
-  return c; // std::move(c);
+  return std::move(c);
 }
 
 TEST(PrepareCommand, Simple)

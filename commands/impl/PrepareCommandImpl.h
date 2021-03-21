@@ -24,8 +24,6 @@ class PrepareCommand::Impl final {
   std::vector<StrongChecksum> strongChecksums;
   // NOTE: This attempts to use the new style despite inconsistency
   std::vector<uint64_t> compressed_sizes_;
-  size_t compression_buffer_size_;
-  char *compression_buffer_;
   const int compression_level_ = 1;
 
   Command::Impl &baseImpl;
