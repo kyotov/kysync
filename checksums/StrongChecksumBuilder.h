@@ -1,6 +1,8 @@
 #ifndef KSYNC_STRONGCHECKSUMBUILDER_H
 #define KSYNC_STRONGCHECKSUMBUILDER_H
 
+#include <memory>
+
 #include "StrongChecksum.h"
 #include <memory>
 

@@ -7,6 +7,9 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/deps/${CMAKE_BUILD_TYPE}/install)
 
+include(CTest)
+enable_testing()
+
 link_directories(${CMAKE_PREFIX_PATH}/lib)
 
 message(${CMAKE_PREFIX_PATH})
@@ -31,8 +34,8 @@ add_library(main STATIC
         checksums/StrongChecksumBuilder.cpp
         Monitor.cpp)
 target_link_libraries(main
-        #libssl_static
-        #libcrypto_static
+        ssl
+        crypto
         glog::glog)
 #FIXME: this is not portable and also not clear it works well for debug...
 #set_target_properties(main PROPERTIES COMPILE_FLAGS /GL)
@@ -59,3 +62,8 @@ target_link_libraries(tests
         zstd
         GTest::gtest
         GTest::gtest_main)
+
+add_test(
+    NAME tests
+    COMMAND tests
+)

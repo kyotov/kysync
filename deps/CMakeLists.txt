@@ -38,17 +38,30 @@ function(install NAME GIT_REPO GIT_TAG)
     )
 endfunction()
 
-ExternalProject_Add(
-        openssl
-        URL https://github.com/CristiFati/Prebuilt-Binaries/raw/master/OpenSSL/v1.1.1/OpenSSL-1.1.1i-Win-pc064.zip
-        PREFIX ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}
-        CONFIGURE_COMMAND ""
-        BUILD_COMMAND ""
-        INSTALL_COMMAND ${CMAKE_COMMAND} -E echo installing from `<SOURCE_DIR>/OpenSSL/1.1.1i` to `${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/install`
-        COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/include ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/install/include
-        COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/lib ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/install/lib
-        COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/bin ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/install/bin
-)
+IF (WIN32)
+    ExternalProject_Add(
+            openssl
+            URL https://github.com/CristiFati/Prebuilt-Binaries/raw/master/OpenSSL/v1.1.1/OpenSSL-1.1.1i-Win-pc064.zip
+            PREFIX ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}
+            CONFIGURE_COMMAND ""
+            BUILD_COMMAND ""
+            INSTALL_COMMAND ${CMAKE_COMMAND} -E echo installing from `<SOURCE_DIR>/OpenSSL/1.1.1i` to `${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/install`
+            COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/include ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/install/include
+            COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/lib ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/install/lib
+            COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/bin ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/install/bin
+    )
+ELSE()
+    ExternalProject_Add(
+            openssl
+            GIT_REPOSITORY https://github.com/openssl/openssl.git
+            GIT_TAG OpenSSL_1_1_1-stable
+            PREFIX ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}
+            CONFIGURE_COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> ./config no-shared no-dso --prefix=<INSTALL_DIR>/install --openssldir=<INSTALL_DIR>/install
+            BUILD_COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> make -j build_libs
+            INSTALL_COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> make install_dev
+    )
+ENDIF()
+
 
 install(gflags
         https://github.com/gflags/gflags.git
@@ -100,3 +113,9 @@ install(httplib
 
         CMAKE_ARGS
         -DOPENSSL_USE_STATIC_LIBS=TRUE)
+
+install(zstd
+        https://github.com/facebook/zstd.git
+        v1.4.7
+
+        SOURCE_SUBDIR build/cmake)

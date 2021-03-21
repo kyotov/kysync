@@ -1,9 +1,10 @@
 #include "PrepareCommand.h"
 
 #include <cstring>
-
+#include <cinttypes>
 #include <glog/logging.h>
 #include <zstd.h>
+
 #include "../checksums/StrongChecksumBuilder.h"
 #include "../checksums/wcs.h"
 #include "impl/PrepareCommandImpl.h"
@@ -69,11 +70,12 @@ int PrepareCommand::Impl::run()
   baseImpl.progressPhase++;
 
   char header[1024];
+
   sprintf(
       header,
       "version: 1\n"
-      "size: %lu\n" // "size: %llu\n"
-      "block: %lu\n" // "block: %llu\n"
+      "size: %" PRIu64 "\n"
+      "block: %" PRIu64 "\n"
       "hash: %s\n"
       "eof: 1\n",
       baseImpl.progressCurrentBytes.load(),
