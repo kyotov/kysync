@@ -10,45 +10,45 @@
 #include "impl/PrepareCommandImpl.h"
 
 PrepareCommand::Impl::Impl(
-    std::istream &_input,
-    std::ostream &_output_ksync,
-    std::ostream &_output_compressed,
-    size_t _block,
-    Command::Impl &_baseImpl)
-    : input(_input),
-      output_ksync_(_output_ksync),
-      output_compressed_(_output_compressed),
-      block(_block),
-      baseImpl(_baseImpl)
+    std::istream &input,
+    std::ostream &output_ksync,
+    std::ostream &output_compressed,
+    size_t block_size,
+    Command::Impl &baseImpl)
+    : input_(input),
+      output_ksync_(output_ksync),
+      output_compressed_(output_compressed),
+      block_size_(block_size),
+      base_impl_(baseImpl)
 {  
 }
 
 int PrepareCommand::Impl::run()
 {
-  baseImpl.progressPhase++;
+  base_impl_.progressPhase++;
 
-  auto unique_buffer = std::make_unique<char[]>(block);
+  auto unique_buffer = std::make_unique<char[]>(block_size_);
   auto buffer = unique_buffer.get();
 
-  auto compression_buffer_size = ZSTD_compressBound(block);
+  auto compression_buffer_size = ZSTD_compressBound(block_size_);
   auto unique_compression_buffer = std::make_unique<char[]>(compression_buffer_size);
   auto compression_buffer = unique_compression_buffer.get();
 
-  input.seekg(0, std::ios_base::end);
-  baseImpl.progressTotalBytes = input.tellg();
+  input_.seekg(0, std::ios_base::end);
+  base_impl_.progressTotalBytes = input_.tellg();
 
   StrongChecksumBuilder hash;
 
-  baseImpl.progressCurrentBytes = 0;
+  base_impl_.progressCurrentBytes = 0;
 
-  input.seekg(0);
-  while (auto count = input.read(buffer, block).gcount()) {
-    memset(buffer + count, 0, block - count);
+  input_.seekg(0);
+  while (auto count = input_.read(buffer, block_size_).gcount()) {
+    memset(buffer + count, 0, block_size_ - count);
 
     hash.update(buffer, count);
 
-    weakChecksums.push_back(weakChecksum(buffer, block));
-    strongChecksums.push_back(StrongChecksum::compute(buffer, block));
+    weakChecksums.push_back(weakChecksum(buffer, block_size_));
+    strongChecksums.push_back(StrongChecksum::compute(buffer, block_size_));
 
     size_t compressed_size = ZSTD_compress(
       compression_buffer, 
@@ -61,11 +61,11 @@ int PrepareCommand::Impl::run()
     output_compressed_.write(compression_buffer, compressed_size);
     compressed_sizes_.push_back(compressed_size);
 
-    baseImpl.progressCurrentBytes += count;
+    base_impl_.progressCurrentBytes += count;
   }
 
   // produce the ksync metadata output
-  baseImpl.progressPhase++;
+  base_impl_.progressPhase++;
 
   char header[1024];
 
@@ -76,8 +76,8 @@ int PrepareCommand::Impl::run()
       "block: %" PRIu64 "\n"
       "hash: %s\n"
       "eof: 1\n",
-      baseImpl.progressCurrentBytes.load(),
-      block,
+      base_impl_.progressCurrentBytes.load(),
+      block_size_,
       hash.digest().toString().c_str());
 
   output_ksync_.write(header, strlen(header));
@@ -94,7 +94,7 @@ int PrepareCommand::Impl::run()
       reinterpret_cast<const char *>(compressed_sizes_.data()),
       compressed_sizes_.size() * sizeof(uint64_t));
 
-  baseImpl.progressPhase++;
+  base_impl_.progressPhase++;
   return 0;
 }
 

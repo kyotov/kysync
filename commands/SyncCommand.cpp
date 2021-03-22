@@ -81,29 +81,29 @@ void SyncCommand::Impl::readMetadata()
   parseHeader(*metadataReader);
   offset = headerSize;
 
-  size_t count;
-  size_t countRead;
+  size_t size;
+  size_t size_read;
 
-  count = blockCount * sizeof(uint32_t);
+  size = blockCount * sizeof(uint32_t);
   weakChecksums.resize(blockCount);
-  countRead = metadataReader->read(weakChecksums.data(), offset, count);
-  CHECK_EQ(count, countRead) << "cannot read all weak checksums";
-  offset += count;
+  size_read = metadataReader->read(weakChecksums.data(), offset, size);
+  CHECK_EQ(size, size_read) << "cannot read all weak checksums";
+  offset += size;
 
-  count = blockCount * sizeof(StrongChecksum);
+  size = blockCount * sizeof(StrongChecksum);
   strongChecksums.resize(blockCount);
-  countRead = metadataReader->read(strongChecksums.data(), offset, count);
-  CHECK_EQ(count, countRead) << "cannot read all strong checksums";
-  offset += count;
+  size_read = metadataReader->read(strongChecksums.data(), offset, size);
+  CHECK_EQ(size, size_read) << "cannot read all strong checksums";
+  offset += size;
 
   // NOTE: The current logic reads all metadata information regardless of whether it is actually used
   // Furthermore, it reads this information up front. This can potentially be optimized so as to
   // read only when reconstructing source chunk
-  count = blockCount * sizeof(uint64_t);
+  size = blockCount * sizeof(uint64_t);
   compressed_sizes_.resize(blockCount);
-  countRead = metadataReader->read(compressed_sizes_.data(), offset, count);
-  CHECK_EQ(count, countRead) << "cannot read all sizes for compressed blocks";
-  offset += count;
+  size_read = metadataReader->read(compressed_sizes_.data(), offset, size);
+  CHECK_EQ(size, size_read) << "cannot read all sizes for compressed blocks";
+  offset += size;
 
   compressed_file_offsets_.resize(blockCount);
   compressed_file_offsets_[0] = 0;

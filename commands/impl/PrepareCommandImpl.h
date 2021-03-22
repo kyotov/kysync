@@ -15,10 +15,10 @@ class PrepareCommand::Impl final {
   friend class PrepareCommand;
   friend class KySyncTest;
 
-  std::istream& input;
+  std::istream& input_;
   std::ostream& output_ksync_;
   std::ostream& output_compressed_;
-  const size_t block;
+  const size_t block_size_;
 
   std::vector<uint32_t> weakChecksums;
   std::vector<StrongChecksum> strongChecksums;
@@ -26,14 +26,14 @@ class PrepareCommand::Impl final {
   std::vector<uint64_t> compressed_sizes_;
   const int compression_level_ = 1;
 
-  Command::Impl &baseImpl;
+  Command::Impl &base_impl_;
 
   Impl(
-      std::istream& _input,
-      std::ostream& _output_ksync,
-      std::ostream& _output_compressed,
-      size_t _block,
-      Command::Impl& _baseImpl);
+      std::istream& input,
+      std::ostream& output_ksync,
+      std::ostream& output_compressed,
+      size_t block_size,
+      Command::Impl& baseImpl);
 
   int run();
 
