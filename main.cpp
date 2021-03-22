@@ -32,7 +32,6 @@ int main(int argc, char **argv)
     LOG(INFO) << "ksync v0.1"; 
 
     if (FLAGS_command == "prepare") {
-      // TODO: Refactor to call through function or lambda
       if (FLAGS_output_ksync_filename.empty()) {
         FLAGS_output_ksync_filename = FLAGS_input_filename + ".ksync";
       }
