@@ -47,8 +47,6 @@ int PrepareCommand::Impl::run()
 
     hash.update(buffer, count);
 
-    // TODO: Ensure that it's a conscious perf tradeoff to have
-    // 3 vectors instead of a single vector of (weakchecksum, strongchecksum, compressoffset) tuples
     weakChecksums.push_back(weakChecksum(buffer, block));
     strongChecksums.push_back(StrongChecksum::compute(buffer, block));
 
