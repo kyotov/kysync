@@ -436,9 +436,8 @@ bool DoFilesMatch(const std::string &first_file_name, const std::string &second_
   std::ifstream second(second_file_name, std::ifstream::binary);
   CHECK(second) << "Could not open " << second_file_name;
 
-  // TODO: This may not be necessary
-  first.seekg(0, std::ifstream::beg);
-  second.seekg(0, std::ifstream::beg);
+  LOG_ASSERT(first.tellg() == 0) << "Unexpected file position on open";
+  LOG_ASSERT(second.tellg() == 0) << "Unexpected file position on open";
   return std::equal(
     std::istreambuf_iterator<char>(first.rdbuf()),
     std::istreambuf_iterator<char>(),
