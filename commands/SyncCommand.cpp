@@ -105,10 +105,10 @@ void SyncCommand::Impl::readMetadata()
   CHECK_EQ(size, size_read) << "cannot read all sizes for compressed blocks";
   offset += size;
 
-  compressed_file_offsets_.resize(blockCount);
-  compressed_file_offsets_[0] = 0;
+  compressed_file_offsets_.reserve(blockCount);
+  compressed_file_offsets_.push_back(0);
   for (int i = 1; i < blockCount; i++) {
-    compressed_file_offsets_[i] = compressed_file_offsets_[i-1] + compressed_sizes_[i-1];
+    compressed_file_offsets_.push_back(compressed_file_offsets_[i-1] + compressed_sizes_[i-1]);
   }
 
   for (size_t index = 0; index < blockCount; index++) {
