@@ -258,7 +258,7 @@ void SyncCommand::Impl::reconstructSourceChunk(
   auto smartBuffer = std::make_unique<char[]>(block);
   auto buffer = smartBuffer.get();
 
-  auto decompression_buffer_size = std::max(block, min_decompression_buffer_size_);
+  auto decompression_buffer_size = ZSTD_compressBound(block);
   auto smart_decompression_buffer = std::make_unique<char[]>(decompression_buffer_size);
   auto decompression_buffer = smart_decompression_buffer.get();
 
