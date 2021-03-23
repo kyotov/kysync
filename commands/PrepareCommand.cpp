@@ -23,6 +23,14 @@ PrepareCommand::Impl::Impl(
 {  
 }
 
+template<typename T>
+void PrepareCommand::Impl::WriteToMetadataStream(const std::vector<T>& container)
+{  
+  output_ksync_.write(
+      reinterpret_cast<const char *>(container.data()),
+      container.size() * sizeof(typename std::vector<T>::value_type));
+}
+
 int PrepareCommand::Impl::run()
 {
   base_impl_.progressPhase++;
@@ -82,17 +90,9 @@ int PrepareCommand::Impl::run()
 
   output_ksync_.write(header, strlen(header));
 
-  output_ksync_.write(
-      reinterpret_cast<const char *>(weakChecksums.data()),
-      weakChecksums.size() * sizeof(uint32_t));
-
-  output_ksync_.write(
-      reinterpret_cast<const char *>(strongChecksums.data()),
-      strongChecksums.size() * sizeof(StrongChecksum));
-
-  output_ksync_.write(
-      reinterpret_cast<const char *>(compressed_sizes_.data()),
-      compressed_sizes_.size() * sizeof(uint64_t));
+  WriteToMetadataStream(weakChecksums);
+  WriteToMetadataStream(strongChecksums);
+  WriteToMetadataStream(compressed_sizes_);
 
   base_impl_.progressPhase++;
   return 0;
