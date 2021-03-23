@@ -68,6 +68,16 @@ void SyncCommand::Impl::parseHeader(const Reader &metadataReader)
   headerSize = header.tellg();
 }
 
+template<typename T>
+size_t SyncCommand::Impl::ReadMetadataIntoContainer(const Reader& metadata_reader, size_t offset, std::vector<T>& container)
+{
+  size_t size_to_read = blockCount * sizeof(typename std::vector<T>::value_type);
+  container.resize(blockCount);
+  size_t size_read = metadata_reader.read(container.data(), offset, size_to_read);
+  CHECK_EQ(size_to_read, size_read) << "cannot read metadata";
+  return size_read;
+}
+
 void SyncCommand::Impl::readMetadata()
 {
   auto metadataReader = Reader::create(metadataUri);
@@ -81,29 +91,12 @@ void SyncCommand::Impl::readMetadata()
   parseHeader(*metadataReader);
   offset = headerSize;
 
-  size_t size;
-  size_t size_read;
-
-  size = blockCount * sizeof(uint32_t);
-  weakChecksums.resize(blockCount);
-  size_read = metadataReader->read(weakChecksums.data(), offset, size);
-  CHECK_EQ(size, size_read) << "cannot read all weak checksums";
-  offset += size;
-
-  size = blockCount * sizeof(StrongChecksum);
-  strongChecksums.resize(blockCount);
-  size_read = metadataReader->read(strongChecksums.data(), offset, size);
-  CHECK_EQ(size, size_read) << "cannot read all strong checksums";
-  offset += size;
-
   // NOTE: The current logic reads all metadata information regardless of whether it is actually used
   // Furthermore, it reads this information up front. This can potentially be optimized so as to
   // read only when reconstructing source chunk
-  size = blockCount * sizeof(uint64_t);
-  compressed_sizes_.resize(blockCount);
-  size_read = metadataReader->read(compressed_sizes_.data(), offset, size);
-  CHECK_EQ(size, size_read) << "cannot read all sizes for compressed blocks";
-  offset += size;
+  offset += ReadMetadataIntoContainer(*metadataReader.get(), offset, weakChecksums);
+  offset += ReadMetadataIntoContainer(*metadataReader.get(), offset, strongChecksums);
+  offset += ReadMetadataIntoContainer(*metadataReader.get(), offset, compressed_sizes_);
 
   compressed_file_offsets_.reserve(blockCount);
   compressed_file_offsets_.push_back(0);

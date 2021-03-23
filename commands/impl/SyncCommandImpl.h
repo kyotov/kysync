@@ -59,6 +59,9 @@ class SyncCommand::Impl final {
       int _threads,
       Command::Impl &_baseImpl);
 
+  template<typename T>
+  size_t ReadMetadataIntoContainer(const Reader& metadata_reader, size_t offset, std::vector<T>& container);
+
   void parseHeader(const Reader &metadataReader);
   void readMetadata();
   void analyzeSeedChunk(int id, size_t startOffset, size_t endOffset);
