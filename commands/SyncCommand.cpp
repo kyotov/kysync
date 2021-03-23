@@ -289,7 +289,7 @@ void SyncCommand::Impl::reconstructSourceChunk(
       CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_UNKNOWN) << "Original size unknown when decompressing from offset " << offset_to_read_from;
       CHECK(expected_size_after_decompression <= block) << "Expected decompressed size is greater than block size. Starting offset " << offset_to_read_from;
       auto decompressed_size = ZSTD_decompress(buffer, block, decompression_buffer, count);
-      CHECK(!ZSTD_isError(decompressed_size)) << "Error when performing zstd decompression: " << ZSTD_getErrorName(decompressed_size);
+      CHECK(!ZSTD_isError(decompressed_size)) << ZSTD_getErrorName(decompressed_size);
       LOG_ASSERT(decompressed_size <= block);
       count = decompressed_size;
     }
