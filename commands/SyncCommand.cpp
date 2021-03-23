@@ -98,7 +98,6 @@ void SyncCommand::Impl::readMetadata()
   offset += ReadMetadataIntoContainer(*metadataReader.get(), offset, strongChecksums);
   offset += ReadMetadataIntoContainer(*metadataReader.get(), offset, compressed_sizes_);
 
-  compressed_file_offsets_.reserve(blockCount);
   compressed_file_offsets_.push_back(0);
   for (int i = 1; i < blockCount; i++) {
     compressed_file_offsets_.push_back(compressed_file_offsets_[i-1] + compressed_sizes_[i-1]);
