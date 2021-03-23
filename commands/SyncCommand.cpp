@@ -281,7 +281,7 @@ void SyncCommand::Impl::reconstructSourceChunk(
     } else {
       auto size_to_read = compressed_sizes_[i];
       auto offset_to_read_from = compressed_file_offsets_[i];
-      CHECK(size_to_read <= decompression_buffer_size) << "Unexpected compressed size larger than block size";
+      CHECK(size_to_read <= decompression_buffer_size) << "Unexpected compressed size larger than compress bounds for block size";
       count = dataReader->read(decompression_buffer, offset_to_read_from, size_to_read);
       downloadedBytes += count;      
       auto const expected_size_after_decompression = ZSTD_getFrameContentSize(decompression_buffer, count);
