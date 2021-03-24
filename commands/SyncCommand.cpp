@@ -78,6 +78,20 @@ size_t SyncCommand::Impl::ReadMetadataIntoContainer(const Reader& metadata_reade
   return size_read;
 }
 
+void SyncCommand::Impl::UpdateCompressedOffsetsAndMaxSize() 
+{
+  compressed_file_offsets_.push_back(0);
+  if (compressed_sizes_.size() > 0) {
+    max_compressed_size_ = compressed_sizes_[0];
+  }
+  for (int i = 1; i < blockCount; i++) {
+    compressed_file_offsets_.push_back(compressed_file_offsets_[i-1] + compressed_sizes_[i-1]);
+    if (compressed_sizes_[i] > max_compressed_size_) {
+      max_compressed_size_ = compressed_sizes_[i];
+    }
+  }
+}
+
 void SyncCommand::Impl::readMetadata()
 {
   auto metadataReader = Reader::create(metadataUri);
@@ -98,10 +112,7 @@ void SyncCommand::Impl::readMetadata()
   offset += ReadMetadataIntoContainer(*metadataReader.get(), offset, strongChecksums);
   offset += ReadMetadataIntoContainer(*metadataReader.get(), offset, compressed_sizes_);
 
-  compressed_file_offsets_.push_back(0);
-  for (int i = 1; i < blockCount; i++) {
-    compressed_file_offsets_.push_back(compressed_file_offsets_[i-1] + compressed_sizes_[i-1]);
-  }
+  UpdateCompressedOffsetsAndMaxSize();
 
   for (size_t index = 0; index < blockCount; index++) {
     set[weakChecksums[index]] = true;
@@ -257,8 +268,7 @@ void SyncCommand::Impl::reconstructSourceChunk(
   auto smartBuffer = std::make_unique<char[]>(block);
   auto buffer = smartBuffer.get();
 
-  auto decompression_buffer_size = ZSTD_compressBound(block);
-  auto smart_decompression_buffer = std::make_unique<char[]>(decompression_buffer_size);
+  auto smart_decompression_buffer = std::make_unique<char[]>(max_compressed_size_);
   auto decompression_buffer = smart_decompression_buffer.get();
 
   auto seedReader = Reader::create(seedUri);
@@ -280,7 +290,7 @@ void SyncCommand::Impl::reconstructSourceChunk(
     } else {
       auto size_to_read = compressed_sizes_[i];
       auto offset_to_read_from = compressed_file_offsets_[i];
-      CHECK(size_to_read <= decompression_buffer_size) << "Unexpected compressed size larger than compress bounds for block size";
+      LOG_ASSERT(size_to_read <= max_compressed_size_);
       count = dataReader->read(decompression_buffer, offset_to_read_from, size_to_read);
       downloadedBytes += count;      
       auto const expected_size_after_decompression = ZSTD_getFrameContentSize(decompression_buffer, count);

@@ -37,6 +37,7 @@ class SyncCommand::Impl final {
   // NOTE: This attempts to use the new style despite inconsistency
   std::vector<uint64_t> compressed_sizes_;
   std::vector<uint64_t> compressed_file_offsets_;
+  uint64_t max_compressed_size_;
 
   const int threads;
 
@@ -60,6 +61,7 @@ class SyncCommand::Impl final {
   size_t ReadMetadataIntoContainer(const Reader& metadata_reader, size_t offset, std::vector<T>& container);
 
   void parseHeader(const Reader &metadataReader);
+  void UpdateCompressedOffsetsAndMaxSize();
   void readMetadata();
   void analyzeSeedChunk(int id, size_t startOffset, size_t endOffset);
   void analyzeSeed();
