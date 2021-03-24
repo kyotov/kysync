@@ -530,6 +530,14 @@ void RunEndToEndFilesTestFor(const std::string &file_name)
     file_name);
 }
 
+// Test summary:
+// For a small file (less than block size) and a general file (a few blocks 
+//   plus a few additional bytes):
+// 1. Run prepare command. 
+// 2. Confirm that the ksync and pzst files are as expected.
+// 3. Use the generated ksync and pzst files to sync to a new output file. 
+// Ensure that the new output file matches the original file. A seed file is 
+// required and for this, the original file is used.
 TEST(SyncCommand, EndToEndFiles)
 {
   // NOTE: This currently assumes that a test data dir exists one 
@@ -539,6 +547,11 @@ TEST(SyncCommand, EndToEndFiles)
   RunEndToEndFilesTestFor(test_data_path + "/test_file.txt");
 }
 
+// Test summary:
+// 1. Use a regular file as seed. Provide a ksync and a pzst file for a 
+//     new version (v2 file that has modifications on the original). 
+// 2. Run sync.
+// Ensure that newly sync'd file matches the original non-compressed v2 file.
 TEST(SyncCommand, SyncFileFromSeed)
 {
   // NOTE: This currently assumes that a test data dir exists one 
