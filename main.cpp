@@ -19,6 +19,7 @@ DEFINE_string(data_uri, "", "data uri");            // NOLINT(cert-err58-cpp)
 DEFINE_string(metadata_uri, "", "data uri");        // NOLINT(cert-err58-cpp)
 DEFINE_uint32(block, 1024, "block size");           // NOLINT(cert-err58-cpp)
 DEFINE_uint32(threads, 32, "number of threads");    // NOLINT(cert-err58-cpp)
+DEFINE_bool(compression_disabled, false, "true implies source file does not have compression"); // NOLINT(cert-err58-cpp)
 
 int main(int argc, char **argv)
 {
@@ -58,7 +59,8 @@ int main(int argc, char **argv)
       CHECK(output) << "unable to write to " << FLAGS_output_filename;
 
       auto c = SyncCommand(
-          FLAGS_data_uri + ".pzst",
+          FLAGS_data_uri + (FLAGS_compression_disabled ? "" : ".pzst"),
+          FLAGS_compression_disabled,
           FLAGS_metadata_uri,
           "file://" + FLAGS_input_filename,
           FLAGS_output_filename,

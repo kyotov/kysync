@@ -302,6 +302,7 @@ TEST(SyncCommand, MetadataRoundtrip)
 
   auto sc = SyncCommand(
       createMemoryReaderUri(data),
+      false,
       createMemoryReaderUri(metadataStr),
       input,
       outputPath,
@@ -329,6 +330,7 @@ TEST(SyncCommand, MetadataRoundtrip)
 void EndToEndTest(
     const std::string &sourceData,
     const std::string &seedData,
+    bool compression_disabled,
     size_t block,
     const std::vector<size_t> &expectedBlockMapping)
 {
@@ -347,10 +349,11 @@ void EndToEndTest(
   }
 
   auto metadataStr = metadata.str();
-  auto compressedStr = compressed.str();
+  auto source_data_to_use = compression_disabled ? sourceData : compressed.str();
 
   auto sc = SyncCommand(
-      createMemoryReaderUri(compressedStr),
+      createMemoryReaderUri(source_data_to_use),
+      compression_disabled,
       createMemoryReaderUri(metadataStr),
       input,
       outputPath,
@@ -371,19 +374,20 @@ void EndToEndTest(
   EXPECT_EQ(sourceData, buffer.get());
 }
 
-TEST(SyncCommand, EndToEnd)
+void RunEndToEndTests(bool compression_disabled)
 {
   // FIXME: research if we can do parametrized testing...
   std::string data = "0123456789";
-  EndToEndTest(data, data, 4, {0, 4, -1ull /*8*/});
-  EndToEndTest(data, data, 6, {0, -1ull /*6*/});
+  EndToEndTest(data, data, compression_disabled, 4, {0, 4, -1ull /*8*/});
+  EndToEndTest(data, data, compression_disabled, 6, {0, -1ull /*6*/});
 
-  EndToEndTest("0123456789", "001234004567", 4, {1, 8, -1ull});
-  EndToEndTest("123412341234", "00123400", 4, {2, 2, 2});
-  EndToEndTest("12345678", "", 4, {-1ull, -1ull});
+  EndToEndTest("0123456789", "001234004567", compression_disabled, 4, {1, 8, -1ull});
+  EndToEndTest("123412341234", "00123400", compression_disabled, 4, {2, 2, 2});
+  EndToEndTest("12345678", "", compression_disabled, 4, {-1ull, -1ull});
   EndToEndTest(
       "abcdefjhijklmnopqrstuvwxyz",
       "_qrst_mnop_ijkl_abcd_efjh_uvwx_yz",
+      compression_disabled,
       4,
       {16, 21, 11, 6, 1, 26, -1ull /*31*/});
 
@@ -391,12 +395,14 @@ TEST(SyncCommand, EndToEnd)
     EndToEndTest(
         "1234234534564567567867897890",
         "1234567890",
+        compression_disabled,
         4,
         {0, -1ull, -1ull, -1ull, 4, -1ull, -1ull});
   } else {
     EndToEndTest(
         "1234234534564567567867897890",
         "1234567890",
+        compression_disabled,
         4,
         {0, 1, 2, 3, 4, 5, 6});
   }
@@ -409,7 +415,13 @@ TEST(SyncCommand, EndToEnd)
     expected.push_back(0);
   }
   auto inputData = input.str();
-  EndToEndTest(inputData, "1234", 4, expected);
+  EndToEndTest(inputData, "1234", compression_disabled, 4, expected);
+}
+
+TEST(SyncCommand, EndToEnd)
+{
+  RunEndToEndTests(false);
+  RunEndToEndTests(true);
 }
 
 // NOTE: This attempts to use the new style despite inconsistency
@@ -444,8 +456,9 @@ bool DoFilesMatch(const std::string &first_file_name, const std::string &second_
     std::istreambuf_iterator<char>(second.rdbuf()));
 }
 
-void SyncFromCompressedFile(
-    const std::string &compressed_file_name,
+void SyncFile(
+    const std::string &source_file_name,
+    const bool compression_disabled,
     const std::string &metadata_file_name,    
     const std::string &seed_data_file_name,
     size_t block_size,
@@ -455,13 +468,14 @@ void SyncFromCompressedFile(
   std::string file_uri_prefix = "file://";
   std::string output_file_name = temp_path_name + "/syncd_output_file";
   auto sync_command = SyncCommand(
-    file_uri_prefix + compressed_file_name,
+    file_uri_prefix + source_file_name,
+    compression_disabled,
     file_uri_prefix + metadata_file_name,
     file_uri_prefix + seed_data_file_name,
     output_file_name,
     32);
   auto return_code = sync_command.run();
-  CHECK(return_code == 0) << "Sync command failed for " + compressed_file_name;
+  CHECK(return_code == 0) << "Sync command failed for " + source_file_name;
   EXPECT_TRUE(DoFilesMatch(expected_output_file_name, output_file_name)) << "Sync'd output file does not match expectations";
 }
 
@@ -508,8 +522,9 @@ void EndToEndFilesTest(
   EXPECT_TRUE(DoFilesMatch(expected_compressed_file_name, compressed_file_name)) << "Generated compressed file does not match expectations";
   EXPECT_FALSE(DoFilesMatch(expected_metadata_file_name, compressed_file_name)) << "Unexpected match of metadata and compressed files";
 
-  SyncFromCompressedFile(
+  SyncFile(
     compressed_file_name,
+    false,
     metadata_file_name,
     source_file_name,
     block_size,
@@ -560,8 +575,29 @@ TEST(SyncCommand, SyncFileFromSeed)
   std::string sync_file_name = test_data_path + "/test_file_v2.txt";
   std::string seed_file_name = test_data_path + "/test_file.txt";
   std::filesystem::path temp_path = CreateAndGetTempDir();
-  SyncFromCompressedFile(
+  SyncFile(
     sync_file_name + ".pzst",
+    false,
+    sync_file_name + ".ksync",
+    seed_file_name,
+    1024,
+    temp_path.string(),
+    sync_file_name);  
+  ClearTempDir(temp_path);
+}
+
+// Test syncing from a non-compressed file
+TEST(SyncCommand, SyncNonCompressedFile)
+{
+  // NOTE: This currently assumes that a test data dir exists one 
+  // level above the test's working directory
+  std::string test_data_path = "../test_data";
+  std::string sync_file_name = test_data_path + "/test_file_v2.txt";
+  std::string seed_file_name = test_data_path + "/test_file.txt";
+  std::filesystem::path temp_path = CreateAndGetTempDir();
+  SyncFile(
+    sync_file_name,
+    true,
     sync_file_name + ".ksync",
     seed_file_name,
     1024,

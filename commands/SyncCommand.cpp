@@ -12,18 +12,20 @@
 #include "impl/SyncCommandImpl.h"
 
 SyncCommand::Impl::Impl(
-    std::string _dataUri,
-    std::string _metadataUri,
-    std::string _seedUri,
-    std::filesystem::path _outputPath,
-    int _threads,
-    Command::Impl &_baseImpl)
-    : dataUri(std::move(_dataUri)),
-      metadataUri(std::move(_metadataUri)),
-      seedUri(std::move(_seedUri)),
-      outputPath(std::move(_outputPath)),
-      threads(_threads),
-      baseImpl(_baseImpl)
+    std::string data_uri,
+    bool compression_disabled,
+    std::string metadata_uri,
+    std::string seed_uri,
+    std::filesystem::path output_path,
+    int threads,
+    Command::Impl &base_impl)
+    : dataUri(std::move(data_uri)),
+      compression_diabled_(compression_disabled),
+      metadataUri(std::move(metadata_uri)),
+      seedUri(std::move(seed_uri)),
+      outputPath(std::move(output_path)),
+      threads_(threads),
+      baseImpl(base_impl)
 {
 }
 
@@ -246,7 +248,7 @@ void SyncCommand::Impl::analyzeSeed()
       seedDataSize,
       block,
       block,
-      threads,
+      threads_,
       // TODO: fold this function in here so we would not need the lambda
       [this](auto id, auto beg, auto end) { analyzeSeedChunk(id, beg, end); });
 }
@@ -288,19 +290,27 @@ void SyncCommand::Impl::reconstructSourceChunk(
       count = seedReader->read(buffer, data.seedOffset, block);
       reusedBytes += count;
     } else {
-      auto size_to_read = compressed_sizes_[i];
-      auto offset_to_read_from = compressed_file_offsets_[i];
-      LOG_ASSERT(size_to_read <= max_compressed_size_);
-      count = dataReader->read(decompression_buffer, offset_to_read_from, size_to_read);
-      downloadedBytes += count;      
-      auto const expected_size_after_decompression = ZSTD_getFrameContentSize(decompression_buffer, count);
-      CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_ERROR) << "Offset starting " << offset_to_read_from << " not compressed by zstd!";
-      CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_UNKNOWN) << "Original size unknown when decompressing from offset " << offset_to_read_from;
-      CHECK(expected_size_after_decompression <= block) << "Expected decompressed size is greater than block size. Starting offset " << offset_to_read_from;
-      auto decompressed_size = ZSTD_decompress(buffer, block, decompression_buffer, count);
-      CHECK(!ZSTD_isError(decompressed_size)) << ZSTD_getErrorName(decompressed_size);
-      LOG_ASSERT(decompressed_size <= block);
-      count = decompressed_size;
+      if (compression_diabled_) 
+      {
+        count = dataReader->read(buffer, i * block, block);	
+        downloadedBytes += count;
+      }
+      else
+      {
+        auto size_to_read = compressed_sizes_[i];
+        auto offset_to_read_from = compressed_file_offsets_[i];
+        LOG_ASSERT(size_to_read <= max_compressed_size_);
+        count = dataReader->read(decompression_buffer, offset_to_read_from, size_to_read);
+        downloadedBytes += count;      
+        auto const expected_size_after_decompression = ZSTD_getFrameContentSize(decompression_buffer, count);
+        CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_ERROR) << "Offset starting " << offset_to_read_from << " not compressed by zstd!";
+        CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_UNKNOWN) << "Original size unknown when decompressing from offset " << offset_to_read_from;
+        CHECK(expected_size_after_decompression <= block) << "Expected decompressed size is greater than block size. Starting offset " << offset_to_read_from;
+        auto decompressed_size = ZSTD_decompress(buffer, block, decompression_buffer, count);
+        CHECK(!ZSTD_isError(decompressed_size)) << ZSTD_getErrorName(decompressed_size);
+        LOG_ASSERT(decompressed_size <= block);
+        count = decompressed_size;
+      }
     }
 
     output.write(buffer, count);
@@ -336,7 +346,7 @@ void SyncCommand::Impl::reconstructSource()
       dataSize,
       block,
       0,
-      threads,
+      threads_,
       [this](auto id, auto beg, auto end) {
         reconstructSourceChunk(id, beg, end);
       });
@@ -393,12 +403,14 @@ void SyncCommand::Impl::accept(MetricVisitor &visitor, const SyncCommand &host)
 
 SyncCommand::SyncCommand(
     std::string dataUri,
+    bool compression_diabled,
     std::string metadataUri,
     std::string seedUri,
     std::filesystem::path outputPath,
     int threads)
     : pImpl(new Impl(
           std::move(dataUri),
+          compression_diabled,
           std::move(metadataUri),
           std::move(seedUri),
           std::move(outputPath),

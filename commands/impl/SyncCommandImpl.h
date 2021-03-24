@@ -12,6 +12,7 @@ class SyncCommand::Impl final {
   friend class KySyncTest;
 
   const std::string dataUri;
+  const bool compression_diabled_;
   const std::string metadataUri;
   const std::string seedUri;
   const std::filesystem::path outputPath;
@@ -39,7 +40,7 @@ class SyncCommand::Impl final {
   std::vector<uint64_t> compressed_file_offsets_;
   uint64_t max_compressed_size_;
 
-  const int threads;
+  const int threads_;
 
   struct WcsMapData {
     size_t index{};
@@ -51,6 +52,7 @@ class SyncCommand::Impl final {
 
   Impl(
       std::string _dataUri,
+      bool compression_diabled,
       std::string _metadataUri,
       std::string _seedUri,
       std::filesystem::path _outputPath,
