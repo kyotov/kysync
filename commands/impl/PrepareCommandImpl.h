@@ -15,20 +15,28 @@ class PrepareCommand::Impl final {
   friend class PrepareCommand;
   friend class KySyncTest;
 
-  std::istream& input;
-  std::ostream& output;
-  const size_t block;
+  std::istream& input_;
+  std::ostream& output_ksync_;
+  std::ostream& output_compressed_;
+  const size_t block_size_;
 
   std::vector<uint32_t> weakChecksums;
   std::vector<StrongChecksum> strongChecksums;
+  // NOTE: This attempts to use the new style despite inconsistency
+  std::vector<uint64_t> compressed_sizes_;
+  const int compression_level_ = 1;
 
-  Command::Impl &baseImpl;
+  Command::Impl &base_impl_;
 
   Impl(
-      std::istream& _input,
-      std::ostream& _output,
-      size_t _block,
-      Command::Impl& _baseImpl);
+      std::istream& input,
+      std::ostream& output_ksync,
+      std::ostream& output_compressed,
+      size_t block_size,
+      Command::Impl& baseImpl);
+
+  template<typename T>
+  void WriteToMetadataStream(const std::vector<T>& container);
 
   int run();
 

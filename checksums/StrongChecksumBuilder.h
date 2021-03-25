@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "StrongChecksum.h"
+#include <memory>
 
 class StrongChecksumBuilder {
 public:

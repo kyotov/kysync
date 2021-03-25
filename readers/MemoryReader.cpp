@@ -1,4 +1,5 @@
 #include "MemoryReader.h"
+#include <cstring>
 
 #include <cstring>
 

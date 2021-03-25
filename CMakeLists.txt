@@ -30,6 +30,7 @@ link_directories(${CMAKE_PREFIX_PATH}/lib)
 
 find_package(GTest REQUIRED NO_MODULE)
 find_package(xxHash REQUIRED NO_MODULE)
+find_package(zstd REQUIRED NO_MODULE)
 find_package(gflags REQUIRED NO_MODULE)
 find_package(glog REQUIRED NO_MODULE)
 find_package(httplib REQUIRED NO_MODULE PATHS ${CMAKE_PREFIX_PATH}/CMake/httplib)
@@ -62,6 +63,7 @@ target_link_libraries(kysync
         httplib::httplib
         glog::glog
         gflags
+        zstd
         xxHash::xxhash)
 
 #set_target_properties(kysync PROPERTIES COMPILE_FLAGS /GL)
@@ -73,6 +75,7 @@ add_executable(tests
 target_link_libraries(tests
         main
         xxHash::xxhash
+        zstd
         GTest::gtest
         GTest::gtest_main)
 

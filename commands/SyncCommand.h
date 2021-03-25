@@ -10,6 +10,7 @@ class SyncCommand final : public Command {
 public:
   explicit SyncCommand(
       std::string dataUri,
+      bool compression_disabled,
       std::string metadataUri,
       std::string seedUri,
       std::filesystem::path outputPath,

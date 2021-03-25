@@ -12,6 +12,7 @@ class SyncCommand::Impl final {
   friend class KySyncTest;
 
   const std::string dataUri;
+  const bool compression_diabled_;
   const std::string metadataUri;
   const std::string seedUri;
   const std::filesystem::path outputPath;
@@ -34,8 +35,12 @@ class SyncCommand::Impl final {
 
   std::vector<uint32_t> weakChecksums;
   std::vector<StrongChecksum> strongChecksums;
+  // NOTE: This attempts to use the new style despite inconsistency
+  std::vector<uint64_t> compressed_sizes_;
+  std::vector<uint64_t> compressed_file_offsets_;
+  uint64_t max_compressed_size_;
 
-  const int threads;
+  const int threads_;
 
   struct WcsMapData {
     size_t index{};
@@ -47,13 +52,18 @@ class SyncCommand::Impl final {
 
   Impl(
       std::string _dataUri,
+      bool compression_diabled,
       std::string _metadataUri,
       std::string _seedUri,
       std::filesystem::path _outputPath,
       int _threads,
       Command::Impl &_baseImpl);
 
+  template<typename T>
+  size_t ReadMetadataIntoContainer(const Reader& metadata_reader, size_t offset, std::vector<T>& container);
+
   void parseHeader(const Reader &metadataReader);
+  void UpdateCompressedOffsetsAndMaxSize();
   void readMetadata();
   void analyzeSeedChunk(int id, size_t startOffset, size_t endOffset);
   void analyzeSeed();

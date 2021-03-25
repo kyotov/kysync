@@ -3,6 +3,7 @@
 #include <fstream>
 #include <future>
 #include <map>
+#include <zstd.h>
 
 #include "../Config.h"
 #include "../checksums/StrongChecksumBuilder.h"
@@ -11,18 +12,20 @@
 #include "impl/SyncCommandImpl.h"
 
 SyncCommand::Impl::Impl(
-    std::string _dataUri,
-    std::string _metadataUri,
-    std::string _seedUri,
-    std::filesystem::path _outputPath,
-    int _threads,
-    Command::Impl &_baseImpl)
-    : dataUri(std::move(_dataUri)),
-      metadataUri(std::move(_metadataUri)),
-      seedUri(std::move(_seedUri)),
-      outputPath(std::move(_outputPath)),
-      threads(_threads),
-      baseImpl(_baseImpl)
+    std::string data_uri,
+    bool compression_disabled,
+    std::string metadata_uri,
+    std::string seed_uri,
+    std::filesystem::path output_path,
+    int threads,
+    Command::Impl &base_impl)
+    : dataUri(std::move(data_uri)),
+      compression_diabled_(compression_disabled),
+      metadataUri(std::move(metadata_uri)),
+      seedUri(std::move(seed_uri)),
+      outputPath(std::move(output_path)),
+      threads_(threads),
+      baseImpl(base_impl)
 {
 }
 
@@ -67,6 +70,30 @@ void SyncCommand::Impl::parseHeader(const Reader &metadataReader)
   headerSize = header.tellg();
 }
 
+template<typename T>
+size_t SyncCommand::Impl::ReadMetadataIntoContainer(const Reader& metadata_reader, size_t offset, std::vector<T>& container)
+{
+  size_t size_to_read = blockCount * sizeof(typename std::vector<T>::value_type);
+  container.resize(blockCount);
+  size_t size_read = metadata_reader.read(container.data(), offset, size_to_read);
+  CHECK_EQ(size_to_read, size_read) << "cannot read metadata";
+  return size_read;
+}
+
+void SyncCommand::Impl::UpdateCompressedOffsetsAndMaxSize() 
+{
+  compressed_file_offsets_.push_back(0);
+  if (compressed_sizes_.size() > 0) {
+    max_compressed_size_ = compressed_sizes_[0];
+  }
+  for (int i = 1; i < blockCount; i++) {
+    compressed_file_offsets_.push_back(compressed_file_offsets_[i-1] + compressed_sizes_[i-1]);
+    if (compressed_sizes_[i] > max_compressed_size_) {
+      max_compressed_size_ = compressed_sizes_[i];
+    }
+  }
+}
+
 void SyncCommand::Impl::readMetadata()
 {
   auto metadataReader = Reader::create(metadataUri);
@@ -80,20 +107,14 @@ void SyncCommand::Impl::readMetadata()
   parseHeader(*metadataReader);
   offset = headerSize;
 
-  size_t count;
-  size_t countRead;
+  // NOTE: The current logic reads all metadata information regardless of whether it is actually used
+  // Furthermore, it reads this information up front. This can potentially be optimized so as to
+  // read only when reconstructing source chunk
+  offset += ReadMetadataIntoContainer(*metadataReader.get(), offset, weakChecksums);
+  offset += ReadMetadataIntoContainer(*metadataReader.get(), offset, strongChecksums);
+  offset += ReadMetadataIntoContainer(*metadataReader.get(), offset, compressed_sizes_);
 
-  count = blockCount * sizeof(uint32_t);
-  weakChecksums.resize(blockCount);
-  countRead = metadataReader->read(weakChecksums.data(), offset, count);
-  CHECK_EQ(count, countRead) << "cannot read all weak checksums";
-  offset += count;
-
-  count = blockCount * sizeof(StrongChecksum);
-  strongChecksums.resize(blockCount);
-  countRead = metadataReader->read(strongChecksums.data(), offset, count);
-  CHECK_EQ(count, countRead) << "cannot read all strong checksums";
-  offset += count;
+  UpdateCompressedOffsetsAndMaxSize();
 
   for (size_t index = 0; index < blockCount; index++) {
     set[weakChecksums[index]] = true;
@@ -227,7 +248,7 @@ void SyncCommand::Impl::analyzeSeed()
       seedDataSize,
       block,
       block,
-      threads,
+      threads_,
       // TODO: fold this function in here so we would not need the lambda
       [this](auto id, auto beg, auto end) { analyzeSeedChunk(id, beg, end); });
 }
@@ -249,6 +270,9 @@ void SyncCommand::Impl::reconstructSourceChunk(
   auto smartBuffer = std::make_unique<char[]>(block);
   auto buffer = smartBuffer.get();
 
+  auto smart_decompression_buffer = std::make_unique<char[]>(max_compressed_size_);
+  auto decompression_buffer = smart_decompression_buffer.get();
+
   auto seedReader = Reader::create(seedUri);
   auto dataReader = Reader::create(dataUri);
 
@@ -266,8 +290,27 @@ void SyncCommand::Impl::reconstructSourceChunk(
       count = seedReader->read(buffer, data.seedOffset, block);
       reusedBytes += count;
     } else {
-      count = dataReader->read(buffer, i * block, block);
-      downloadedBytes += count;
+      if (compression_diabled_) 
+      {
+        count = dataReader->read(buffer, i * block, block);	
+        downloadedBytes += count;
+      }
+      else
+      {
+        auto size_to_read = compressed_sizes_[i];
+        auto offset_to_read_from = compressed_file_offsets_[i];
+        LOG_ASSERT(size_to_read <= max_compressed_size_);
+        count = dataReader->read(decompression_buffer, offset_to_read_from, size_to_read);
+        downloadedBytes += count;      
+        auto const expected_size_after_decompression = ZSTD_getFrameContentSize(decompression_buffer, count);
+        CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_ERROR) << "Offset starting " << offset_to_read_from << " not compressed by zstd!";
+        CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_UNKNOWN) << "Original size unknown when decompressing from offset " << offset_to_read_from;
+        CHECK(expected_size_after_decompression <= block) << "Expected decompressed size is greater than block size. Starting offset " << offset_to_read_from;
+        auto decompressed_size = ZSTD_decompress(buffer, block, decompression_buffer, count);
+        CHECK(!ZSTD_isError(decompressed_size)) << ZSTD_getErrorName(decompressed_size);
+        LOG_ASSERT(decompressed_size <= block);
+        count = decompressed_size;
+      }
     }
 
     output.write(buffer, count);
@@ -293,7 +336,7 @@ void SyncCommand::Impl::reconstructSourceChunk(
 void SyncCommand::Impl::reconstructSource()
 {
   auto dataReader = Reader::create(dataUri);
-  auto dataSize = dataReader->size();
+  auto dataSize = size;
 
   baseImpl.progressPhase++;
   baseImpl.progressTotalBytes = dataSize;
@@ -303,7 +346,7 @@ void SyncCommand::Impl::reconstructSource()
       dataSize,
       block,
       0,
-      threads,
+      threads_,
       [this](auto id, auto beg, auto end) {
         reconstructSourceChunk(id, beg, end);
       });
@@ -360,12 +403,14 @@ void SyncCommand::Impl::accept(MetricVisitor &visitor, const SyncCommand &host)
 
 SyncCommand::SyncCommand(
     std::string dataUri,
+    bool compression_diabled,
     std::string metadataUri,
     std::string seedUri,
     std::filesystem::path outputPath,
     int threads)
     : pImpl(new Impl(
           std::move(dataUri),
+          compression_diabled,
           std::move(metadataUri),
           std::move(seedUri),
           std::move(outputPath),
