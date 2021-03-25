@@ -115,9 +115,3 @@ install(httplib
 
         CMAKE_ARGS
         -DOPENSSL_USE_STATIC_LIBS=TRUE)
-
-install(zstd
-        https://github.com/facebook/zstd.git
-        v1.4.7
-
-        SOURCE_SUBDIR build/cmake)
