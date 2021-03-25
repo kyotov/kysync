@@ -30,10 +30,16 @@ link_directories(${CMAKE_PREFIX_PATH}/lib)
 
 find_package(GTest REQUIRED NO_MODULE)
 find_package(xxHash REQUIRED NO_MODULE)
-find_package(zstd REQUIRED NO_MODULE)
 find_package(gflags REQUIRED NO_MODULE)
 find_package(glog REQUIRED NO_MODULE)
 find_package(httplib REQUIRED NO_MODULE PATHS ${CMAKE_PREFIX_PATH}/CMake/httplib)
+find_package(zstd REQUIRED NO_MODULE)
+
+if (MSVC)
+    set(ZSTD_LIBRARY zstd_static)
+else ()
+    set(ZSTD_LIBRARY zstd)
+endif ()
 
 add_library(main STATIC
         readers/Reader.cpp
@@ -63,7 +69,7 @@ target_link_libraries(kysync
         httplib::httplib
         glog::glog
         gflags
-        zstd
+        ${ZSTD_LIBRARY}
         xxHash::xxhash)
 
 #set_target_properties(kysync PROPERTIES COMPILE_FLAGS /GL)
@@ -74,12 +80,12 @@ add_executable(tests
         metrics/ExpectationCheckMetricsVisitor.cpp)
 target_link_libraries(tests
         main
+        ${ZSTD_LIBRARY}
         xxHash::xxhash
-        zstd
         GTest::gtest
         GTest::gtest_main)
 
 add_test(
-    NAME tests
-    COMMAND tests
+        NAME tests
+        COMMAND tests
 )

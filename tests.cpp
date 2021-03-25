@@ -546,16 +546,16 @@ void RunEndToEndFilesTestFor(const std::string &file_name)
 }
 
 // Test summary:
-// For a small file (less than block size) and a general file (a few blocks 
+// For a small file (less than block size) and a general file (a few blocks
 //   plus a few additional bytes):
-// 1. Run prepare command. 
+// 1. Run prepare command.
 // 2. Confirm that the ksync and pzst files are as expected.
-// 3. Use the generated ksync and pzst files to sync to a new output file. 
-// Ensure that the new output file matches the original file. A seed file is 
+// 3. Use the generated ksync and pzst files to sync to a new output file.
+// Ensure that the new output file matches the original file. A seed file is
 // required and for this, the original file is used.
 TEST(SyncCommand, EndToEndFiles)
 {
-  // NOTE: This currently assumes that a test data dir exists one 
+  // NOTE: This currently assumes that a test data dir exists one
   // level above the test's working directory
   std::string test_data_path = "../test_data";
   RunEndToEndFilesTestFor(test_data_path + "/test_file_small.txt");
@@ -563,13 +563,13 @@ TEST(SyncCommand, EndToEndFiles)
 }
 
 // Test summary:
-// 1. Use a regular file as seed. Provide a ksync and a pzst file for a 
-//     new version (v2 file that has modifications on the original). 
+// 1. Use a regular file as seed. Provide a ksync and a pzst file for a
+//     new version (v2 file that has modifications on the original).
 // 2. Run sync.
 // Ensure that newly sync'd file matches the original non-compressed v2 file.
 TEST(SyncCommand, SyncFileFromSeed)
 {
-  // NOTE: This currently assumes that a test data dir exists one 
+  // NOTE: This currently assumes that a test data dir exists one
   // level above the test's working directory
   std::string test_data_path = "../test_data";
   std::string sync_file_name = test_data_path + "/test_file_v2.txt";
@@ -582,14 +582,14 @@ TEST(SyncCommand, SyncFileFromSeed)
     seed_file_name,
     1024,
     temp_path.string(),
-    sync_file_name);  
+    sync_file_name);
   ClearTempDir(temp_path);
 }
 
 // Test syncing from a non-compressed file
 TEST(SyncCommand, SyncNonCompressedFile)
 {
-  // NOTE: This currently assumes that a test data dir exists one 
+  // NOTE: This currently assumes that a test data dir exists one
   // level above the test's working directory
   std::string test_data_path = "../test_data";
   std::string sync_file_name = test_data_path + "/test_file_v2.txt";
@@ -602,6 +602,6 @@ TEST(SyncCommand, SyncNonCompressedFile)
     seed_file_name,
     1024,
     temp_path.string(),
-    sync_file_name);  
+    sync_file_name);
   ClearTempDir(temp_path);
 }

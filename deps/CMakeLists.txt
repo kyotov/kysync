@@ -90,12 +90,6 @@ install(googletest
         #FIXME: figure out how to make all of them static!!!
         -Dgtest_force_shared_crt=ON)
 
-install(zstd
-        https://github.com/facebook/zstd.git
-        v1.4.7
-        
-        SOURCE_SUBDIR build/cmake)
-
 install(xxhash
         https://github.com/Cyan4973/xxHash.git
         v0.8.0
@@ -120,4 +114,8 @@ install(zstd
         https://github.com/facebook/zstd.git
         v1.4.7
 
-        SOURCE_SUBDIR build/cmake)
+        SOURCE_SUBDIR build/cmake
+
+        CMAKE_ARGS
+        -DZSTD_BUILD_STATIC=TRUE
+        -DZSTD_BUILD_SHARED=FALSE)
