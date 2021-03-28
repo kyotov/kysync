@@ -17,7 +17,6 @@ class SyncCommand::Impl final {
   const std::string metadataUri;
   const std::string seedUri;
   const std::filesystem::path outputPath;
-  StrongChecksumBuilder output_hash_;
 
   Command::Impl &baseImpl;
 

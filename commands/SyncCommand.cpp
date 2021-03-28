@@ -315,7 +315,6 @@ void SyncCommand::Impl::reconstructSourceChunk(
     }
 
     output.write(buffer, count);
-    output_hash_.update(buffer, count);
 
     if (VERIFY) {
       LOG_ASSERT(wcs == weakChecksums[data.index]);
@@ -366,17 +365,14 @@ void SyncCommand::Impl::reconstructSource()
   // NOTE: This is kept here until we can confirm that StrongChecksumBuilder
   // is thread safe and provides the same has regardless of the ordering when
   // calling update.
-  // std::ifstream read_for_hash_check(outputPath, std::ios::binary);
-  // while (read_for_hash_check) {
-  //   auto count = read_for_hash_check.read(buffer, bufferSize).gcount();
-  //   outputHash.update(buffer, count);
-  //   baseImpl.progressCurrentBytes += count;
-  // }
+  std::ifstream read_for_hash_check(outputPath, std::ios::binary);
+  while (read_for_hash_check) {
+    auto count = read_for_hash_check.read(buffer, bufferSize).gcount();
+    outputHash.update(buffer, count);
+    baseImpl.progressCurrentBytes += count;
+  }
 
-  // CHECK_EQ(hash, outputHash.digest().toString())
-  //     << "mismatch in hash of reconstructed data";
-  
-  CHECK_EQ(hash, output_hash_.digest().toString())
+  CHECK_EQ(hash, outputHash.digest().toString())
       << "mismatch in hash of reconstructed data";
 }
 
