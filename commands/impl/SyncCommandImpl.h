@@ -41,6 +41,8 @@ class SyncCommand::Impl final {
   std::vector<uint64_t> compressed_file_offsets_;
   uint64_t max_compressed_size_;
 
+  std::vector<std::ofstream> output_streams_;
+
   const int threads_;
 
   struct WcsMapData {
@@ -70,6 +72,8 @@ class SyncCommand::Impl final {
   void analyzeSeed();
   void reconstructSourceChunk(int id, size_t startOffset, size_t endOffset);
   void reconstructSource();
+  void ReserveFileStreams();
+  void ReserveFileSize();
 
   int run();
 

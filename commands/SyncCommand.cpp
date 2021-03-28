@@ -276,7 +276,7 @@ void SyncCommand::Impl::reconstructSourceChunk(
   auto seedReader = Reader::create(seedUri);
   auto dataReader = Reader::create(dataUri);
 
-  std::ofstream output(outputPath, std::ios::binary);
+  std::ofstream& output = output_streams_[id];
   output.seekp(begOffset);
 
   for (auto offset = begOffset; offset < endOffset; offset += block) {
@@ -332,6 +332,49 @@ void SyncCommand::Impl::reconstructSourceChunk(
 
     baseImpl.progressCurrentBytes += count;
   }
+  // Ensure the file is flushed before additional checks such as hash 
+  // comparisons are performed. The checks can happen any time after this 
+  // function completes (for all threads)
+  output.flush();
+}
+
+// Reserve file streams/handles for each potential thread. Calling 
+//   std::ofstream output(outputPath, std::ios::binary)
+// in each thread can lead to race conditions. Specifically, the above call
+// can cause the output file to be reinitialized (despite lack of the 
+// truncate flag) overwriting information written at start by another thread.
+void SyncCommand::Impl::ReserveFileStreams()
+{
+  for (int id = 0; id < threads_; id++)
+  {
+    // NOTE: Reservation is done for all potential threads even if later fewer
+    // threads are created. A complexity/optimization trade-off is to identify
+    // final number of threads and then to create these.
+    output_streams_.push_back(std::move(std::ofstream(outputPath, std::ios::binary)));
+    output_streams_[id].exceptions(std::ofstream::failbit | std::ofstream::badbit);
+  }
+}
+
+void SyncCommand::Impl::ReserveFileSize()
+{
+  // NOTE: seekp() is expected to automatically extend the file. As stated at 
+  // https://stackoverflow.com/questions/11022417/failbit-not-being-set-when-seekg-seeks-past-end-of-file-c-linux
+  // and
+  // https://pubs.opengroup.org/onlinepubs/009696699/functions/fseek.html:
+  //   The fseek() function shall allow the file-position indicator to be set 
+  //   beyond the end of existing data in the file. If data is later written at 
+  //   this point, subsequent reads of data in the gap shall return bytes with 
+  //   the value 0 until data is actually written into the gap.
+  // The below is added more as a precaution to prevent a race where we have 
+  // seekp-extend in one thread while another thread is flushing its buffer.
+  if (size > 0)
+  {
+    std::ofstream output(outputPath, std::ios::binary);
+    output.seekp(size - 1);
+    char sentinel = '\0';
+    output.write(&sentinel, sizeof(sentinel));
+    output.flush();
+  }
 }
 
 void SyncCommand::Impl::reconstructSource()
@@ -342,6 +385,9 @@ void SyncCommand::Impl::reconstructSource()
   baseImpl.progressPhase++;
   baseImpl.progressTotalBytes = dataSize;
   baseImpl.progressCurrentBytes = 0;
+
+  ReserveFileSize();
+  ReserveFileStreams();
 
   auto actualThreads = parallelize(
       dataSize,
@@ -362,9 +408,6 @@ void SyncCommand::Impl::reconstructSource()
 
   StrongChecksumBuilder outputHash;
 
-  // NOTE: This is kept here until we can confirm that StrongChecksumBuilder
-  // is thread safe and provides the same has regardless of the ordering when
-  // calling update.
   std::ifstream read_for_hash_check(outputPath, std::ios::binary);
   while (read_for_hash_check) {
     auto count = read_for_hash_check.read(buffer, bufferSize).gcount();
