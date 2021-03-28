@@ -276,7 +276,8 @@ void SyncCommand::Impl::reconstructSourceChunk(
   auto seedReader = Reader::create(seedUri);
   auto dataReader = Reader::create(dataUri);
 
-  std::ofstream output(getChunkPath(outputPath, id), std::ios::binary);
+  std::ofstream output(outputPath, std::ios::binary);
+  output.seekp(begOffset);
 
   for (auto offset = begOffset; offset < endOffset; offset += block) {
     auto i = offset / block;
@@ -314,6 +315,7 @@ void SyncCommand::Impl::reconstructSourceChunk(
     }
 
     output.write(buffer, count);
+    output_hash_.update(buffer, count);
 
     if (VERIFY) {
       LOG_ASSERT(wcs == weakChecksums[data.index]);
@@ -361,23 +363,20 @@ void SyncCommand::Impl::reconstructSource()
 
   StrongChecksumBuilder outputHash;
 
-  std::ofstream output(outputPath, std::ios::binary);
+  // NOTE: This is kept here until we can confirm that StrongChecksumBuilder
+  // is thread safe and provides the same has regardless of the ordering when
+  // calling update.
+  // std::ifstream read_for_hash_check(outputPath, std::ios::binary);
+  // while (read_for_hash_check) {
+  //   auto count = read_for_hash_check.read(buffer, bufferSize).gcount();
+  //   outputHash.update(buffer, count);
+  //   baseImpl.progressCurrentBytes += count;
+  // }
 
-  for (int id = 0; id < actualThreads; id++) {
-    auto chunkPath = getChunkPath(outputPath, id);
-    {
-      std::ifstream chunk(chunkPath, std::ios::binary);
-      while (chunk) {
-        auto count = chunk.read(buffer, bufferSize).gcount();
-        output.write(buffer, count);
-        outputHash.update(buffer, count);
-        baseImpl.progressCurrentBytes += count;
-      }
-    }
-    std::filesystem::remove(chunkPath);
-  }
-
-  CHECK_EQ(hash, outputHash.digest().toString())
+  // CHECK_EQ(hash, outputHash.digest().toString())
+  //     << "mismatch in hash of reconstructed data";
+  
+  CHECK_EQ(hash, output_hash_.digest().toString())
       << "mismatch in hash of reconstructed data";
 }
 

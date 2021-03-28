@@ -4,6 +4,7 @@
 #include <bitset>
 
 #include "../../checksums/StrongChecksum.h"
+#include "../../checksums/StrongChecksumBuilder.h"
 #include "../SyncCommand.h"
 #include "CommandImpl.h"
 
@@ -16,6 +17,7 @@ class SyncCommand::Impl final {
   const std::string metadataUri;
   const std::string seedUri;
   const std::filesystem::path outputPath;
+  StrongChecksumBuilder output_hash_;
 
   Command::Impl &baseImpl;
 
