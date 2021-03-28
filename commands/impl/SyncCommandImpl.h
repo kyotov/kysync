@@ -4,7 +4,6 @@
 #include <bitset>
 
 #include "../../checksums/StrongChecksum.h"
-#include "../../checksums/StrongChecksumBuilder.h"
 #include "../SyncCommand.h"
 #include "CommandImpl.h"
 
