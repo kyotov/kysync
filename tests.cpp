@@ -127,6 +127,45 @@ std::string createMemoryReaderUri(const std::string &data)
   return createMemoryReaderUri(data.data(), data.size());
 }
 
+class TempPathProvider
+{
+ public:
+  std::string GetPathName() const
+  {
+    return temp_path_.string();
+  }
+
+  TempPathProvider()
+  {
+    CreateTempDir();
+  }
+
+  ~TempPathProvider()
+  {
+    ClearTempDir();
+  }   
+
+ private:
+  void CreateTempDir()
+  {
+    // NOTE: We can use a temporary/random dirname to enable multiple test runs
+    // on the same machine. We currently use the same name mostly for convenience.
+    temp_path_ = fs::temp_directory_path() / "ksync_files_test";
+    if (fs::exists(temp_path_)) 
+    {
+      fs::remove_all(temp_path_);
+    }
+    fs::create_directories(temp_path_);
+  }
+
+  void ClearTempDir()
+  {
+    fs::remove_all(temp_path_);
+  }
+
+  std::filesystem::path temp_path_;
+};
+
 TEST(Readers, MemoryReaderSimple)
 {
   auto data = "0123456789";
@@ -479,24 +518,6 @@ void SyncFile(
   EXPECT_TRUE(DoFilesMatch(expected_output_file_name, output_file_name)) << "Sync'd output file does not match expectations";
 }
 
-std::filesystem::path CreateAndGetTempDir()
-{
-  // NOTE: We can use a temporary/random dirname to enable multiple test runs
-  // on the same machine. We currently use the same name mostly for convenience.
-  std::filesystem::path temp_path = fs::temp_directory_path() / "ksync_files_test";
-  if (fs::exists(temp_path)) 
-  {
-    fs::remove_all(temp_path);
-  }
-  fs::create_directories(temp_path);
-  return std::move(temp_path);
-}
-
-void ClearTempDir(const std::filesystem::path &temp_path)
-{
-  fs::remove_all(temp_path);
-}
-
 void EndToEndFilesTest(
     const std::string &source_file_name,
     const std::string &seed_data_file_name,
@@ -508,8 +529,8 @@ void EndToEndFilesTest(
   LOG(INFO) << "E2E Files Test for " << source_file_name;
   LOG(INFO) << "Using seed file " << seed_data_file_name;
 
-  std::filesystem::path temp_path = CreateAndGetTempDir();
-  std::string temp_path_name = temp_path.string();
+  TempPathProvider temp_path_provider;
+  std::string temp_path_name = temp_path_provider.GetPathName();
   std::string metadata_file_name = temp_path_name + "/i.ksync";
   std::string compressed_file_name = temp_path_name + "/i.pzst";
   auto return_code = PrepareFile(
@@ -530,8 +551,6 @@ void EndToEndFilesTest(
     block_size,
     temp_path_name,
     expected_output_file_name);
-
-  ClearTempDir(temp_path);
 }
 
 void RunEndToEndFilesTestFor(const std::string &file_name)
@@ -574,16 +593,15 @@ TEST(SyncCommand, SyncFileFromSeed)
   std::string test_data_path = "../test_data";
   std::string sync_file_name = test_data_path + "/test_file_v2.txt";
   std::string seed_file_name = test_data_path + "/test_file.txt";
-  std::filesystem::path temp_path = CreateAndGetTempDir();
+  TempPathProvider temp_path_provider;
   SyncFile(
     sync_file_name + ".pzst",
     false,
     sync_file_name + ".ksync",
     seed_file_name,
     1024,
-    temp_path.string(),
+    temp_path_provider.GetPathName(),
     sync_file_name);
-  ClearTempDir(temp_path);
 }
 
 // Test syncing from a non-compressed file
@@ -594,14 +612,13 @@ TEST(SyncCommand, SyncNonCompressedFile)
   std::string test_data_path = "../test_data";
   std::string sync_file_name = test_data_path + "/test_file_v2.txt";
   std::string seed_file_name = test_data_path + "/test_file.txt";
-  std::filesystem::path temp_path = CreateAndGetTempDir();
+  TempPathProvider temp_path_provider;
   SyncFile(
     sync_file_name,
     true,
     sync_file_name + ".ksync",
     seed_file_name,
     1024,
-    temp_path.string(),
+    temp_path_provider.GetPathName(),
     sync_file_name);
-  ClearTempDir(temp_path);
 }
