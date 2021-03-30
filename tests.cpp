@@ -1,5 +1,6 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+#include <zstd.h>
 
 #include <filesystem>
 #include <fstream>
@@ -211,6 +212,16 @@ public:
 
     return result;
   }
+
+  static int GetCompressionLevel(const PrepareCommand &c)
+  {
+    return c.pImpl->compression_level_;
+  }
+
+  static size_t GetBlockSize(const PrepareCommand &c)
+  {
+    return c.pImpl->block_size_;
+  }
 };
 
 std::stringstream createInputStream(const std::string &data)
@@ -219,6 +230,28 @@ std::stringstream createInputStream(const std::string &data)
   result.write(data.data(), data.size());
   result.seekg(0);
   return result;
+}
+
+size_t GetExpectedCompressedSize(const std::string& data, int compression_level, size_t block_size)
+{
+  auto compression_buffer_size = ZSTD_compressBound(block_size);
+  auto unique_compression_buffer = std::make_unique<char[]>(compression_buffer_size);
+  size_t compressed_size = 0; 
+  size_t size_read = 0;
+  while (size_read < data.size())
+  {
+    auto size_remaining = data.size() - size_read;
+    size_t size_to_read = std::min(block_size, size_remaining);    
+    compressed_size += ZSTD_compress(
+      unique_compression_buffer.get(), 
+      compression_buffer_size,
+      data.data() + size_read,
+      size_to_read, 
+      compression_level);
+    CHECK(!ZSTD_isError(compressed_size)) << ZSTD_getErrorName(compressed_size);
+    size_read += size_to_read;  
+  }
+  return compressed_size;
 }
 
 PrepareCommand prepare(const std::string& data, std::ostream &output_ksync, std::ostream &output_compressed, size_t block)
@@ -235,6 +268,7 @@ PrepareCommand prepare(const std::string& data, std::ostream &output_ksync, std:
       {
           {"//progressCurrentBytes", size},
           {"//progressTotalBytes", size},
+          {"//progress_compressed_bytes_", GetExpectedCompressedSize(data, KySyncTest::GetCompressionLevel(c), KySyncTest::GetBlockSize(c))},
       });
 
   return std::move(c);
@@ -463,7 +497,8 @@ void SyncFile(
     const std::string &seed_data_file_name,
     size_t block_size,
     const std::string &temp_path_name,
-    const std::string &expected_output_file_name)
+    const std::string &expected_output_file_name,
+    std::map<std::string, uint64_t> &&expected_metrics)
 {
   std::string file_uri_prefix = "file://";
   std::string output_file_name = temp_path_name + "/syncd_output_file";
@@ -477,6 +512,9 @@ void SyncFile(
   auto return_code = sync_command.run();
   CHECK(return_code == 0) << "Sync command failed for " + source_file_name;
   EXPECT_TRUE(DoFilesMatch(expected_output_file_name, output_file_name)) << "Sync'd output file does not match expectations";
+  ExpectationCheckMetricVisitor(
+    sync_command,
+    std::move(expected_metrics));
 }
 
 std::filesystem::path CreateAndGetTempDir()
@@ -503,7 +541,8 @@ void EndToEndFilesTest(
     size_t block_size,
     const std::string &expected_metadata_file_name,
     const std::string &expected_compressed_file_name,
-    const std::string &expected_output_file_name)
+    const std::string &expected_output_file_name,
+    uint64_t expected_compressed_size)
 {
   LOG(INFO) << "E2E Files Test for " << source_file_name;
   LOG(INFO) << "Using seed file " << seed_data_file_name;
@@ -522,6 +561,14 @@ void EndToEndFilesTest(
   EXPECT_TRUE(DoFilesMatch(expected_compressed_file_name, compressed_file_name)) << "Generated compressed file does not match expectations";
   EXPECT_FALSE(DoFilesMatch(expected_metadata_file_name, compressed_file_name)) << "Unexpected match of metadata and compressed files";
 
+  std::map<std::string, uint64_t> expected_metrics = 
+  {
+
+    {"//progressCurrentBytes", std::filesystem::file_size(source_file_name)},
+    {"//progressTotalBytes", std::filesystem::file_size(source_file_name)},
+    {"//progress_compressed_bytes_", expected_compressed_size},
+  };
+
   SyncFile(
     compressed_file_name,
     false,
@@ -529,12 +576,13 @@ void EndToEndFilesTest(
     source_file_name,
     block_size,
     temp_path_name,
-    expected_output_file_name);
+    expected_output_file_name,
+    std::move(expected_metrics));
 
   ClearTempDir(temp_path);
 }
 
-void RunEndToEndFilesTestFor(const std::string &file_name)
+void RunEndToEndFilesTestFor(const std::string &file_name, uint64_t expected_compressed_size)
 {
   EndToEndFilesTest(
     file_name, 
@@ -542,7 +590,8 @@ void RunEndToEndFilesTestFor(const std::string &file_name)
     1024,
     file_name + ".ksync",
     file_name + ".pzst",
-    file_name);
+    file_name,
+    expected_compressed_size);
 }
 
 // Test summary:
@@ -558,8 +607,9 @@ TEST(SyncCommand, EndToEndFiles)
   // NOTE: This currently assumes that a test data dir exists one
   // level above the test's working directory
   std::string test_data_path = "../test_data";
-  RunEndToEndFilesTestFor(test_data_path + "/test_file_small.txt");
-  RunEndToEndFilesTestFor(test_data_path + "/test_file.txt");
+  const uint64_t expected_compressed_size = 42;
+  RunEndToEndFilesTestFor(test_data_path + "/test_file_small.txt", expected_compressed_size);
+  RunEndToEndFilesTestFor(test_data_path + "/test_file.txt", expected_compressed_size);
 }
 
 // Test summary:
@@ -575,6 +625,15 @@ TEST(SyncCommand, SyncFileFromSeed)
   std::string sync_file_name = test_data_path + "/test_file_v2.txt";
   std::string seed_file_name = test_data_path + "/test_file.txt";
   std::filesystem::path temp_path = CreateAndGetTempDir();
+
+  std::map<std::string, uint64_t> expected_metrics = 
+  {
+
+    {"//progressCurrentBytes", 10340},
+    {"//progressTotalBytes", 10340},
+    {"//progress_compressed_bytes_", 140},
+  };
+
   SyncFile(
     sync_file_name + ".pzst",
     false,
@@ -582,7 +641,8 @@ TEST(SyncCommand, SyncFileFromSeed)
     seed_file_name,
     1024,
     temp_path.string(),
-    sync_file_name);
+    sync_file_name,
+    std::move(expected_metrics));
   ClearTempDir(temp_path);
 }
 
@@ -595,6 +655,15 @@ TEST(SyncCommand, SyncNonCompressedFile)
   std::string sync_file_name = test_data_path + "/test_file_v2.txt";
   std::string seed_file_name = test_data_path + "/test_file.txt";
   std::filesystem::path temp_path = CreateAndGetTempDir();
+
+  std::map<std::string, uint64_t> expected_metrics = 
+  {
+
+    {"//progressCurrentBytes", 10340},
+    {"//progressTotalBytes", 10340},
+    {"//progress_compressed_bytes_", 0},
+  };
+
   SyncFile(
     sync_file_name,
     true,
@@ -602,6 +671,7 @@ TEST(SyncCommand, SyncNonCompressedFile)
     seed_file_name,
     1024,
     temp_path.string(),
-    sync_file_name);
+    sync_file_name,
+    std::move(expected_metrics));
   ClearTempDir(temp_path);
 }
