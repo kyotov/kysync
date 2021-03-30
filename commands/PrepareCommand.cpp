@@ -48,6 +48,7 @@ int PrepareCommand::Impl::run()
   StrongChecksumBuilder hash;
 
   base_impl_.progressCurrentBytes = 0;
+  base_impl_.progress_compressed_bytes_ = 0;
 
   input_.seekg(0);
   while (auto count = input_.read(buffer, block_size_).gcount()) {
@@ -67,6 +68,7 @@ int PrepareCommand::Impl::run()
     CHECK(!ZSTD_isError(compressed_size)) << ZSTD_getErrorName(compressed_size);    
     output_compressed_.write(compression_buffer, compressed_size);
     compressed_sizes_.push_back(compressed_size);
+    base_impl_.progress_compressed_bytes_ += compressed_size;
 
     base_impl_.progressCurrentBytes += count;
   }
