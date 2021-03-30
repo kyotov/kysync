@@ -8,12 +8,13 @@ set(CMAKE_CXX_STANDARD 20)
 #       we might want to shortcut this if it becomes annoying
 
 set(DEPS_DIR ${CMAKE_SOURCE_DIR}/deps/${CMAKE_BUILD_TYPE})
+
 execute_process(
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${DEPS_DIR} -G "${CMAKE_GENERATOR}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${DEPS_DIR}
 )
 execute_process(
         WORKING_DIRECTORY ${DEPS_DIR}
-        COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} ..
+        COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} ${CMAKE_SOURCE_DIR}/deps #-G "${CMAKE_GENERATOR}"
 )
 execute_process(
         WORKING_DIRECTORY ${DEPS_DIR}
@@ -54,8 +55,8 @@ add_library(main STATIC
         checksums/StrongChecksumBuilder.cpp
         Monitor.cpp)
 target_link_libraries(main
-        ssl
-        crypto
+        #ssl
+        #crypto
         glog::glog)
 
 #FIXME: this is not portable and also not clear it works well for debug...
@@ -65,12 +66,14 @@ target_link_libraries(main
 add_executable(kysync
         main.cpp)
 target_link_libraries(kysync
-        main
-        httplib::httplib
-        glog::glog
-        gflags
+	main
+        ssl
+        crypto
         ${ZSTD_LIBRARY}
-        xxHash::xxhash)
+        xxHash::xxhash
+        #httplib::httplib
+        glog::glog
+        gflags)
 
 #set_target_properties(kysync PROPERTIES COMPILE_FLAGS /GL)
 #set_target_properties(kysync PROPERTIES LINK_FLAGS /LTCG)
@@ -80,6 +83,8 @@ add_executable(tests
         metrics/ExpectationCheckMetricsVisitor.cpp)
 target_link_libraries(tests
         main
+        ssl
+        crypto
         ${ZSTD_LIBRARY}
         xxHash::xxhash
         GTest::gtest

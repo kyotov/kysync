@@ -2,6 +2,7 @@
 #define KSYNC_SYNCCOMMANDIMPL_H
 
 #include <bitset>
+#include <unordered_map>
 
 #include "../../checksums/StrongChecksum.h"
 #include "../SyncCommand.h"
