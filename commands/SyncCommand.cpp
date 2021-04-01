@@ -101,6 +101,7 @@ void SyncCommand::Impl::readMetadata()
   baseImpl.progressPhase++;
   baseImpl.progressTotalBytes = metadataReader->size();
   baseImpl.progressCurrentBytes = 0;
+  baseImpl.progress_compressed_bytes_ = 0;
 
   auto &offset = baseImpl.progressCurrentBytes;
 
@@ -243,6 +244,7 @@ void SyncCommand::Impl::analyzeSeed()
   baseImpl.progressPhase++;
   baseImpl.progressTotalBytes = seedDataSize;
   baseImpl.progressCurrentBytes = 0;
+  baseImpl.progress_compressed_bytes_ = 0;
 
   parallelize(
       seedDataSize,
@@ -302,7 +304,8 @@ void SyncCommand::Impl::reconstructSourceChunk(
         auto offset_to_read_from = compressed_file_offsets_[i];
         LOG_ASSERT(size_to_read <= max_compressed_size_);
         count = dataReader->read(decompression_buffer, offset_to_read_from, size_to_read);
-        downloadedBytes += count;      
+        downloadedBytes += count;
+        baseImpl.progress_compressed_bytes_ += count;
         auto const expected_size_after_decompression = ZSTD_getFrameContentSize(decompression_buffer, count);
         CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_ERROR) << "Offset starting " << offset_to_read_from << " not compressed by zstd!";
         CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_UNKNOWN) << "Original size unknown when decompressing from offset " << offset_to_read_from;
@@ -385,6 +388,7 @@ void SyncCommand::Impl::reconstructSource()
   baseImpl.progressPhase++;
   baseImpl.progressTotalBytes = dataSize;
   baseImpl.progressCurrentBytes = 0;
+  baseImpl.progress_compressed_bytes_ = 0;
 
   ReserveFileSize();
   ReserveFileStreams();
@@ -401,6 +405,10 @@ void SyncCommand::Impl::reconstructSource()
   baseImpl.progressPhase++;
   baseImpl.progressTotalBytes = dataSize;
   baseImpl.progressCurrentBytes = 0;
+  // NOTE: Compressed bytes is consciously not set to 0 to preserve compressed
+  // bytes information from the last phase as the final reconstruction from
+  // source does not change compressed bytes read. downloadedBytes follows a 
+  // similar pattern.
 
   constexpr auto bufferSize = 1024 * 1024;
   auto smartBuffer = std::make_unique<char[]>(bufferSize);

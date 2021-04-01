@@ -5,6 +5,7 @@ struct Command::Impl final {
   Metric progressPhase;
   Metric progressTotalBytes;
   Metric progressCurrentBytes;
+  Metric progress_compressed_bytes_;
 
   void accept(MetricVisitor &visitor) const;
 };

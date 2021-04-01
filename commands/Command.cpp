@@ -9,6 +9,7 @@ void Command::Impl::accept(MetricVisitor &visitor) const
   VISIT(visitor, progressPhase);
   VISIT(visitor, progressTotalBytes);
   VISIT(visitor, progressCurrentBytes);
+  VISIT(visitor, progress_compressed_bytes_);
 };
 
 Command::Command() : pImpl(std::make_unique<Impl>()) {}
