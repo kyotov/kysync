@@ -58,7 +58,7 @@ ELSE()
             GIT_REPOSITORY https://github.com/openssl/openssl.git
             GIT_TAG OpenSSL_1_1_1-stable
             PREFIX ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}
-            CONFIGURE_COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> ./config no-shared no-dso --prefix=<INSTALL_DIR>/install --openssldir=<INSTALL_DIR>/install
+            CONFIGURE_COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> ./config no-shared no-dso no-zlib --prefix=<INSTALL_DIR>/install --openssldir=<INSTALL_DIR>/install
             BUILD_COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> make -j build_libs
             INSTALL_COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> make install_dev
     )
