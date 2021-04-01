@@ -390,8 +390,8 @@ void SyncCommand::Impl::reconstructSource()
   baseImpl.progressCurrentBytes = 0;
   baseImpl.progress_compressed_bytes_ = 0;
 
-  ReserveFileSize();
   ReserveFileStreams();
+  ReserveFileSize();
 
   auto actualThreads = parallelize(
       dataSize,
