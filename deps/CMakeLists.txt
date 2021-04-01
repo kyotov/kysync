@@ -116,6 +116,8 @@ install(zstd
 
         SOURCE_SUBDIR build/cmake
 
+        DEPENDS googletest
+
         CMAKE_ARGS
         -DZSTD_BUILD_STATIC=TRUE
         -DZSTD_BUILD_SHARED=FALSE)
