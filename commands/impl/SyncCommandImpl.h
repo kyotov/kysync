@@ -40,8 +40,6 @@ class SyncCommand::Impl final {
   std::vector<uint64_t> compressed_file_offsets_;
   uint64_t max_compressed_size_;
 
-  std::vector<std::ofstream> output_streams_;
-
   const int threads_;
 
   struct WcsMapData {
