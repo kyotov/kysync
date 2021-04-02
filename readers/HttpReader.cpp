@@ -2,6 +2,7 @@
 
 // TODO: do we need this!?
 #define CPPHTTPLIB_OPENSSL_SUPPORT
+#undef CPPHTTPLIB_ZLIB_SUPPORT
 
 #include <glog/logging.h>
 #include <httplib.h>

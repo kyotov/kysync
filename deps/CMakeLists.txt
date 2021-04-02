@@ -27,14 +27,14 @@ function(install NAME GIT_REPO GIT_TAG)
             ${NAME}
             GIT_REPOSITORY ${GIT_REPO}
             GIT_TAG ${GIT_TAG}
-            PREFIX ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}
+            PREFIX ${CMAKE_BINARY_DIR}
 
             ${ARGN}
             CMAKE_ARGS
             --config ${CMAKE_BUILD_TYPE}
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>
-            -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/install
+            -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_BINARY_DIR}/install
     )
 endfunction()
 
@@ -42,7 +42,7 @@ IF (WIN32)
     ExternalProject_Add(
             openssl
             URL https://github.com/CristiFati/Prebuilt-Binaries/raw/master/OpenSSL/v1.1.1/OpenSSL-1.1.1i-Win-pc064.zip
-            PREFIX ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}
+            PREFIX ${CMAKE_BINARY_DIR}
             CONFIGURE_COMMAND ""
             BUILD_COMMAND ""
             INSTALL_COMMAND ${CMAKE_COMMAND} -E echo installing from `<SOURCE_DIR>/OpenSSL/1.1.1i` to `<INSTALL_DIR>/install`
@@ -57,8 +57,8 @@ ELSE()
             openssl
             GIT_REPOSITORY https://github.com/openssl/openssl.git
             GIT_TAG OpenSSL_1_1_1-stable
-            PREFIX ${CMAKE_SOURCE_DIR}/${CMAKE_BUILD_TYPE}
-            CONFIGURE_COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> ./config no-shared no-dso no-zlib --prefix=<INSTALL_DIR>/install --openssldir=<INSTALL_DIR>/install
+            PREFIX ${CMAKE_BINARY_DIR}
+            CONFIGURE_COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> ./config no-shared no-dso --prefix=<INSTALL_DIR>/install --openssldir=<INSTALL_DIR>/install
             BUILD_COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> make -j build_libs
             INSTALL_COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> make install_dev
     )

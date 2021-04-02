@@ -3,23 +3,38 @@ project(ksync)
 
 set(CMAKE_CXX_STANDARD 20)
 
-# install dependencies
-# NOTE: currently this runs each time the cmake cache is reloaded and verifies all deps are installed properly
-#       we might want to shortcut this if it becomes annoying
+if (CMAKE_BUILD_TYPE STREQUAL "")
+	message("INFO: CMAKE_BUILD_TYPE not specified, assuming Debug")
+	set(CMAKE_BUILD_TYPE Debug)
+endif ()
 
-set(DEPS_DIR ${CMAKE_SOURCE_DIR}/deps/${CMAKE_BUILD_TYPE})
+#
+# see https://cliutils.gitlab.io/modern-cmake/chapters/basics/variables.html
+#
+option(FORCE_REFRESH_DEPS "force refresh reps" OFF)
 
-execute_process(
+set(DEPS_DIR ${CMAKE_BINARY_DIR}/deps/${CMAKE_BUILD_TYPE})
+message("INFO: dependencies will be installed in ${DEPS_DIR}")
+
+#if ((NOT EXISTS ${DEPS_DIR}) OR (${FORCE_REFRESH_DEPS}))
+if (NOT EXISTS ${DEPS_DIR})
+    message("${DEPS_DIR} not found, installing deps...")
+
+    execute_process(
         COMMAND ${CMAKE_COMMAND} -E make_directory ${DEPS_DIR}
-)
-execute_process(
+    )
+    execute_process(
         WORKING_DIRECTORY ${DEPS_DIR}
         COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} ${CMAKE_SOURCE_DIR}/deps #-G "${CMAKE_GENERATOR}"
-)
-execute_process(
+    )
+    execute_process(
         WORKING_DIRECTORY ${DEPS_DIR}
         COMMAND ${CMAKE_COMMAND} --build . --config ${CMAKE_BUILD_TYPE}
-)
+    )
+else ()
+    message("${DEPS_DIR} found, skipping deps install...")
+endif () 
+
 set(CMAKE_PREFIX_PATH ${DEPS_DIR}/install)
 
 #set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
@@ -27,7 +42,10 @@ set(CMAKE_PREFIX_PATH ${DEPS_DIR}/install)
 include(CTest)
 enable_testing()
 
-link_directories(${CMAKE_PREFIX_PATH}/lib)
+#If (APPLE)
+#    file(RELATIVE_PATH LD_PATH "${CMAKE_BINARY_DIR}" "${DEPS_DIR}/install/lib")
+#    add_link_options(-L${LD_PATH})
+#endif ()
 
 find_package(GTest REQUIRED NO_MODULE)
 find_package(xxHash REQUIRED NO_MODULE)
@@ -36,11 +54,12 @@ find_package(glog REQUIRED NO_MODULE)
 find_package(httplib REQUIRED NO_MODULE PATHS ${CMAKE_PREFIX_PATH}/CMake/httplib)
 find_package(zstd REQUIRED NO_MODULE)
 
-if (MSVC)
-    set(ZSTD_LIBRARY zstd_static)
-else ()
-    set(ZSTD_LIBRARY zstd)
-endif ()
+# TODO: see if there is no zstd::... to use instead
+#if (MSVC)
+#   set(ZSTD_LIBRARY zstd_static)
+#else ()
+#    set(ZSTD_LIBRARY zstd)
+#endif ()
 
 add_library(main STATIC
         readers/Reader.cpp
@@ -55,8 +74,9 @@ add_library(main STATIC
         checksums/StrongChecksumBuilder.cpp
         Monitor.cpp)
 target_link_libraries(main
-        #ssl
-        #crypto
+        zstd::libzstd_static
+        xxHash::xxhash
+        httplib::httplib
         glog::glog)
 
 #FIXME: this is not portable and also not clear it works well for debug...
@@ -67,13 +87,8 @@ add_executable(kysync
         main.cpp)
 target_link_libraries(kysync
 	main
-        ssl
-        crypto
-        ${ZSTD_LIBRARY}
-        xxHash::xxhash
-        #httplib::httplib
-        glog::glog
         gflags)
+target_link_options(kysync PRIVATE -undefined dynamic_lookup)
 
 #set_target_properties(kysync PROPERTIES COMPILE_FLAGS /GL)
 #set_target_properties(kysync PROPERTIES LINK_FLAGS /LTCG)
@@ -83,12 +98,9 @@ add_executable(tests
         metrics/ExpectationCheckMetricsVisitor.cpp)
 target_link_libraries(tests
         main
-        ssl
-        crypto
-        ${ZSTD_LIBRARY}
-        xxHash::xxhash
         GTest::gtest
         GTest::gtest_main)
+target_link_options(tests PRIVATE -undefined dynamic_lookup)
 
 add_test(
         NAME tests
