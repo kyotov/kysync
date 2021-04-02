@@ -4,8 +4,8 @@ project(ksync)
 set(CMAKE_CXX_STANDARD 20)
 
 if (CMAKE_BUILD_TYPE STREQUAL "")
-	message("INFO: CMAKE_BUILD_TYPE not specified, assuming Debug")
-	set(CMAKE_BUILD_TYPE Debug)
+    message("INFO: CMAKE_BUILD_TYPE not specified, assuming Debug")
+    set(CMAKE_BUILD_TYPE Debug)
 endif ()
 
 #
@@ -13,39 +13,31 @@ endif ()
 #
 option(FORCE_REFRESH_DEPS "force refresh reps" OFF)
 
-set(DEPS_DIR ${CMAKE_BINARY_DIR}/deps/${CMAKE_BUILD_TYPE})
+set(DEPS_DIR ${CMAKE_BINARY_DIR}/deps)
 message("INFO: dependencies will be installed in ${DEPS_DIR}")
 
-#if ((NOT EXISTS ${DEPS_DIR}) OR (${FORCE_REFRESH_DEPS}))
-if (NOT EXISTS ${DEPS_DIR})
+if ((NOT EXISTS ${DEPS_DIR}) OR (${FORCE_REFRESH_DEPS}))
     message("${DEPS_DIR} not found, installing deps...")
 
     execute_process(
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${DEPS_DIR}
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${DEPS_DIR}
     )
     execute_process(
-        WORKING_DIRECTORY ${DEPS_DIR}
-        COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} ${CMAKE_SOURCE_DIR}/deps #-G "${CMAKE_GENERATOR}"
+            COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -B ${DEPS_DIR} -S ${CMAKE_SOURCE_DIR}/deps -G "${CMAKE_GENERATOR}"
     )
     execute_process(
-        WORKING_DIRECTORY ${DEPS_DIR}
-        COMMAND ${CMAKE_COMMAND} --build . --config ${CMAKE_BUILD_TYPE}
+            COMMAND
+            ${CMAKE_COMMAND} -E env --unset=CC --unset=CXX
+            ${CMAKE_COMMAND} --build ${DEPS_DIR} --target all --config ${CMAKE_BUILD_TYPE} -j
     )
 else ()
     message("${DEPS_DIR} found, skipping deps install...")
-endif () 
+endif ()
 
 set(CMAKE_PREFIX_PATH ${DEPS_DIR}/install)
 
-#set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-
 include(CTest)
 enable_testing()
-
-#If (APPLE)
-#    file(RELATIVE_PATH LD_PATH "${CMAKE_BINARY_DIR}" "${DEPS_DIR}/install/lib")
-#    add_link_options(-L${LD_PATH})
-#endif ()
 
 find_package(GTest REQUIRED NO_MODULE)
 find_package(xxHash REQUIRED NO_MODULE)
@@ -53,13 +45,6 @@ find_package(gflags REQUIRED NO_MODULE)
 find_package(glog REQUIRED NO_MODULE)
 find_package(httplib REQUIRED NO_MODULE PATHS ${CMAKE_PREFIX_PATH}/CMake/httplib)
 find_package(zstd REQUIRED NO_MODULE)
-
-# TODO: see if there is no zstd::... to use instead
-#if (MSVC)
-#   set(ZSTD_LIBRARY zstd_static)
-#else ()
-#    set(ZSTD_LIBRARY zstd)
-#endif ()
 
 add_library(main STATIC
         readers/Reader.cpp
@@ -86,7 +71,7 @@ target_link_libraries(main
 add_executable(kysync
         main.cpp)
 target_link_libraries(kysync
-	main
+        main
         gflags)
 target_link_options(kysync PRIVATE -undefined dynamic_lookup)
 
