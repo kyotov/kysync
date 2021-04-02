@@ -358,28 +358,6 @@ void SyncCommand::Impl::ReserveFileStreams()
   }
 }
 
-void SyncCommand::Impl::ReserveFileSize()
-{
-  // NOTE: seekp() is expected to automatically extend the file. As stated at 
-  // https://stackoverflow.com/questions/11022417/failbit-not-being-set-when-seekg-seeks-past-end-of-file-c-linux
-  // and
-  // https://pubs.opengroup.org/onlinepubs/009696699/functions/fseek.html:
-  //   The fseek() function shall allow the file-position indicator to be set 
-  //   beyond the end of existing data in the file. If data is later written at 
-  //   this point, subsequent reads of data in the gap shall return bytes with 
-  //   the value 0 until data is actually written into the gap.
-  // The below is added more as a precaution to prevent a race where we have 
-  // seekp-extend in one thread while another thread is flushing its buffer.
-  if (size > 0)
-  {
-    std::ofstream output(outputPath, std::ios::binary);
-    output.seekp(size - 1);
-    char sentinel = '\0';
-    output.write(&sentinel, sizeof(sentinel));
-    output.flush();
-  }
-}
-
 void SyncCommand::Impl::reconstructSource()
 {
   auto dataReader = Reader::create(dataUri);
@@ -391,7 +369,10 @@ void SyncCommand::Impl::reconstructSource()
   baseImpl.progress_compressed_bytes_ = 0;
 
   ReserveFileStreams();
-  ReserveFileSize();
+  // NOTE: seekp() is expected to automatically extend the file.
+  // The below is added more as a precaution to prevent a race where we have 
+  // seekp-extend in one thread while another thread is flushing its buffer.
+  std::filesystem::resize_file(outputPath, dataSize);
 
   auto actualThreads = parallelize(
       dataSize,

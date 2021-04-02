@@ -72,7 +72,6 @@ class SyncCommand::Impl final {
   void reconstructSourceChunk(int id, size_t startOffset, size_t endOffset);
   void reconstructSource();
   void ReserveFileStreams();
-  void ReserveFileSize();
 
   int run();
 
