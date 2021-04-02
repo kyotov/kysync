@@ -71,7 +71,6 @@ class SyncCommand::Impl final {
   void analyzeSeed();
   void reconstructSourceChunk(int id, size_t startOffset, size_t endOffset);
   void reconstructSource();
-  void ReserveFileStreams();
 
   int run();
 

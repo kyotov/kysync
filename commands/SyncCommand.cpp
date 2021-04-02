@@ -278,7 +278,18 @@ void SyncCommand::Impl::reconstructSourceChunk(
   auto seedReader = Reader::create(seedUri);
   auto dataReader = Reader::create(dataUri);
 
-  std::ofstream& output = output_streams_[id];
+  // NOTE: The fstream object is consciously initialized with both out and in 
+  // modes although this function only writes to the file.
+  // Calling 
+  //   std::ofstream output(outputPath, std::ios::binary)
+  // or calling
+  //   std::fstream output(outputPath, std::ios::binary | std::ios::out)
+  // causes the file to be truncated which can lead to race conditions if called
+  // in each thread. More information about the truncate behavior is available
+  // here: https://stackoverflow.com/questions/39256916/does-stdofstream-truncate-or-append-by-default#:~:text=It%20truncates%20by%20default
+  // Using ate or app does not resolve this.
+  std::fstream output(outputPath, std::ios::binary | std::fstream::out | std::fstream::in);
+  output.exceptions(std::fstream::failbit | std::fstream::badbit);
   output.seekp(begOffset);
 
   for (auto offset = begOffset; offset < endOffset; offset += block) {
@@ -335,27 +346,6 @@ void SyncCommand::Impl::reconstructSourceChunk(
 
     baseImpl.progressCurrentBytes += count;
   }
-  // Ensure the file is flushed before additional checks such as hash 
-  // comparisons are performed. The checks can happen any time after this 
-  // function completes (for all threads)
-  output.flush();
-}
-
-// Reserve file streams/handles for each potential thread. Calling 
-//   std::ofstream output(outputPath, std::ios::binary)
-// in each thread can lead to race conditions. Specifically, the above call
-// can cause the output file to be reinitialized (despite lack of the 
-// truncate flag) overwriting information written at start by another thread.
-void SyncCommand::Impl::ReserveFileStreams()
-{
-  for (int id = 0; id < threads_; id++)
-  {
-    // NOTE: Reservation is done for all potential threads even if later fewer
-    // threads are created. A complexity/optimization trade-off is to identify
-    // final number of threads and then to create these.
-    output_streams_.push_back(std::move(std::ofstream(outputPath, std::ios::binary)));
-    output_streams_[id].exceptions(std::ofstream::failbit | std::ofstream::badbit);
-  }
 }
 
 void SyncCommand::Impl::reconstructSource()
@@ -368,10 +358,11 @@ void SyncCommand::Impl::reconstructSource()
   baseImpl.progressCurrentBytes = 0;
   baseImpl.progress_compressed_bytes_ = 0;
 
-  ReserveFileStreams();
   // NOTE: seekp() is expected to automatically extend the file.
   // The below is added more as a precaution to prevent a race where we have 
   // seekp-extend in one thread while another thread is flushing its buffer.
+  // resize_file expects the file to exist before being called.
+  std::ofstream output(outputPath, std::ios::binary);
   std::filesystem::resize_file(outputPath, dataSize);
 
   auto actualThreads = parallelize(
