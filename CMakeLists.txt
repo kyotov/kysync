@@ -26,9 +26,7 @@ if ((NOT EXISTS ${DEPS_DIR}) OR (${FORCE_REFRESH_DEPS}))
             COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -B ${DEPS_DIR} -S ${CMAKE_SOURCE_DIR}/deps -G "${CMAKE_GENERATOR}"
     )
     execute_process(
-            COMMAND
-            ${CMAKE_COMMAND} -E env --unset=CC --unset=CXX
-            ${CMAKE_COMMAND} --build ${DEPS_DIR} --target all --config ${CMAKE_BUILD_TYPE} -j
+            COMMAND ${CMAKE_COMMAND} -E env --unset=CC --unset=CXX ${CMAKE_COMMAND} --build ${DEPS_DIR} --config ${CMAKE_BUILD_TYPE} -j
     )
 else ()
     message("${DEPS_DIR} found, skipping deps install...")
