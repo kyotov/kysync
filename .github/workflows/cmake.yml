@@ -15,7 +15,7 @@ jobs:
   ci:
     strategy:
       matrix:
-        os: [macos-latest]
+        os: [windows-latest]
         
     runs-on: ${{ matrix.os }}
 
