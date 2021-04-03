@@ -107,8 +107,8 @@ void testReader(Reader &reader, size_t expectedSize) {
   ExpectationCheckMetricVisitor(
       reader,
       {//
-       {"//totalReads", 3},
-       {"//totalBytesRead", 5}});
+       {"//total_reads_", 3},
+       {"//total_bytes_read_", 5}});
 }
 
 std::string createMemoryReaderUri(const void *address, size_t size) {
@@ -189,32 +189,32 @@ class KySyncTest {
 public:
   static const std::vector<uint32_t> &examineWeakChecksums(
       const PrepareCommand &c) {
-    return c.pImpl->weakChecksums;
+    return c.pImpl->weak_checksums_;
   }
 
   static const std::vector<StrongChecksum> &examineStrongChecksums(
       const PrepareCommand &c) {
-    return c.pImpl->strongChecksums;
+    return c.pImpl->strong_checksums_;
   }
 
   static const std::vector<uint32_t> &examineWeakChecksums(
       const SyncCommand &c) {
-    return c.pImpl->weakChecksums;
+    return c.pImpl->weak_checksums_;
   }
 
   static const std::vector<StrongChecksum> &examineStrongChecksums(
       const SyncCommand &c) {
-    return c.pImpl->strongChecksums;
+    return c.pImpl->strong_checksums_;
   }
 
-  static void readMetadata(const SyncCommand &c) { c.pImpl->readMetadata(); }
+  static void readMetadata(const SyncCommand &c) { c.pImpl->ReadMetadata(); }
 
   static std::vector<size_t> examineAnalisys(const SyncCommand &c) {
     std::vector<size_t> result;
 
-    for (size_t i = 0; i < c.pImpl->blockCount; i++) {
-      auto wcs = c.pImpl->weakChecksums[i];
-      auto data = c.pImpl->analysis[wcs];
+    for (size_t i = 0; i < c.pImpl->block_count_; i++) {
+      auto wcs = c.pImpl->weak_checksums_[i];
+      auto data = c.pImpl->analysis_[wcs];
       result.push_back(data.seedOffset);
     }
 
@@ -276,8 +276,8 @@ PrepareCommand prepare(
   ExpectationCheckMetricVisitor(  // NOLINT(bugprone-unused-raii)
       c,
       {
-          {"//progressCurrentBytes", size},
-          {"//progressTotalBytes", size},
+          {"//progress_current_bytes_", size},
+          {"//progress_total_bytes_", size},
           {"//progress_compressed_bytes_",
            GetExpectedCompressedSize(
                data,
@@ -366,9 +366,9 @@ TEST(SyncCommand, MetadataRoundtrip) {
   ExpectationCheckMetricVisitor(  // NOLINT(bugprone-unused-raii)
       sc,
       {
-          {"//progressPhase", 1},
-          {"//progressTotalBytes", 159},
-          {"//progressCurrentBytes", 159},
+          {"//progress_phase_", 1},
+          {"//progress_total_bytes_", 159},
+          {"//progress_current_bytes_", 159},
       });
 }
 
@@ -569,8 +569,9 @@ void EndToEndFilesTest(
 
   std::map<std::string, uint64_t> expected_metrics = {
 
-      {"//progressCurrentBytes", std::filesystem::file_size(source_file_name)},
-      {"//progressTotalBytes", std::filesystem::file_size(source_file_name)},
+      {"//progress_current_bytes_",
+       std::filesystem::file_size(source_file_name)},
+      {"//progress_total_bytes_", std::filesystem::file_size(source_file_name)},
       {"//progress_compressed_bytes_", expected_compressed_size},
   };
 
@@ -634,8 +635,8 @@ TEST(SyncCommand, SyncFileFromSeed) {
 
   std::map<std::string, uint64_t> expected_metrics = {
 
-      {"//progressCurrentBytes", 10340},
-      {"//progressTotalBytes", 10340},
+      {"//progress_current_bytes_", 10340},
+      {"//progress_total_bytes_", 10340},
       {"//progress_compressed_bytes_", 140},
   };
 
@@ -660,9 +661,8 @@ TEST(SyncCommand, SyncNonCompressedFile) {
   TempPathProvider temp_path_provider;
 
   std::map<std::string, uint64_t> expected_metrics = {
-
-      {"//progressCurrentBytes", 10340},
-      {"//progressTotalBytes", 10340},
+      {"//progress_current_bytes_", 10340},
+      {"//progress_total_bytes_", 10340},
       {"//progress_compressed_bytes_", 0},
   };
 

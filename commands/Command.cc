@@ -4,10 +4,10 @@
 #include "../metrics/MetricVisitor.h"
 #include "impl/CommandImpl.h"
 
-void Command::Impl::accept(MetricVisitor &visitor) const {
-  VISIT(visitor, progressPhase);
-  VISIT(visitor, progressTotalBytes);
-  VISIT(visitor, progressCurrentBytes);
+void Command::Impl::Accept(MetricVisitor &visitor) const {
+  VISIT(visitor, progress_phase_);
+  VISIT(visitor, progress_total_bytes_);
+  VISIT(visitor, progress_current_bytes_);
   VISIT(visitor, progress_compressed_bytes_);
 };
 
@@ -18,5 +18,5 @@ Command::Command(Command &&) noexcept = default;
 Command::~Command() = default;
 
 void Command::Accept(MetricVisitor &visitor) const {
-  return pImpl->accept(visitor);
+  return pImpl->Accept(visitor);
 }

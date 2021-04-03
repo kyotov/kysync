@@ -30,8 +30,8 @@ void PrepareCommand::Impl::WriteToMetadataStream(
       container.size() * sizeof(typename std::vector<T>::value_type));
 }
 
-int PrepareCommand::Impl::run() {
-  base_impl_.progressPhase++;
+int PrepareCommand::Impl::Run() {
+  base_impl_.progress_phase_++;
 
   auto unique_buffer = std::make_unique<char[]>(block_size_);
   auto buffer = unique_buffer.get();
@@ -42,11 +42,11 @@ int PrepareCommand::Impl::run() {
   auto compression_buffer = unique_compression_buffer.get();
 
   input_.seekg(0, std::ios_base::end);
-  base_impl_.progressTotalBytes = input_.tellg();
+  base_impl_.progress_total_bytes_ = input_.tellg();
 
   StrongChecksumBuilder hash;
 
-  base_impl_.progressCurrentBytes = 0;
+  base_impl_.progress_current_bytes_ = 0;
   base_impl_.progress_compressed_bytes_ = 0;
 
   input_.seekg(0);
@@ -55,8 +55,8 @@ int PrepareCommand::Impl::run() {
 
     hash.update(buffer, count);
 
-    weakChecksums.push_back(weakChecksum(buffer, block_size_));
-    strongChecksums.push_back(StrongChecksum::compute(buffer, block_size_));
+    weak_checksums_.push_back(weakChecksum(buffer, block_size_));
+    strong_checksums_.push_back(StrongChecksum::compute(buffer, block_size_));
 
     size_t compressed_size = ZSTD_compress(
         compression_buffer,
@@ -69,11 +69,11 @@ int PrepareCommand::Impl::run() {
     compressed_sizes_.push_back(compressed_size);
     base_impl_.progress_compressed_bytes_ += compressed_size;
 
-    base_impl_.progressCurrentBytes += count;
+    base_impl_.progress_current_bytes_ += count;
   }
 
   // produce the ksync metadata output
-  base_impl_.progressPhase++;
+  base_impl_.progress_phase_++;
 
   char header[1024];
 
@@ -86,21 +86,21 @@ int PrepareCommand::Impl::run() {
       "\n"
       "hash: %s\n"
       "eof: 1\n",
-      base_impl_.progressCurrentBytes.load(),
+      base_impl_.progress_current_bytes_.load(),
       block_size_,
       hash.digest().toString().c_str());
 
   output_ksync_.write(header, strlen(header));
 
-  WriteToMetadataStream(weakChecksums);
-  WriteToMetadataStream(strongChecksums);
+  WriteToMetadataStream(weak_checksums_);
+  WriteToMetadataStream(strong_checksums_);
   WriteToMetadataStream(compressed_sizes_);
 
-  base_impl_.progressPhase++;
+  base_impl_.progress_phase_++;
   return 0;
 }
 
-void PrepareCommand::Impl::accept(
+void PrepareCommand::Impl::Accept(
     MetricVisitor &visitor,
     const PrepareCommand &host) {}
 
@@ -121,9 +121,9 @@ PrepareCommand::PrepareCommand(PrepareCommand &&) noexcept = default;
 
 PrepareCommand::~PrepareCommand() = default;
 
-int PrepareCommand::run() { return pImpl->run(); }
+int PrepareCommand::run() { return pImpl->Run(); }
 
 void PrepareCommand::Accept(MetricVisitor &visitor) const {
   Command::Accept(visitor);
-  pImpl->accept(visitor, *this);
+  pImpl->Accept(visitor, *this);
 }

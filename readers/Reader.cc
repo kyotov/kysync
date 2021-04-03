@@ -11,12 +11,12 @@
 namespace fs = std::filesystem;
 
 struct Reader::Impl {
-  Metric totalReads;
-  Metric totalBytesRead;
+  Metric total_reads_;
+  Metric total_bytes_read_;
 
   void accept(MetricVisitor &visitor) const {
-    VISIT(visitor, totalReads);
-    VISIT(visitor, totalBytesRead);
+    VISIT(visitor, total_reads_);
+    VISIT(visitor, total_bytes_read_);
   }
 };
 
@@ -25,8 +25,8 @@ Reader::Reader() : impl_(std::make_unique<Impl>()) {}
 Reader::~Reader() = default;
 
 size_t Reader::Read(void * /*buffer*/, size_t /*offset*/, size_t size) const {
-  impl_->totalReads++;
-  impl_->totalBytesRead += size;
+  impl_->total_reads_++;
+  impl_->total_bytes_read_ += size;
   return size;
 }
 

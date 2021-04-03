@@ -2,12 +2,12 @@
 #define KSYNC_COMMANDIMPL_H
 
 struct Command::Impl final {
-  Metric progressPhase;
-  Metric progressTotalBytes;
-  Metric progressCurrentBytes;
+  Metric progress_phase_;
+  Metric progress_total_bytes_;
+  Metric progress_current_bytes_;
   Metric progress_compressed_bytes_;
 
-  void accept(MetricVisitor &visitor) const;
+  void Accept(MetricVisitor &visitor) const;
 };
 
 #endif  // KSYNC_COMMANDIMPL_H

@@ -20,8 +20,8 @@ class PrepareCommand::Impl final {
   std::ostream& output_compressed_;
   const size_t block_size_;
 
-  std::vector<uint32_t> weakChecksums;
-  std::vector<StrongChecksum> strongChecksums;
+  std::vector<uint32_t> weak_checksums_;
+  std::vector<StrongChecksum> strong_checksums_;
   // NOTE: This attempts to use the new style despite inconsistency
   std::vector<uint64_t> compressed_sizes_;
   const int compression_level_ = 1;
@@ -38,9 +38,9 @@ class PrepareCommand::Impl final {
   template <typename T>
   void WriteToMetadataStream(const std::vector<T>& container);
 
-  int run();
+  int Run();
 
-  void accept(MetricVisitor& visitor, const PrepareCommand& host);
+  void Accept(MetricVisitor& visitor, const PrepareCommand& host);
 };
 
 #endif  // KSYNC_PREPARECOMMANDIMPL_H
