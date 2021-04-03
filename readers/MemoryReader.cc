@@ -1,6 +1,6 @@
 #include "MemoryReader.h"
 
-#include <memory>
+#include <cstring>
 
 class MemoryReader::Impl {
 public:

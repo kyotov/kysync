@@ -440,6 +440,8 @@ void RunEndToEndTests(bool compression_disabled) {
       4,
       {16, 21, 11, 6, 1, 26, -1ull /*31*/});
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "Simplify"
   if (kWarmupAfterMatch) {
     EndToEndTest(
         "1234234534564567567867897890",
@@ -455,6 +457,7 @@ void RunEndToEndTests(bool compression_disabled) {
         4,
         {0, 1, 2, 3, 4, 5, 6});
   }
+#pragma clang diagnostic pop
 
   std::string chunk = "1234";
   std::stringstream input;
@@ -519,7 +522,6 @@ void SyncFile(
     const bool compression_disabled,
     const std::string &metadata_file_name,
     const std::string &seed_data_file_name,
-    size_t block_size,
     const std::string &temp_path_name,
     const std::string &expected_output_file_name,
     std::map<std::string, uint64_t> &&expected_metrics) {
@@ -580,7 +582,6 @@ void EndToEndFilesTest(
       false,
       metadata_file_name,
       source_file_name,
-      block_size,
       temp_path_name,
       expected_output_file_name,
       std::move(expected_metrics));
@@ -645,7 +646,6 @@ TEST(SyncCommand, SyncFileFromSeed) {  // NOLINT(cert-err58-cpp)
       false,
       sync_file_name + ".ksync",
       seed_file_name,
-      1024,
       temp_path_provider.GetPathName(),
       sync_file_name,
       std::move(expected_metrics));
@@ -671,7 +671,6 @@ TEST(SyncCommand, SyncNonCompressedFile) {  // NOLINT(cert-err58-cpp)
       true,
       sync_file_name + ".ksync",
       seed_file_name,
-      1024,
       temp_path_provider.GetPathName(),
       sync_file_name,
       std::move(expected_metrics));

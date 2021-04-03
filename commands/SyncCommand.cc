@@ -124,7 +124,7 @@ void SyncCommand::Impl::ReadMetadata() {
 }
 
 void SyncCommand::Impl::AnalyzeSeedChunk(
-    int /*id*/ id,
+    int /*id*/,
     size_t start_offset,
     size_t end_offset) {
   auto smart_buffer = std::make_unique<uint8_t[]>(2 * block);
@@ -162,12 +162,15 @@ void SyncCommand::Impl::AnalyzeSeedChunk(
           strong_checksum_matches_++;
           data.seedOffset = seed_offset + offset;
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "Simplify"
           if (kVerify) {
             auto t = std::make_unique<char[]>(block);
             seed_reader->Read(t.get(), data.seedOffset, block);
             LOG_ASSERT(wcs == WeakChecksum(t.get(), block));
             LOG_ASSERT(seed_digest == StrongChecksum::compute(t.get(), block));
           }
+#pragma clang diagnostic pop
         } else {
           weak_checksum_false_positive_++;
         }
@@ -254,7 +257,7 @@ void SyncCommand::Impl::AnalyzeSeed() {
 }
 
 void SyncCommand::Impl::ReconstructSourceChunk(
-    int id,
+    int /*id*/,
     size_t start_offset,
     size_t end_offset) {
   LOG_ASSERT(start_offset % block == 0);
@@ -334,6 +337,8 @@ void SyncCommand::Impl::ReconstructSourceChunk(
 
     output.write(buffer, count);
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "Simplify"
     if (kVerify) {
       LOG_ASSERT(wcs == weak_checksums_[data.index]);
       if (count == block) {
@@ -341,6 +346,7 @@ void SyncCommand::Impl::ReconstructSourceChunk(
         LOG_ASSERT(scs == StrongChecksum::compute(buffer, count));
       }
     }
+#pragma clang diagnostic pop
 
     if (i < block_count_ - 1 || size_ % block == 0) {
       CHECK_EQ(count, block);
