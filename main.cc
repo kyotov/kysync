@@ -12,23 +12,23 @@ namespace fs = std::filesystem;
 DEFINE_string(command, "", "prepare, sync, ...");  // NOLINT(cert-err58-cpp)
 DEFINE_string(input_filename, "", "input file");   // NOLINT(cert-err58-cpp)
 // TODO: maybe output_path? it is used elsewhere...
-DEFINE_string(
+DEFINE_string(  // NOLINT(cert-err58-cpp)
     output_ksync_filename,
     "",
-    "output ksync file");  // NOLINT(cert-err58-cpp)
-DEFINE_string(
+    "output ksync file");
+DEFINE_string(  // NOLINT(cert-err58-cpp)
     output_compressed_filename,
     "",
-    "output compressed file");                      // NOLINT(cert-err58-cpp)
+    "output compressed file");
 DEFINE_string(output_filename, "", "output file");  // NOLINT(cert-err58-cpp)
 DEFINE_string(data_uri, "", "data uri");            // NOLINT(cert-err58-cpp)
 DEFINE_string(metadata_uri, "", "data uri");        // NOLINT(cert-err58-cpp)
 DEFINE_uint32(block, 1024, "block size");           // NOLINT(cert-err58-cpp)
 DEFINE_uint32(threads, 32, "number of threads");    // NOLINT(cert-err58-cpp)
-DEFINE_bool(
+DEFINE_bool(                                        // NOLINT(cert-err58-cpp)
     compression_disabled,
     false,
-    "true implies source file does not have compression");  // NOLINT(cert-err58-cpp)
+    "true implies source file does not have compression");
 
 int main(int argc, char **argv) {
   try {
