@@ -53,30 +53,30 @@ struct Monitor::Impl : public MetricVisitor {
     using ms = std::chrono::milliseconds;
     auto now = std::chrono::high_resolution_clock::now();
 
-    auto totalDuration = now - ts_total_begin_;
-    auto phaseDuration = now - ts_phase_begin_;
-    auto totalS = duration_cast<ms>(totalDuration).count() / 1000.0;
-    auto phaseS = duration_cast<ms>(phaseDuration).count() / 1000.0;
+    auto total_duration = now - ts_total_begin_;
+    auto phase_duration = now - ts_phase_begin_;
+    auto total_s = duration_cast<ms>(total_duration).count() / 1000.0;
+    auto phase_s = duration_cast<ms>(phase_duration).count() / 1000.0;
     auto percent = size == 0 ? 0 : 100 * position / size;
-    auto mbps = phaseS == 0 ? 0 : position / phaseS / (1ll << 20);
+    auto mbps = phase_s == 0 ? 0 : position / phase_s / (1ll << 20);
 
-    auto newPhase = metrics_["//progress_phase_"]->load();
-    if (phase_ != newPhase) {
+    auto new_phase = metrics_["//progress_phase_"]->load();
+    if (phase_ != new_phase) {
       if (phase_ > 0) {
         LOG(INFO) << last_update_;
       }
-      phase_ = newPhase;
+      phase_ = new_phase;
       ts_phase_begin_ = now;
     }
 
-    std::stringstream update;
-    update << "phase " << phase_ << std::fixed                                 //
-           << " | " << std::setw(5) << position / (1ll << 20) << " MB"        //
-           << " | " << std::setw(5) << std::setprecision(1) << phaseS << "s"  //
-           << " | " << std::setw(7) << mbps << " MB/s"                        //
-           << " | " << std::setw(3) << percent << "%"                         //
-           << " | " << std::setw(5) << totalS << "s total";
-    last_update_ = update.str();
+    std::stringstream ss;
+    ss << "phase " << phase_ << std::fixed                                 //
+       << " | " << std::setw(5) << position / (1ll << 20) << " MB"         //
+       << " | " << std::setw(5) << std::setprecision(1) << phase_s << "s"  //
+       << " | " << std::setw(7) << mbps << " MB/s"                         //
+       << " | " << std::setw(3) << percent << "%"                          //
+       << " | " << std::setw(5) << total_s << "s total";
+    last_update_ = ss.str();
     std::cout << last_update_ << "\t\r";
 
     if (last) {
@@ -85,7 +85,7 @@ struct Monitor::Impl : public MetricVisitor {
     }
   }
 
-  int run() {
+  int Run() {
     Visit("", command_);
 
     ts_total_begin_ = std::chrono::high_resolution_clock::now();
@@ -107,4 +107,4 @@ Monitor::Monitor(Command& command) : pImpl(std::make_unique<Impl>(command)) {}
 
 Monitor::~Monitor() = default;
 
-int Monitor::Run() { return pImpl->run(); }
+int Monitor::Run() { return pImpl->Run(); }

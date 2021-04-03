@@ -1,6 +1,7 @@
 #include "FileReader.h"
 
 #include <fstream>
+#include <istream>
 
 namespace fs = std::filesystem;
 
@@ -12,9 +13,9 @@ struct FileReader::Impl {
     data_.open(path_, std::ios::binary);
   }
 
-  [[nodiscard]] size_t size() const { return fs::file_size(path_); }
+  [[nodiscard]] size_t GetSize() const { return fs::file_size(path_); }
 
-  size_t read(void *buffer, size_t offset, size_t size) {
+  size_t Read(void *buffer, size_t offset, size_t size) {
     // the seekg was failing if the eof bit was set... :(
     // according to https://devdocs.io/cpp/io/basic_istream/seekg this should
     // not happen since C++11, which is supposed to clear the eof bit, but alas
@@ -31,9 +32,9 @@ FileReader::FileReader(const std::filesystem::path &path)
 
 FileReader::~FileReader() = default;
 
-size_t FileReader::GetSize() const { return impl_->size(); }
+size_t FileReader::GetSize() const { return impl_->GetSize(); }
 
 size_t FileReader::Read(void *buffer, size_t offset, size_t size) const {
-  auto count = impl_->read(buffer, offset, size);
+  auto count = impl_->Read(buffer, offset, size);
   return Reader::Read(buffer, offset, count);
 }

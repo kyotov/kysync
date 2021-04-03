@@ -23,8 +23,8 @@ uint32_t weakChecksum(
     const WeakChecksumCallback &callback) {
   auto *data = (uint8_t *)buffer;
 
-  uint16_t a = runningChecksum & 0xFFFF;
-  uint16_t b = runningChecksum >> 16;
+  auto a = static_cast<uint16_t>(runningChecksum & 0xFFFF);
+  auto b = static_cast<uint16_t>(runningChecksum >> 16);
 
   for (size_t i = 0; i < size; i++) {
     a += data[i] - data[i - size];
