@@ -1,7 +1,5 @@
 #include "MemoryReader.h"
 
-#include <cstring>
-
 struct MemoryReader::Impl {
   const void* buffer;
   const size_t size;

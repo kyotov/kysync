@@ -253,12 +253,6 @@ void SyncCommand::Impl::AnalyzeSeed() {
       [this](auto id, auto beg, auto end) { AnalyzeSeedChunk(id, beg, end); });
 }
 
-std::filesystem::path getChunkPath(std::filesystem::path p, int i) {
-  std::stringstream t;
-  t << "." << i;
-  return p.concat(t.str());
-}
-
 void SyncCommand::Impl::ReconstructSourceChunk(
     int id,
     size_t start_offset,

@@ -4,7 +4,6 @@
 #include <zstd.h>
 
 #include <cinttypes>
-#include <cstring>
 
 #include "../checksums/StrongChecksumBuilder.h"
 #include "../checksums/wcs.h"

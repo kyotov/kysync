@@ -1,7 +1,6 @@
 #include "FileReader.h"
 
 #include <fstream>
-#include <istream>
 
 namespace fs = std::filesystem;
 
