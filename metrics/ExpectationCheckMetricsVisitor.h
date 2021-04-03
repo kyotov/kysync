@@ -15,14 +15,14 @@ public:
 
   ~ExpectationCheckMetricVisitor();
 
-  void visit(const std::string &name, const Metric &value) override;
+  void Visit(const std::string &name, const Metric &value) override;
 
-  void visit(const std::string &name, const MetricContainer &container)
+  void Visit(const std::string &name, const MetricContainer &container)
       override;
 
 private:
   struct Impl;
-  std::unique_ptr<Impl> pImpl;
+  std::unique_ptr<Impl> impl_;
 };
 
 #endif  // KSYNC_EXPECTATIONCHECKMETRICSVISITOR_H

@@ -6,13 +6,13 @@
 #include "Metric.h"
 #include "MetricContainer.h"
 
-#define VISIT(visitor, host) visitor.visit(std::string(#host), host)
+#define VISIT(visitor, host) visitor.Visit(std::string(#host), host)
 
 class MetricVisitor {
 public:
-  virtual void visit(const std::string &name, const Metric &value) = 0;
+  virtual void Visit(const std::string &name, const Metric &value) = 0;
 
-  virtual void visit(
+  virtual void Visit(
       const std::string &name,
       const MetricContainer &container) = 0;
 };

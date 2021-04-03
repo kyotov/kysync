@@ -12,85 +12,85 @@
 #include "metrics/MetricVisitor.h"
 
 struct Monitor::Impl : public MetricVisitor {
-  std::vector<std::string> metricKeys;
-  std::unordered_map<std::string, const Metric*> metrics;
+  std::vector<std::string> metric_keys_;
+  std::unordered_map<std::string, const Metric*> metrics_;
 
-  std::stack<std::string> context;
+  std::stack<std::string> context_;
 
-  Command& command;
+  Command& command_;
 
-  uint64_t phase = 0;
-  std::string lastUpdate;
+  uint64_t phase_ = 0;
+  std::string last_update_;
 
-  decltype(std::chrono::high_resolution_clock::now()) tsTotalBegin;
-  decltype(std::chrono::high_resolution_clock::now()) tsPhaseBegin;
+  decltype(std::chrono::high_resolution_clock::now()) ts_total_begin_;
+  decltype(std::chrono::high_resolution_clock::now()) ts_phase_begin_;
 
-  explicit Impl(Command& _command) : command(_command) { context.push(""); }
+  explicit Impl(Command& _command) : command_(_command) { context_.push(""); }
 
-  void visit(const std::string& name, const Metric& value) override {
-    auto key = context.top() + "/" + name;
-    metricKeys.push_back(key);
-    metrics[key] = &value;
+  void Visit(const std::string& name, const Metric& value) override {
+    auto key = context_.top() + "/" + name;
+    metric_keys_.push_back(key);
+    metrics_[key] = &value;
   }
 
-  void visit(const std::string& name, const MetricContainer& container)
+  void Visit(const std::string& name, const MetricContainer& container)
       override {
-    context.push(context.top() + "/" + name);
+    context_.push(context_.top() + "/" + name);
     container.Accept(*this);
-    context.pop();
+    context_.pop();
   }
 
-  void dump() {
-    for (const auto& key : metricKeys) {
-      LOG(INFO) << key << "=" << metrics[key]->load();
+  void Dump() {
+    for (const auto& key : metric_keys_) {
+      LOG(INFO) << key << "=" << metrics_[key]->load();
     }
   }
 
   void update(bool last) {
-    auto size = metrics["//progressTotalBytes"]->load();
-    auto position = metrics["//progressCurrentBytes"]->load();
+    auto size = metrics_["//progress_total_bytes_"]->load();
+    auto position = metrics_["//progress_current_bytes_"]->load();
 
     using ms = std::chrono::milliseconds;
     auto now = std::chrono::high_resolution_clock::now();
 
-    auto totalDuration = now - tsTotalBegin;
-    auto phaseDuration = now - tsPhaseBegin;
+    auto totalDuration = now - ts_total_begin_;
+    auto phaseDuration = now - ts_phase_begin_;
     auto totalS = duration_cast<ms>(totalDuration).count() / 1000.0;
     auto phaseS = duration_cast<ms>(phaseDuration).count() / 1000.0;
     auto percent = size == 0 ? 0 : 100 * position / size;
     auto mbps = phaseS == 0 ? 0 : position / phaseS / (1ll << 20);
 
-    auto newPhase = metrics["//progressPhase"]->load();
-    if (phase != newPhase) {
-      if (phase > 0) {
-        LOG(INFO) << lastUpdate;
+    auto newPhase = metrics_["//progress_phase_"]->load();
+    if (phase_ != newPhase) {
+      if (phase_ > 0) {
+        LOG(INFO) << last_update_;
       }
-      phase = newPhase;
-      tsPhaseBegin = now;
+      phase_ = newPhase;
+      ts_phase_begin_ = now;
     }
 
     std::stringstream update;
-    update << "phase " << phase << std::fixed                                 //
+    update << "phase " << phase_ << std::fixed                                 //
            << " | " << std::setw(5) << position / (1ll << 20) << " MB"        //
            << " | " << std::setw(5) << std::setprecision(1) << phaseS << "s"  //
            << " | " << std::setw(7) << mbps << " MB/s"                        //
            << " | " << std::setw(3) << percent << "%"                         //
            << " | " << std::setw(5) << totalS << "s total";
-    lastUpdate = update.str();
-    std::cout << lastUpdate << "\t\r";
+    last_update_ = update.str();
+    std::cout << last_update_ << "\t\r";
 
     if (last) {
-      LOG(INFO) << lastUpdate;
-      dump();
+      LOG(INFO) << last_update_;
+      Dump();
     }
   }
 
   int run() {
-    visit("", command);
+    Visit("", command_);
 
-    tsTotalBegin = std::chrono::high_resolution_clock::now();
+    ts_total_begin_ = std::chrono::high_resolution_clock::now();
 
-    auto result = std::async([this]() { return command.Run(); });
+    auto result = std::async([this]() { return command_.Run(); });
 
     std::chrono::milliseconds period(100);
 
@@ -107,4 +107,4 @@ Monitor::Monitor(Command& command) : pImpl(std::make_unique<Impl>(command)) {}
 
 Monitor::~Monitor() = default;
 
-int Monitor::run() { return pImpl->run(); }
+int Monitor::Run() { return pImpl->run(); }

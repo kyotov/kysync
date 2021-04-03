@@ -36,7 +36,6 @@ class SyncCommand::Impl final {
 
   std::vector<uint32_t> weak_checksums_;
   std::vector<StrongChecksum> strong_checksums_;
-  // NOTE: This attempts to use the new style despite inconsistency
   std::vector<uint64_t> compressed_sizes_;
   std::vector<uint64_t> compressed_file_offsets_;
   uint64_t max_compressed_size_;

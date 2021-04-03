@@ -1,72 +1,72 @@
 #include "ExpectationCheckMetricsVisitor.h"
 
 struct ExpectationCheckMetricVisitor::Impl {
-  std::map<std::string, uint64_t> expectations;
-  std::map<std::string, uint64_t> unchecked;
-  std::string context;
+  std::map<std::string, uint64_t> expectations_;
+  std::map<std::string, uint64_t> unchecked_;
+  std::string context_;
 
   explicit Impl(std::map<std::string, uint64_t> &&_expectations)
-      : expectations(_expectations),
-        context("//") {}
+      : expectations_(_expectations),
+        context_("//") {}
 
   ~Impl() {
     std::stringstream s;
 
     s << "unmet expectations:" << std::endl;
-    for (const auto &kv : expectations) {
+    for (const auto &kv : expectations_) {
       s << "  {\"" << kv.first << "\", " << kv.second << "}," << std::endl;
     }
 
     s << "unchecked metrics:" << std::endl;
-    for (const auto &kv : unchecked) {
+    for (const auto &kv : unchecked_) {
       s << "  {\"" << kv.first << "\", " << kv.second << "}," << std::endl;
     }
 
-    EXPECT_EQ(expectations.size(), 0) << s.str();
+    EXPECT_EQ(expectations_.size(), 0) << s.str();
   }
 
-  void visit(const std::string &name, const Metric &value) {
-    auto key = context + name;
+  void Visit(const std::string &name, const Metric &value) {
+    auto key = context_ + name;
 
-    auto i = expectations.find(key);
-    if (i != expectations.end()) {
+    auto i = expectations_.find(key);
+    if (i != expectations_.end()) {
       const auto &expected = i->second;
       const auto &found = value;
       EXPECT_EQ(found, expected) << "for metric " << key;
-      expectations.erase(i);
+      expectations_.erase(i);
     } else {
-      unchecked[key] = value;
+      unchecked_[key] = value;
     }
   }
 
-  void visit(
+  void Visit(
       const std::string &name,
       const MetricContainer &container,
       ExpectationCheckMetricVisitor &host) {
-    auto old_context = context;
-    context += name + "/";
+    auto old_context = context_;
+    context_ += name + "/";
     container.Accept(host);
-    context = old_context;
+    context_ = old_context;
   }
 };
 
 ExpectationCheckMetricVisitor::ExpectationCheckMetricVisitor(
     MetricContainer &host,
     std::map<std::string, uint64_t> &&_expectations)
-    : pImpl(std::make_unique<Impl>(std::move(_expectations))) {
+    : impl_(std::make_unique<Impl>(std::move(_expectations))) {
   host.Accept(*this);
 }
 
 ExpectationCheckMetricVisitor::~ExpectationCheckMetricVisitor() = default;
 
-void ExpectationCheckMetricVisitor::visit(
+void ExpectationCheckMetricVisitor::Visit(
     const std::string &name,
     const Metric &value) {
-  pImpl->visit(name, value);
+  impl_->Visit(name, value);
 }
 
-void ExpectationCheckMetricVisitor::visit(
+void ExpectationCheckMetricVisitor::Visit(
     const std::string &name,
     const MetricContainer &container) {
-  pImpl->visit(name, container, *this);
+  impl_->Visit(name, container, *this);
 }

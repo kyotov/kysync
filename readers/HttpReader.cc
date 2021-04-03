@@ -4,17 +4,17 @@
 #include <httplib.h>
 
 struct HttpReader::Impl {
-  const std::string host;
-  const std::string path;
-  httplib::Client cli;
+  const std::string host_;
+  const std::string path_;
+  httplib::Client cli_;
 
-  explicit Impl(std::string _host, std::string _path)
-      : host(std::move(_host)),
-        path(std::move(_path)),
-        cli(host.c_str()) {}
+  explicit Impl(std::string host, std::string path)
+      : host_(std::move(host)),
+        path_(std::move(path)),
+        cli_(host_.c_str()) {}
 
-  [[nodiscard]] size_t size() {
-    auto res = cli.Head(path.c_str());
+  [[nodiscard]] size_t GetSize() {
+    auto res = cli_.Head(path_.c_str());
 
     CHECK(res->has_header("Content-Length"));
     auto size = res->get_header_value("Content-Length");
@@ -22,15 +22,15 @@ struct HttpReader::Impl {
     return strtoull(size.c_str(), nullptr, 10);
   }
 
-  size_t read(void *buffer, size_t offset, size_t size) {
-    auto begOffset = offset;
-    auto endOffset = offset + size - 1;
+  size_t Read(void *buffer, size_t offset, size_t size) {
+    auto beg_offset = offset;
+    auto end_offset = offset + size - 1;
 
-    auto range = httplib::make_range_header({{begOffset, endOffset}});
-    auto res = cli.Get(path.c_str(), {range});
+    auto range = httplib::make_range_header({{beg_offset, end_offset}});
+    auto res = cli_.Get(path_.c_str(), {range});
 
     CHECK_EQ(res.error(), httplib::Success);
-    CHECK_EQ(res->status, 206) << begOffset << "-" << endOffset;
+    CHECK_EQ(res->status, 206) << beg_offset << "-" << end_offset;
 
     auto count = res->body.size();
     memcpy(buffer, res->body.data(), count);
@@ -50,9 +50,9 @@ HttpReader::HttpReader(const std::string &url) {
 
 HttpReader::~HttpReader() = default;
 
-size_t HttpReader::GetSize() const { return impl_->size(); }
+size_t HttpReader::GetSize() const { return impl_->GetSize(); }
 
 size_t HttpReader::Read(void *buffer, size_t offset, size_t size) const {
-  auto count = impl_->read(buffer, offset, size);
+  auto count = impl_->Read(buffer, offset, size);
   return Reader::Read(buffer, offset, count);
 }

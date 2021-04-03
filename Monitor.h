@@ -11,7 +11,7 @@ public:
 
   ~Monitor();
 
-  int run();
+  int Run();
 
 private:
   struct Impl;
