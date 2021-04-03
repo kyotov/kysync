@@ -31,7 +31,7 @@ function(install NAME GIT_REPO GIT_TAG)
 
             ${ARGN}
             CMAKE_ARGS
-            --config ${CMAKE_BUILD_TYPE}
+            #--config ${CMAKE_BUILD_TYPE}
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>
             -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_BINARY_DIR}/install
@@ -58,7 +58,7 @@ ELSE()
             GIT_TAG OpenSSL_1_1_1-stable
             PREFIX ${CMAKE_BINARY_DIR}
             CONFIGURE_COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> ./config no-shared no-dso --prefix=<INSTALL_DIR>/install --openssldir=<INSTALL_DIR>/install
-            BUILD_COMMAND make -C <SOURCE_DIR> build_libs #-j
+            BUILD_COMMAND make -C <SOURCE_DIR> build_libs -j
             INSTALL_COMMAND make -C <SOURCE_DIR> install_dev
     )
 ENDIF()
