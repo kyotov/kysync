@@ -9,13 +9,13 @@ public:
 
   ~HttpReader() override;
 
-  [[nodiscard]] size_t size() const override;
+  [[nodiscard]] size_t GetSize() const override;
 
-  size_t read(void *buffer, size_t offset, size_t size) const override;
+  size_t Read(void *buffer, size_t offset, size_t size) const override;
 
 private:
   struct Impl;
-  std::unique_ptr<Impl> pImpl;
+  std::unique_ptr<Impl> impl_;
 };
 
 #endif  // KSYNC_HTTPREADER_H

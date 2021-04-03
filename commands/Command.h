@@ -1,9 +1,9 @@
 #ifndef KSYNC_COMMAND_H
 #define KSYNC_COMMAND_H
 
-#include "../metrics/MetricContainer.h"
-
 #include <memory>
+
+#include "../metrics/MetricContainer.h"
 
 class Command : public MetricContainer {
 public:
@@ -13,13 +13,13 @@ public:
 
   virtual ~Command();
 
-  virtual int run() = 0;
+  virtual int Run() = 0;
 
-  void accept(MetricVisitor &visitor) const override;
+  void Accept(MetricVisitor &visitor) const override;
 
 protected:
   struct Impl;
-  std::unique_ptr<Impl> pImpl;
+  std::unique_ptr<Impl> impl_;
 };
 
 #endif  // KSYNC_COMMAND_H

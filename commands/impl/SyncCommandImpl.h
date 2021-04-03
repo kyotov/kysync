@@ -12,30 +12,30 @@ class SyncCommand::Impl final {
   friend class SyncCommand;
   friend class KySyncTest;
 
-  const std::string dataUri;
+  const std::string data_uri_;
   const bool compression_diabled_;
-  const std::string metadataUri;
-  const std::string seedUri;
-  const std::filesystem::path outputPath;
+  const std::string metadata_uri_;
+  const std::string seed_uri_;
+  const std::filesystem::path output_path_;
 
-  Command::Impl &baseImpl;
+  Command::Impl &base_impl_;
 
-  Metric weakChecksumMatches;
-  Metric weakChecksumFalsePositive;
-  Metric strongChecksumMatches;
+  Metric weak_checksum_matches_;
+  Metric weak_checksum_false_positive_;
+  Metric strong_checksum_matches_;
 
-  Metric reusedBytes;
-  Metric downloadedBytes;
+  Metric reused_bytes_;
+  Metric downloaded_bytes_;
 
-  size_t size{};
-  size_t headerSize{};
+  size_t size_{};
+  size_t header_size_{};
   size_t block{};
-  size_t blockCount{};
+  size_t block_count_{};
 
   std::string hash;
 
-  std::vector<uint32_t> weakChecksums;
-  std::vector<StrongChecksum> strongChecksums;
+  std::vector<uint32_t> weak_checksums_;
+  std::vector<StrongChecksum> strong_checksums_;
   // NOTE: This attempts to use the new style despite inconsistency
   std::vector<uint64_t> compressed_sizes_;
   std::vector<uint64_t> compressed_file_offsets_;
@@ -48,32 +48,35 @@ class SyncCommand::Impl final {
     size_t seedOffset{-1ull};
   };
 
-  std::bitset<0x100000000ull> set;
-  std::unordered_map<uint32_t, WcsMapData> analysis;
+  std::bitset<0x100000000ull> set_;
+  std::unordered_map<uint32_t, WcsMapData> analysis_;
 
   Impl(
-      std::string _dataUri,
+      std::string data_uri,
       bool compression_diabled,
-      std::string _metadataUri,
-      std::string _seedUri,
-      std::filesystem::path _outputPath,
-      int _threads,
-      Command::Impl &_baseImpl);
+      std::string metadata_uri,
+      std::string seed_uri,
+      std::filesystem::path output_path,
+      int threads,
+      Command::Impl &base_impl);
 
-  template<typename T>
-  size_t ReadMetadataIntoContainer(const Reader& metadata_reader, size_t offset, std::vector<T>& container);
+  template <typename T>
+  size_t ReadIntoContainer(
+      const Reader &metadata_reader,
+      size_t offset,
+      std::vector<T> &container);
 
-  void parseHeader(const Reader &metadataReader);
+  void parseHeader(const Reader &metadata_reader);
   void UpdateCompressedOffsetsAndMaxSize();
-  void readMetadata();
-  void analyzeSeedChunk(int id, size_t startOffset, size_t endOffset);
-  void analyzeSeed();
-  void reconstructSourceChunk(int id, size_t startOffset, size_t endOffset);
-  void reconstructSource();
+  void ReadMetadata();
+  void AnalyzeSeedChunk(int id, size_t start_offset, size_t end_offset);
+  void AnalyzeSeed();
+  void ReconstructSourceChunk(int id, size_t start_offset, size_t end_offset);
+  void ReconstructSource();
 
-  int run();
+  int Run();
 
-  void accept(MetricVisitor &visitor, const SyncCommand &host);
+  void Accept(MetricVisitor &visitor, const SyncCommand &host);
 };
 
 #endif  // KSYNC_SYNCCOMMANDIMPL_H

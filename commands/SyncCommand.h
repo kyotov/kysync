@@ -18,13 +18,13 @@ public:
 
   ~SyncCommand() override;
 
-  int run() override;
+  int Run() override;
 
-  void accept(MetricVisitor &visitor) const override;
+  void Accept(MetricVisitor &visitor) const override;
 
 private:
   class Impl;
-  std::unique_ptr<Impl> pImpl;
+  std::unique_ptr<Impl> impl_;
 
   friend class KySyncTest;
 };

@@ -21,8 +21,7 @@ uint32_t weakChecksum(const void *buffer, size_t size);
  * - the checksum of the data in the window
  * NOTE: the window size is assumed to be known to the user...
  */
-using WeakChecksumCallback =
-    std::function<void(size_t offset, uint32_t wcs)>;
+using WeakChecksumCallback = std::function<void(size_t offset, uint32_t wcs)>;
 
 /**
  * computes a running window checksum ala rsync

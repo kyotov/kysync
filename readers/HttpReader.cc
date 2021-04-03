@@ -11,12 +11,9 @@ struct HttpReader::Impl {
   explicit Impl(std::string _host, std::string _path)
       : host(std::move(_host)),
         path(std::move(_path)),
-        cli(host.c_str())
-  {
-  }
+        cli(host.c_str()) {}
 
-  [[nodiscard]] size_t size()
-  {
+  [[nodiscard]] size_t size() {
     auto res = cli.Head(path.c_str());
 
     CHECK(res->has_header("Content-Length"));
@@ -25,8 +22,7 @@ struct HttpReader::Impl {
     return strtoull(size.c_str(), nullptr, 10);
   }
 
-  size_t read(void *buffer, size_t offset, size_t size)
-  {
+  size_t read(void *buffer, size_t offset, size_t size) {
     auto begOffset = offset;
     auto endOffset = offset + size - 1;
 
@@ -43,25 +39,20 @@ struct HttpReader::Impl {
   }
 };
 
-HttpReader::HttpReader(const std::string &url)
-{
+HttpReader::HttpReader(const std::string &url) {
   auto pos = url.find("//");
   CHECK(pos != url.npos);
   pos = url.find('/', pos + 2);
   CHECK(pos != url.npos);
 
-  pImpl = std::make_unique<Impl>(url.substr(0, pos), url.substr(pos));
+  impl_ = std::make_unique<Impl>(url.substr(0, pos), url.substr(pos));
 }
 
 HttpReader::~HttpReader() = default;
 
-size_t HttpReader::size() const
-{
-  return pImpl->size();
-}
+size_t HttpReader::GetSize() const { return impl_->size(); }
 
-size_t HttpReader::read(void *buffer, size_t offset, size_t size) const
-{
-  auto count = pImpl->read(buffer, offset, size);
-  return Reader::read(buffer, offset, count);
+size_t HttpReader::Read(void *buffer, size_t offset, size_t size) const {
+  auto count = impl_->read(buffer, offset, size);
+  return Reader::Read(buffer, offset, count);
 }

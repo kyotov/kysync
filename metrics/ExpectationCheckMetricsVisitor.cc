@@ -7,12 +7,9 @@ struct ExpectationCheckMetricVisitor::Impl {
 
   explicit Impl(std::map<std::string, uint64_t> &&_expectations)
       : expectations(_expectations),
-        context("//")
-  {
-  }
+        context("//") {}
 
-  ~Impl()
-  {
+  ~Impl() {
     std::stringstream s;
 
     s << "unmet expectations:" << std::endl;
@@ -28,8 +25,7 @@ struct ExpectationCheckMetricVisitor::Impl {
     EXPECT_EQ(expectations.size(), 0) << s.str();
   }
 
-  void visit(const std::string &name, const Metric &value)
-  {
+  void visit(const std::string &name, const Metric &value) {
     auto key = context + name;
 
     auto i = expectations.find(key);
@@ -46,11 +42,10 @@ struct ExpectationCheckMetricVisitor::Impl {
   void visit(
       const std::string &name,
       const MetricContainer &container,
-      ExpectationCheckMetricVisitor &host)
-  {
+      ExpectationCheckMetricVisitor &host) {
     auto old_context = context;
     context += name + "/";
-    container.accept(host);
+    container.Accept(host);
     context = old_context;
   }
 };
@@ -58,23 +53,20 @@ struct ExpectationCheckMetricVisitor::Impl {
 ExpectationCheckMetricVisitor::ExpectationCheckMetricVisitor(
     MetricContainer &host,
     std::map<std::string, uint64_t> &&_expectations)
-    : pImpl(std::make_unique<Impl>(std::move(_expectations)))
-{
-  host.accept(*this);
+    : pImpl(std::make_unique<Impl>(std::move(_expectations))) {
+  host.Accept(*this);
 }
 
 ExpectationCheckMetricVisitor::~ExpectationCheckMetricVisitor() = default;
 
 void ExpectationCheckMetricVisitor::visit(
     const std::string &name,
-    const Metric &value)
-{
+    const Metric &value) {
   pImpl->visit(name, value);
 }
 
 void ExpectationCheckMetricVisitor::visit(
     const std::string &name,
-    const MetricContainer &container)
-{
+    const MetricContainer &container) {
   pImpl->visit(name, container, *this);
 }

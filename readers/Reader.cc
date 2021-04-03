@@ -5,40 +5,34 @@
 #include <filesystem>
 
 #include "FileReader.h"
-#include "MemoryReader.h"
 #include "HttpReader.h"
+#include "MemoryReader.h"
 
 namespace fs = std::filesystem;
 
 struct Reader::Impl {
-  Metric totalReads;
-  Metric totalBytesRead;
+  Metric total_reads_;
+  Metric total_bytes_read_;
 
-  void accept(MetricVisitor &visitor) const
-  {
-    VISIT(visitor, totalReads);
-    VISIT(visitor, totalBytesRead);
+  void accept(MetricVisitor &visitor) const {
+    VISIT(visitor, total_reads_);
+    VISIT(visitor, total_bytes_read_);
   }
 };
 
-Reader::Reader() : pImpl(std::make_unique<Impl>()) {}
+Reader::Reader() : impl_(std::make_unique<Impl>()) {}
 
 Reader::~Reader() = default;
 
-size_t Reader::read(void * /*buffer*/, size_t /*offset*/, size_t size) const
-{
-  pImpl->totalReads++;
-  pImpl->totalBytesRead += size;
+size_t Reader::Read(void * /*buffer*/, size_t /*offset*/, size_t size) const {
+  impl_->total_reads_++;
+  impl_->total_bytes_read_ += size;
   return size;
 }
 
-void Reader::accept(MetricVisitor &visitor) const
-{
-  pImpl->accept(visitor);
-}
+void Reader::Accept(MetricVisitor &visitor) const { impl_->accept(visitor); }
 
-std::unique_ptr<Reader> Reader::create(const std::string &uri)
-{
+std::unique_ptr<Reader> Reader::Create(const std::string &uri) {
   if (uri.starts_with("http://") || uri.starts_with("https://")) {
     return std::make_unique<HttpReader>(uri);
   }

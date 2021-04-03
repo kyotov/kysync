@@ -26,6 +26,13 @@ if ((NOT EXISTS ${DEPS_DIR}) OR (${FORCE_REFRESH_DEPS}))
             COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -B ${DEPS_DIR} -S ${CMAKE_SOURCE_DIR}/deps -G "${CMAKE_GENERATOR}"
     )
     execute_process(
+            ##
+            #FIXME: this started failing on mac first (wihtout removing CC and CXX from the environment)
+            #       it then started failing on linux too (at least on github ci)
+            #       symptoms:
+            #       * rerun fixed it...
+            #       * but if you remove build/CMakeCache.txt then it is not fixed...
+            #       dumped the environment before the call and noticed difference in CC/CXX. made it the same. passed.
             COMMAND ${CMAKE_COMMAND} -E env --unset=CC --unset=CXX ${CMAKE_COMMAND} --build ${DEPS_DIR} --config ${CMAKE_BUILD_TYPE} -j
     )
 else ()
@@ -45,17 +52,17 @@ find_package(httplib REQUIRED NO_MODULE PATHS ${CMAKE_PREFIX_PATH}/CMake/httplib
 find_package(zstd REQUIRED NO_MODULE)
 
 add_library(main STATIC
-        readers/Reader.cpp
-        readers/MemoryReader.cpp
-        readers/FileReader.cpp
-        readers/HttpReader.cpp
-        commands/Command.cpp
-        commands/PrepareCommand.cpp
-        commands/SyncCommand.cpp
-        checksums/wcs.cpp
-        checksums/StrongChecksum.cpp
-        checksums/StrongChecksumBuilder.cpp
-        Monitor.cpp)
+        readers/Reader.cc
+        readers/MemoryReader.cc
+        readers/FileReader.cc
+        readers/HttpReader.cc
+        commands/Command.cc
+        commands/PrepareCommand.cc
+        commands/SyncCommand.cc
+        checksums/wcs.cc
+        checksums/StrongChecksum.cc
+        checksums/StrongChecksumBuilder.cc
+        Monitor.cc)
 target_link_libraries(main
         zstd::libzstd_static
         xxHash::xxhash
@@ -67,7 +74,7 @@ target_link_libraries(main
 #set_target_properties(main PROPERTIES LINK_FLAGS /LTCG)
 
 add_executable(kysync
-        main.cpp)
+        main.cc)
 target_link_libraries(kysync
         main
         gflags)
@@ -75,8 +82,8 @@ target_link_libraries(kysync
 #set_target_properties(kysync PROPERTIES LINK_FLAGS /LTCG)
 
 add_executable(tests
-        tests.cpp
-        metrics/ExpectationCheckMetricsVisitor.cpp)
+        tests.cc
+        metrics/ExpectationCheckMetricsVisitor.cc)
 target_link_libraries(tests
         main
         GTest::gtest

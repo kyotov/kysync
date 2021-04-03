@@ -25,34 +25,28 @@ struct Monitor::Impl : public MetricVisitor {
   decltype(std::chrono::high_resolution_clock::now()) tsTotalBegin;
   decltype(std::chrono::high_resolution_clock::now()) tsPhaseBegin;
 
-  explicit Impl(Command& _command) : command(_command)
-  {
-    context.push("");
-  }
+  explicit Impl(Command& _command) : command(_command) { context.push(""); }
 
-  void visit(const std::string& name, const Metric& value) override
-  {
+  void visit(const std::string& name, const Metric& value) override {
     auto key = context.top() + "/" + name;
     metricKeys.push_back(key);
     metrics[key] = &value;
   }
 
-  void visit(const std::string& name, const MetricContainer& container) override
-  {
+  void visit(const std::string& name, const MetricContainer& container)
+      override {
     context.push(context.top() + "/" + name);
-    container.accept(*this);
+    container.Accept(*this);
     context.pop();
   }
 
-  void dump()
-  {
+  void dump() {
     for (const auto& key : metricKeys) {
       LOG(INFO) << key << "=" << metrics[key]->load();
     }
   }
 
-  void update(bool last)
-  {
+  void update(bool last) {
     auto size = metrics["//progressTotalBytes"]->load();
     auto position = metrics["//progressCurrentBytes"]->load();
 
@@ -91,13 +85,12 @@ struct Monitor::Impl : public MetricVisitor {
     }
   }
 
-  int run()
-  {
+  int run() {
     visit("", command);
 
     tsTotalBegin = std::chrono::high_resolution_clock::now();
 
-    auto result = std::async([this]() { return command.run(); });
+    auto result = std::async([this]() { return command.Run(); });
 
     std::chrono::milliseconds period(100);
 
@@ -114,7 +107,4 @@ Monitor::Monitor(Command& command) : pImpl(std::make_unique<Impl>(command)) {}
 
 Monitor::~Monitor() = default;
 
-int Monitor::run()
-{
-  return pImpl->run();
-}
+int Monitor::run() { return pImpl->run(); }

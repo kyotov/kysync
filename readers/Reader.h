@@ -12,17 +12,17 @@ public:
 
   virtual ~Reader();
 
-  [[nodiscard]] virtual size_t size() const = 0;
+  [[nodiscard]] virtual size_t GetSize() const = 0;
 
-  virtual size_t read(void *buffer, size_t offset, size_t size) const;
+  virtual size_t Read(void *buffer, size_t offset, size_t size) const;
 
-  void accept(MetricVisitor &visitor) const override;
+  void Accept(MetricVisitor &visitor) const override;
 
-  static std::unique_ptr<Reader> create(const std::string &uri);
+  static std::unique_ptr<Reader> Create(const std::string &uri);
 
 private:
   struct Impl;
-  std::unique_ptr<Impl> pImpl;
+  std::unique_ptr<Impl> impl_;
 };
 
 #endif  // KSYNC_READER_H
