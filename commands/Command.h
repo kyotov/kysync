@@ -13,13 +13,13 @@ public:
 
   virtual ~Command();
 
-  virtual int run() = 0;
+  virtual int Run() = 0;
 
   void Accept(MetricVisitor &visitor) const override;
 
 protected:
   struct Impl;
-  std::unique_ptr<Impl> pImpl;
+  std::unique_ptr<Impl> impl_;
 };
 
 #endif  // KSYNC_COMMAND_H

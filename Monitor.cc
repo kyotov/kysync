@@ -90,7 +90,7 @@ struct Monitor::Impl : public MetricVisitor {
 
     tsTotalBegin = std::chrono::high_resolution_clock::now();
 
-    auto result = std::async([this]() { return command.run(); });
+    auto result = std::async([this]() { return command.Run(); });
 
     std::chrono::milliseconds period(100);
 

@@ -110,20 +110,20 @@ PrepareCommand::PrepareCommand(
     std::ostream &output_compressed,
     size_t block)
     // FIXME: due to the privacy declarations, we can't use std::make_unique??
-    : pImpl(new Impl(
+    : impl_(new Impl(
           input,
           output_ksync,
           output_compressed,
           block,
-          *Command::pImpl)) {}
+          *Command::impl_)) {}
 
 PrepareCommand::PrepareCommand(PrepareCommand &&) noexcept = default;
 
 PrepareCommand::~PrepareCommand() = default;
 
-int PrepareCommand::run() { return pImpl->Run(); }
+int PrepareCommand::Run() { return impl_->Run(); }
 
 void PrepareCommand::Accept(MetricVisitor &visitor) const {
   Command::Accept(visitor);
-  pImpl->Accept(visitor, *this);
+  impl_->Accept(visitor, *this);
 }

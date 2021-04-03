@@ -11,12 +11,12 @@ void Command::Impl::Accept(MetricVisitor &visitor) const {
   VISIT(visitor, progress_compressed_bytes_);
 };
 
-Command::Command() : pImpl(std::make_unique<Impl>()) {}
+Command::Command() : impl_(std::make_unique<Impl>()) {}
 
 Command::Command(Command &&) noexcept = default;
 
 Command::~Command() = default;
 
 void Command::Accept(MetricVisitor &visitor) const {
-  return pImpl->Accept(visitor);
+  return impl_->Accept(visitor);
 }

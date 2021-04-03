@@ -189,32 +189,32 @@ class KySyncTest {
 public:
   static const std::vector<uint32_t> &examineWeakChecksums(
       const PrepareCommand &c) {
-    return c.pImpl->weak_checksums_;
+    return c.impl_->weak_checksums_;
   }
 
   static const std::vector<StrongChecksum> &examineStrongChecksums(
       const PrepareCommand &c) {
-    return c.pImpl->strong_checksums_;
+    return c.impl_->strong_checksums_;
   }
 
   static const std::vector<uint32_t> &examineWeakChecksums(
       const SyncCommand &c) {
-    return c.pImpl->weak_checksums_;
+    return c.impl_->weak_checksums_;
   }
 
   static const std::vector<StrongChecksum> &examineStrongChecksums(
       const SyncCommand &c) {
-    return c.pImpl->strong_checksums_;
+    return c.impl_->strong_checksums_;
   }
 
-  static void readMetadata(const SyncCommand &c) { c.pImpl->ReadMetadata(); }
+  static void readMetadata(const SyncCommand &c) { c.impl_->ReadMetadata(); }
 
   static std::vector<size_t> examineAnalisys(const SyncCommand &c) {
     std::vector<size_t> result;
 
-    for (size_t i = 0; i < c.pImpl->block_count_; i++) {
-      auto wcs = c.pImpl->weak_checksums_[i];
-      auto data = c.pImpl->analysis_[wcs];
+    for (size_t i = 0; i < c.impl_->block_count_; i++) {
+      auto wcs = c.impl_->weak_checksums_[i];
+      auto data = c.impl_->analysis_[wcs];
       result.push_back(data.seedOffset);
     }
 
@@ -222,11 +222,11 @@ public:
   }
 
   static int GetCompressionLevel(const PrepareCommand &c) {
-    return c.pImpl->compression_level_;
+    return c.impl_->compression_level_;
   }
 
   static size_t GetBlockSize(const PrepareCommand &c) {
-    return c.pImpl->block_size_;
+    return c.impl_->block_size_;
   }
 };
 
@@ -270,7 +270,7 @@ PrepareCommand prepare(
 
   auto input = createInputStream(data);
   PrepareCommand c(input, output_ksync, output_compressed, block);
-  c.run();
+  c.Run();
 
   // FIXME: maybe make the expectation checking in a method??
   ExpectationCheckMetricVisitor(  // NOLINT(bugprone-unused-raii)
@@ -404,7 +404,7 @@ void EndToEndTest(
       outputPath,
       1);
 
-  sc.run();
+  sc.Run();
 
   EXPECT_EQ(KySyncTest::examineAnalisys(sc), expectedBlockMapping);
 
@@ -488,7 +488,7 @@ int PrepareFile(
   auto input = std::ifstream(source_file_name, std::ios::binary);
   CHECK(input) << "unable to Read from " << source_file_name;
   return PrepareCommand(input, output_metadata, output_compressed, block_size)
-      .run();
+      .Run();
 }
 
 bool DoFilesMatch(
@@ -532,7 +532,7 @@ void SyncFile(
       file_uri_prefix + seed_data_file_name,
       output_file_name,
       32);
-  auto return_code = sync_command.run();
+  auto return_code = sync_command.Run();
   CHECK(return_code == 0) << "Sync command failed for " + source_file_name;
   EXPECT_TRUE(DoFilesMatch(expected_output_file_name, output_file_name))
       << "Sync'd output file does not match expectations";

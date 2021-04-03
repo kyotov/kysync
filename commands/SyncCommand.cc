@@ -437,20 +437,20 @@ SyncCommand::SyncCommand(
     std::string seedUri,
     std::filesystem::path outputPath,
     int threads)
-    : pImpl(new Impl(
+    : impl_(new Impl(
           std::move(dataUri),
           compression_diabled,
           std::move(metadataUri),
           std::move(seedUri),
           std::move(outputPath),
           threads,
-          *Command::pImpl)) {}
+          *Command::impl_)) {}
 
 SyncCommand::~SyncCommand() = default;
 
-int SyncCommand::run() { return pImpl->Run(); }
+int SyncCommand::Run() { return impl_->Run(); }
 
 void SyncCommand::Accept(MetricVisitor &visitor) const {
   Command::Accept(visitor);
-  pImpl->Accept(visitor, *this);
+  impl_->Accept(visitor, *this);
 }
