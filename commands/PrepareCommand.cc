@@ -123,7 +123,7 @@ PrepareCommand::~PrepareCommand() = default;
 
 int PrepareCommand::run() { return pImpl->run(); }
 
-void PrepareCommand::accept(MetricVisitor &visitor) const {
-  Command::accept(visitor);
+void PrepareCommand::Accept(MetricVisitor &visitor) const {
+  Command::Accept(visitor);
   pImpl->accept(visitor, *this);
 }

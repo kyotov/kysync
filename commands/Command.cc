@@ -17,6 +17,6 @@ Command::Command(Command &&) noexcept = default;
 
 Command::~Command() = default;
 
-void Command::accept(MetricVisitor &visitor) const {
+void Command::Accept(MetricVisitor &visitor) const {
   return pImpl->accept(visitor);
 }

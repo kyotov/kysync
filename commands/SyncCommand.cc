@@ -32,7 +32,7 @@ void SyncCommand::Impl::parseHeader(const Reader &metadataReader) {
   constexpr size_t MAX_HEADER_SIZE = 1024;
   char buffer[MAX_HEADER_SIZE];
 
-  metadataReader.read(buffer, 0, MAX_HEADER_SIZE);
+  metadataReader.Read(buffer, 0, MAX_HEADER_SIZE);
 
   std::stringstream header;
   header.write(buffer, MAX_HEADER_SIZE);
@@ -77,8 +77,8 @@ size_t SyncCommand::Impl::ReadMetadataIntoContainer(
       blockCount * sizeof(typename std::vector<T>::value_type);
   container.resize(blockCount);
   size_t size_read =
-      metadata_reader.read(container.data(), offset, size_to_read);
-  CHECK_EQ(size_to_read, size_read) << "cannot read metadata";
+      metadata_reader.Read(container.data(), offset, size_to_read);
+  CHECK_EQ(size_to_read, size_read) << "cannot Read metadata";
   return size_read;
 }
 
@@ -97,10 +97,10 @@ void SyncCommand::Impl::UpdateCompressedOffsetsAndMaxSize() {
 }
 
 void SyncCommand::Impl::readMetadata() {
-  auto metadataReader = Reader::create(metadataUri);
+  auto metadataReader = Reader::Create(metadataUri);
 
   baseImpl.progressPhase++;
-  baseImpl.progressTotalBytes = metadataReader->size();
+  baseImpl.progressTotalBytes = metadataReader->GetSize();
   baseImpl.progressCurrentBytes = 0;
   baseImpl.progress_compressed_bytes_ = 0;
 
@@ -138,8 +138,8 @@ void SyncCommand::Impl::analyzeSeedChunk(
   auto buffer = smartBuffer.get() + block;
   memset(buffer, 0, block);
 
-  auto seedReader = Reader::create(seedUri);
-  auto seedSize = seedReader->size();
+  auto seedReader = Reader::Create(seedUri);
+  auto seedSize = seedReader->GetSize();
 
   uint32_t _wcs = 0;
 
@@ -170,7 +170,7 @@ void SyncCommand::Impl::analyzeSeedChunk(
 
           if (VERIFY) {
             auto t = std::make_unique<char[]>(block);
-            seedReader->read(t.get(), data.seedOffset, block);
+            seedReader->Read(t.get(), data.seedOffset, block);
             LOG_ASSERT(wcs == weakChecksum(t.get(), block));
             LOG_ASSERT(seedDigest == StrongChecksum::compute(t.get(), block));
           }
@@ -181,7 +181,7 @@ void SyncCommand::Impl::analyzeSeedChunk(
     };
 
     memcpy(buffer - block, buffer, block);
-    auto count = seedReader->read(buffer, seedOffset, block);
+    auto count = seedReader->Read(buffer, seedOffset, block);
     memset(buffer + count, 0, block - count);
 
     /* I tried to "optimize" the following by manually inlining `weakChecksum`
@@ -208,12 +208,12 @@ int parallelize(
   auto chunk = (blocks + threads - 1) / threads;
 
   if (chunk < 2) {
-    LOG(INFO) << "size too small... not using parallelization";
+    LOG(INFO) << "GetSize too small... not using parallelization";
     threads = 1;
     chunk = blocks;
   }
 
-  VLOG(1) << "parallelize size=" << dataSize  //
+  VLOG(1) << "parallelize GetSize=" << dataSize  //
           << " block=" << blockSize           //
           << " threads=" << threads;
 
@@ -242,9 +242,9 @@ int parallelize(
 }
 
 void SyncCommand::Impl::analyzeSeed() {
-  auto seedReader = Reader::create(seedUri);
+  auto seedReader = Reader::Create(seedUri);
 
-  auto seedDataSize = seedReader->size();
+  auto seedDataSize = seedReader->GetSize();
   baseImpl.progressPhase++;
   baseImpl.progressTotalBytes = seedDataSize;
   baseImpl.progressCurrentBytes = 0;
@@ -278,8 +278,8 @@ void SyncCommand::Impl::reconstructSourceChunk(
       std::make_unique<char[]>(max_compressed_size_);
   auto decompression_buffer = smart_decompression_buffer.get();
 
-  auto seedReader = Reader::create(seedUri);
-  auto dataReader = Reader::create(dataUri);
+  auto seedReader = Reader::Create(seedUri);
+  auto dataReader = Reader::Create(dataUri);
 
   // NOTE: The fstream object is consciously initialized with both out and in
   // modes although this function only writes to the file.
@@ -307,17 +307,17 @@ void SyncCommand::Impl::reconstructSourceChunk(
     size_t count;
 
     if (data.seedOffset != -1ull && scs == strongChecksums[data.index]) {
-      count = seedReader->read(buffer, data.seedOffset, block);
+      count = seedReader->Read(buffer, data.seedOffset, block);
       reusedBytes += count;
     } else {
       if (compression_diabled_) {
-        count = dataReader->read(buffer, i * block, block);
+        count = dataReader->Read(buffer, i * block, block);
         downloadedBytes += count;
       } else {
         auto size_to_read = compressed_sizes_[i];
         auto offset_to_read_from = compressed_file_offsets_[i];
         LOG_ASSERT(size_to_read <= max_compressed_size_);
-        count = dataReader->read(
+        count = dataReader->Read(
             decompression_buffer,
             offset_to_read_from,
             size_to_read);
@@ -329,10 +329,10 @@ void SyncCommand::Impl::reconstructSourceChunk(
             << "Offset starting " << offset_to_read_from
             << " not compressed by zstd!";
         CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_UNKNOWN)
-            << "Original size unknown when decompressing from offset "
+            << "Original GetSize unknown when decompressing from offset "
             << offset_to_read_from;
         CHECK(expected_size_after_decompression <= block)
-            << "Expected decompressed size is greater than block size. "
+            << "Expected decompressed size is greater than block GetSize. "
                "Starting offset "
             << offset_to_read_from;
         auto decompressed_size =
@@ -365,7 +365,7 @@ void SyncCommand::Impl::reconstructSourceChunk(
 }
 
 void SyncCommand::Impl::reconstructSource() {
-  auto dataReader = Reader::create(dataUri);
+  auto dataReader = Reader::Create(dataUri);
   auto dataSize = size;
 
   baseImpl.progressPhase++;
@@ -454,7 +454,7 @@ SyncCommand::~SyncCommand() = default;
 
 int SyncCommand::run() { return pImpl->run(); }
 
-void SyncCommand::accept(MetricVisitor &visitor) const {
-  Command::accept(visitor);
+void SyncCommand::Accept(MetricVisitor &visitor) const {
+  Command::Accept(visitor);
   pImpl->accept(visitor, *this);
 }

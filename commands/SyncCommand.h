@@ -20,7 +20,7 @@ public:
 
   int run() override;
 
-  void accept(MetricVisitor &visitor) const override;
+  void Accept(MetricVisitor &visitor) const override;
 
 private:
   class Impl;

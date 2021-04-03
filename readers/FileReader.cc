@@ -27,13 +27,13 @@ struct FileReader::Impl {
 };
 
 FileReader::FileReader(const std::filesystem::path &path)
-    : pImpl(std::make_unique<Impl>(path)) {}
+    : impl_(std::make_unique<Impl>(path)) {}
 
 FileReader::~FileReader() = default;
 
-size_t FileReader::size() const { return pImpl->size(); }
+size_t FileReader::GetSize() const { return impl_->size(); }
 
-size_t FileReader::read(void *buffer, size_t offset, size_t size) const {
-  auto count = pImpl->read(buffer, offset, size);
-  return Reader::read(buffer, offset, count);
+size_t FileReader::Read(void *buffer, size_t offset, size_t size) const {
+  auto count = impl_->read(buffer, offset, size);
+  return Reader::Read(buffer, offset, count);
 }

@@ -45,7 +45,7 @@ struct ExpectationCheckMetricVisitor::Impl {
       ExpectationCheckMetricVisitor &host) {
     auto old_context = context;
     context += name + "/";
-    container.accept(host);
+    container.Accept(host);
     context = old_context;
   }
 };
@@ -54,7 +54,7 @@ ExpectationCheckMetricVisitor::ExpectationCheckMetricVisitor(
     MetricContainer &host,
     std::map<std::string, uint64_t> &&_expectations)
     : pImpl(std::make_unique<Impl>(std::move(_expectations))) {
-  host.accept(*this);
+  host.Accept(*this);
 }
 
 ExpectationCheckMetricVisitor::~ExpectationCheckMetricVisitor() = default;

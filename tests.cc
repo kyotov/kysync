@@ -82,24 +82,24 @@ TEST(StringChecksum, Stream) {
 }
 
 void testReader(Reader &reader, size_t expectedSize) {
-  ASSERT_EQ(reader.size(), expectedSize);
+  ASSERT_EQ(reader.GetSize(), expectedSize);
 
   char buffer[1024];
 
   {
-    auto count = reader.read(buffer, 1, 3);
+    auto count = reader.Read(buffer, 1, 3);
     buffer[count] = '\0';
     EXPECT_STREQ(buffer, "123");
   }
 
   {
-    auto count = reader.read(buffer, 8, 3);
+    auto count = reader.Read(buffer, 8, 3);
     buffer[count] = '\0';
     EXPECT_STREQ(buffer, "89");
   }
 
   {
-    auto count = reader.read(buffer, 20, 5);
+    auto count = reader.Read(buffer, 20, 5);
     buffer[count] = '\0';
     EXPECT_STREQ(buffer, "");
   }
@@ -153,7 +153,7 @@ TEST(Readers, MemoryReaderSimple) {
   testReader(reader, strlen(data));
 
   auto uri = createMemoryReaderUri(data, strlen(data));
-  testReader(*Reader::create(uri), strlen(data));
+  testReader(*Reader::Create(uri), strlen(data));
 }
 
 TEST(Readers, FileReaderSimple) {
@@ -167,22 +167,22 @@ TEST(Readers, FileReaderSimple) {
   auto reader = FileReader(path);
   testReader(reader, fs::file_size(path));
 
-  testReader(*Reader::create("file://" + path.string()), strlen(data));
+  testReader(*Reader::Create("file://" + path.string()), strlen(data));
 }
 
 TEST(Readers, BadUri) {
   // invalid protocol
-  EXPECT_THROW(Reader::create("foo://1234"), std::invalid_argument);
+  EXPECT_THROW(Reader::Create("foo://1234"), std::invalid_argument);
 
   // invalid buffer
-  EXPECT_THROW(Reader::create("memory://G:0"), std::invalid_argument);
+  EXPECT_THROW(Reader::Create("memory://G:0"), std::invalid_argument);
   // invalid size
-  EXPECT_THROW(Reader::create("memory://0:G"), std::invalid_argument);
+  EXPECT_THROW(Reader::Create("memory://0:G"), std::invalid_argument);
   // invalid separator
-  EXPECT_THROW(Reader::create("memory://0+0"), std::invalid_argument);
+  EXPECT_THROW(Reader::Create("memory://0+0"), std::invalid_argument);
 
   // non-existent file
-  EXPECT_THROW(Reader::create("file://foo"), std::invalid_argument);
+  EXPECT_THROW(Reader::Create("file://foo"), std::invalid_argument);
 }
 
 class KySyncTest {
@@ -486,7 +486,7 @@ int PrepareFile(
   CHECK(output_compressed) << "unable to write to "
                            << output_compressed_file_name;
   auto input = std::ifstream(source_file_name, std::ios::binary);
-  CHECK(input) << "unable to read from " << source_file_name;
+  CHECK(input) << "unable to Read from " << source_file_name;
   return PrepareCommand(input, output_metadata, output_compressed, block_size)
       .run();
 }

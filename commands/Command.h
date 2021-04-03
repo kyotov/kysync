@@ -15,7 +15,7 @@ public:
 
   virtual int run() = 0;
 
-  void accept(MetricVisitor &visitor) const override;
+  void Accept(MetricVisitor &visitor) const override;
 
 protected:
   struct Impl;

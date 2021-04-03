@@ -45,14 +45,14 @@ HttpReader::HttpReader(const std::string &url) {
   pos = url.find('/', pos + 2);
   CHECK(pos != url.npos);
 
-  pImpl = std::make_unique<Impl>(url.substr(0, pos), url.substr(pos));
+  impl_ = std::make_unique<Impl>(url.substr(0, pos), url.substr(pos));
 }
 
 HttpReader::~HttpReader() = default;
 
-size_t HttpReader::size() const { return pImpl->size(); }
+size_t HttpReader::GetSize() const { return impl_->size(); }
 
-size_t HttpReader::read(void *buffer, size_t offset, size_t size) const {
-  auto count = pImpl->read(buffer, offset, size);
-  return Reader::read(buffer, offset, count);
+size_t HttpReader::Read(void *buffer, size_t offset, size_t size) const {
+  auto count = impl_->read(buffer, offset, size);
+  return Reader::Read(buffer, offset, count);
 }

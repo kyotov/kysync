@@ -36,7 +36,7 @@ struct Monitor::Impl : public MetricVisitor {
   void visit(const std::string& name, const MetricContainer& container)
       override {
     context.push(context.top() + "/" + name);
-    container.accept(*this);
+    container.Accept(*this);
     context.pop();
   }
 
