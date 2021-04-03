@@ -11,7 +11,7 @@ endif ()
 #
 # see https://cliutils.gitlab.io/modern-cmake/chapters/basics/variables.html
 #
-option(FORCE_REFRESH_DEPS "force refresh reps" OFF)
+option(FORCE_REFRESH_DEPS "force refresh reps" ON)
 
 set(DEPS_DIR ${CMAKE_BINARY_DIR}/deps)
 message("INFO: dependencies will be installed in ${DEPS_DIR}")
@@ -73,8 +73,6 @@ add_executable(kysync
 target_link_libraries(kysync
         main
         gflags)
-target_link_options(kysync PRIVATE -undefined dynamic_lookup)
-
 #set_target_properties(kysync PROPERTIES COMPILE_FLAGS /GL)
 #set_target_properties(kysync PROPERTIES LINK_FLAGS /LTCG)
 
@@ -85,7 +83,6 @@ target_link_libraries(tests
         main
         GTest::gtest
         GTest::gtest_main)
-target_link_options(tests PRIVATE -undefined dynamic_lookup)
 
 add_test(
         NAME tests
