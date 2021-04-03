@@ -1,9 +1,9 @@
 #ifndef KSYNC_COMMAND_H
 #define KSYNC_COMMAND_H
 
-#include "../metrics/MetricContainer.h"
-
 #include <memory>
+
+#include "../metrics/MetricContainer.h"
 
 class Command : public MetricContainer {
 public:

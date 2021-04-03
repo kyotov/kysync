@@ -9,8 +9,9 @@ there is a rough list of remaining items to do [here](todo.md)
 # pitch
 
 The below experiments use 128 threads on:
-* Processor	Intel(R) Core(TM) i9-7940X CPU @ 3.10GHz, 3096 Mhz, 14 Core(s), 28 Logical Processor(s)
-* BaseBoard Product	TUF X299 MARK 2
+
+* Processor Intel(R) Core(TM) i9-7940X CPU @ 3.10GHz, 3096 Mhz, 14 Core(s), 28 Logical Processor(s)
+* BaseBoard Product TUF X299 MARK 2
 * Samsung SSD 970 EVO 2TB
 
 This is the Ubuntu 20.04.01 DVD reconstructing itself over an identical copy with 16kb chunks:
@@ -33,6 +34,7 @@ O0217 20:31:01.766489 16168 Monitor.cpp:49] //downloadedBytes=81920
 ```
 
 This is the Ubuntu 20.04.01 DVD reconstructing itself over 20.10 DVD (6 months apart) with 16kb chunks:
+
 ```
 > kysync.exe -command sync -data-uri="file://c:\Users\Kamen Yotov\Downloads\ubuntu-20.04.1-desktop-amd64.iso" -input-filename="C:\Users\Kamen Yotov\Downloads\ubuntu-20.10-desktop-amd64.iso" -output-filename=x.iso -threads=128
 
@@ -49,8 +51,9 @@ O0217 20:30:29.908663  3920 Monitor.cpp:49] //strongChecksumMatches=62210
 O0217 20:30:29.908663  3920 Monitor.cpp:49] //reusedBytes=1021247488                                                    
 O0217 20:30:29.908663  3920 Monitor.cpp:49] //downloadedBytes=1763770368                                                
 ```
-Note that about 1GB got reused and about 1.7GB got downloaded.
-For this experiment the download speed is not factored in... just the computational overhead.
+
+Note that about 1GB got reused and about 1.7GB got downloaded. For this experiment the download speed is not factored
+in... just the computational overhead.
 
 # reference
 
@@ -62,7 +65,9 @@ more links:
 
 [CVSup1999] How Does CVSup Go So Fast?. 1999-02-10. John D. Polstra. http://www.cvsup.org/howsofast.html
 
-[Pipe1999] Network Performance Effects of HTTP/1.1, CSS1, and PNG. 1999/10/18. The World Wide Web Consortium. Henrik Frystyk Nielsen, Jim Gettys, Anselm Baird-Smith, Eric Prud'hommeaux, Håkon Wium Lie, and Chris Lilley. http://www.w3.org/TR/NOTE-pipelining-970624
+[Pipe1999] Network Performance Effects of HTTP/1.1, CSS1, and PNG. 1999/10/18. The World Wide Web Consortium. Henrik
+Frystyk Nielsen, Jim Gettys, Anselm Baird-Smith, Eric Prud'hommeaux, Håkon Wium Lie, and Chris
+Lilley. http://www.w3.org/TR/NOTE-pipelining-970624
 
 [BitT2003] Incentives Build Robustness in BitTorrent. 2003-05-22. Bram Cohen. http://bittorrent.com/bittorrentecon.pdf
 
@@ -70,8 +75,10 @@ more links:
 
 [GzipRsync] (gzip --rsync patch). http://ozlabs.org/~rusty/gzip.rsync.patch2
 
-[CIS2004] Improved Single-Round Protocols for Remote File Synchronization. 2004-09. Utku Irmak, Svilen Mihaylov, and Torsten Suel. http://cis.poly.edu/suel/papers/erasure.pdf
+[CIS2004] Improved Single-Round Protocols for Remote File Synchronization. 2004-09. Utku Irmak, Svilen Mihaylov, and
+Torsten Suel. http://cis.poly.edu/suel/papers/erasure.pdf
 
-[ModGzip] mod_gzip - serving compressed content by the Apache webserver. Michael Schröpl. http://www.schroepl.net/projekte/mod_gzip/
+[ModGzip] mod_gzip - serving compressed content by the Apache webserver. Michael
+Schröpl. http://www.schroepl.net/projekte/mod_gzip/
 
 [ModDeflate] mod_deflate. The Apache Software Foundation. http://httpd.apache.org/docs-2.0/mod/mod_deflate.html

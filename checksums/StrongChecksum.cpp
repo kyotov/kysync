@@ -5,15 +5,13 @@
 #include <iomanip>
 #include <sstream>
 
-StrongChecksum StrongChecksum::compute(const void *buffer, size_t size)
-{
+StrongChecksum StrongChecksum::compute(const void *buffer, size_t size) {
   auto digest = XXH3_128bits(buffer, size);
 
   return {digest.high64, digest.low64};
 }
 
-StrongChecksum StrongChecksum::compute(std::istream &input)
-{
+StrongChecksum StrongChecksum::compute(std::istream &input) {
   constexpr size_t BUF_SIZE = 64 * 1024;
 
   auto state = XXH3_createState();
@@ -30,13 +28,11 @@ StrongChecksum StrongChecksum::compute(std::istream &input)
   return {digest.high64, digest.low64};
 }
 
-bool StrongChecksum::operator==(const StrongChecksum &other) const
-{
+bool StrongChecksum::operator==(const StrongChecksum &other) const {
   return hi == other.hi && lo == other.lo;
 }
 
-std::string StrongChecksum::toString() const
-{
+std::string StrongChecksum::toString() const {
   std::stringstream s;
   s << std::hex << std::setw(16) << std::setfill('0') << hi << lo;
   return s.str();

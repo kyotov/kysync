@@ -54,7 +54,7 @@ IF (WIN32)
             COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/OpenSSL/1.1.1i/lib/libcrypto_static.lib <INSTALL_DIR>/install/lib/crypto.lib
             COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/bin <INSTALL_DIR>/install/bin
     )
-ELSE()
+ELSE ()
     ExternalProject_Add(
             openssl
             GIT_REPOSITORY https://github.com/openssl/openssl.git
@@ -64,7 +64,7 @@ ELSE()
             BUILD_COMMAND make -C <SOURCE_DIR> build_libs #-j
             INSTALL_COMMAND make -C <SOURCE_DIR> install_dev
     )
-ENDIF()
+ENDIF ()
 
 install(googletest
         https://github.com/google/googletest.git

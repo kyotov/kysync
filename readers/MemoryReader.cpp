@@ -1,5 +1,4 @@
 #include "MemoryReader.h"
-#include <cstring>
 
 #include <cstring>
 
@@ -11,19 +10,13 @@ struct MemoryReader::Impl {
 };
 
 MemoryReader::MemoryReader(const void* buffer, size_t size)
-    : pImpl(std::make_unique<Impl>(buffer, size))
-{
-}
+    : pImpl(std::make_unique<Impl>(buffer, size)) {}
 
 MemoryReader::~MemoryReader() = default;
 
-size_t MemoryReader::size() const
-{
-  return pImpl->size;
-}
+size_t MemoryReader::size() const { return pImpl->size; }
 
-size_t MemoryReader::read(void* buffer, size_t offset, size_t size) const
-{
+size_t MemoryReader::read(void* buffer, size_t offset, size_t size) const {
   auto limit = std::min(pImpl->size, offset + size);
   auto count = offset < limit ? limit - offset : 0;
 

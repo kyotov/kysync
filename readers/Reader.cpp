@@ -5,8 +5,8 @@
 #include <filesystem>
 
 #include "FileReader.h"
-#include "MemoryReader.h"
 #include "HttpReader.h"
+#include "MemoryReader.h"
 
 namespace fs = std::filesystem;
 
@@ -14,8 +14,7 @@ struct Reader::Impl {
   Metric totalReads;
   Metric totalBytesRead;
 
-  void accept(MetricVisitor &visitor) const
-  {
+  void accept(MetricVisitor &visitor) const {
     VISIT(visitor, totalReads);
     VISIT(visitor, totalBytesRead);
   }
@@ -25,20 +24,15 @@ Reader::Reader() : pImpl(std::make_unique<Impl>()) {}
 
 Reader::~Reader() = default;
 
-size_t Reader::read(void * /*buffer*/, size_t /*offset*/, size_t size) const
-{
+size_t Reader::read(void * /*buffer*/, size_t /*offset*/, size_t size) const {
   pImpl->totalReads++;
   pImpl->totalBytesRead += size;
   return size;
 }
 
-void Reader::accept(MetricVisitor &visitor) const
-{
-  pImpl->accept(visitor);
-}
+void Reader::accept(MetricVisitor &visitor) const { pImpl->accept(visitor); }
 
-std::unique_ptr<Reader> Reader::create(const std::string &uri)
-{
+std::unique_ptr<Reader> Reader::create(const std::string &uri) {
   if (uri.starts_with("http://") || uri.starts_with("https://")) {
     return std::make_unique<HttpReader>(uri);
   }

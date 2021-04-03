@@ -60,8 +60,11 @@ class SyncCommand::Impl final {
       int _threads,
       Command::Impl &_baseImpl);
 
-  template<typename T>
-  size_t ReadMetadataIntoContainer(const Reader& metadata_reader, size_t offset, std::vector<T>& container);
+  template <typename T>
+  size_t ReadMetadataIntoContainer(
+      const Reader &metadata_reader,
+      size_t offset,
+      std::vector<T> &container);
 
   void parseHeader(const Reader &metadataReader);
   void UpdateCompressedOffsetsAndMaxSize();

@@ -26,7 +26,7 @@ class PrepareCommand::Impl final {
   std::vector<uint64_t> compressed_sizes_;
   const int compression_level_ = 1;
 
-  Command::Impl &base_impl_;
+  Command::Impl& base_impl_;
 
   Impl(
       std::istream& input,
@@ -35,7 +35,7 @@ class PrepareCommand::Impl final {
       size_t block_size,
       Command::Impl& baseImpl);
 
-  template<typename T>
+  template <typename T>
   void WriteToMetadataStream(const std::vector<T>& container);
 
   int run();

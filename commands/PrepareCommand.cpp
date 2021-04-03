@@ -1,9 +1,10 @@
 #include "PrepareCommand.h"
 
-#include <cstring>
-#include <cinttypes>
 #include <glog/logging.h>
 #include <zstd.h>
+
+#include <cinttypes>
+#include <cstring>
 
 #include "../checksums/StrongChecksumBuilder.h"
 #include "../checksums/wcs.h"
@@ -19,27 +20,25 @@ PrepareCommand::Impl::Impl(
       output_ksync_(output_ksync),
       output_compressed_(output_compressed),
       block_size_(block_size),
-      base_impl_(baseImpl)
-{  
-}
+      base_impl_(baseImpl) {}
 
-template<typename T>
-void PrepareCommand::Impl::WriteToMetadataStream(const std::vector<T>& container)
-{  
+template <typename T>
+void PrepareCommand::Impl::WriteToMetadataStream(
+    const std::vector<T> &container) {
   output_ksync_.write(
       reinterpret_cast<const char *>(container.data()),
       container.size() * sizeof(typename std::vector<T>::value_type));
 }
 
-int PrepareCommand::Impl::run()
-{
+int PrepareCommand::Impl::run() {
   base_impl_.progressPhase++;
 
   auto unique_buffer = std::make_unique<char[]>(block_size_);
   auto buffer = unique_buffer.get();
 
   auto compression_buffer_size = ZSTD_compressBound(block_size_);
-  auto unique_compression_buffer = std::make_unique<char[]>(compression_buffer_size);
+  auto unique_compression_buffer =
+      std::make_unique<char[]>(compression_buffer_size);
   auto compression_buffer = unique_compression_buffer.get();
 
   input_.seekg(0, std::ios_base::end);
@@ -60,12 +59,12 @@ int PrepareCommand::Impl::run()
     strongChecksums.push_back(StrongChecksum::compute(buffer, block_size_));
 
     size_t compressed_size = ZSTD_compress(
-      compression_buffer, 
-      compression_buffer_size,
-      buffer, 
-      count, 
-      compression_level_);
-    CHECK(!ZSTD_isError(compressed_size)) << ZSTD_getErrorName(compressed_size);    
+        compression_buffer,
+        compression_buffer_size,
+        buffer,
+        count,
+        compression_level_);
+    CHECK(!ZSTD_isError(compressed_size)) << ZSTD_getErrorName(compressed_size);
     output_compressed_.write(compression_buffer, compressed_size);
     compressed_sizes_.push_back(compressed_size);
     base_impl_.progress_compressed_bytes_ += compressed_size;
@@ -81,8 +80,10 @@ int PrepareCommand::Impl::run()
   sprintf(
       header,
       "version: 1\n"
-      "size: %" PRIu64 "\n"
-      "block: %" PRIu64 "\n"
+      "size: %" PRIu64
+      "\n"
+      "block: %" PRIu64
+      "\n"
       "hash: %s\n"
       "eof: 1\n",
       base_impl_.progressCurrentBytes.load(),
@@ -101,9 +102,7 @@ int PrepareCommand::Impl::run()
 
 void PrepareCommand::Impl::accept(
     MetricVisitor &visitor,
-    const PrepareCommand &host)
-{
-}
+    const PrepareCommand &host) {}
 
 PrepareCommand::PrepareCommand(
     std::istream &input,
@@ -111,21 +110,20 @@ PrepareCommand::PrepareCommand(
     std::ostream &output_compressed,
     size_t block)
     // FIXME: due to the privacy declarations, we can't use std::make_unique??
-    : pImpl(new Impl(input, output_ksync, output_compressed, block, *Command::pImpl))
-{
-}
+    : pImpl(new Impl(
+          input,
+          output_ksync,
+          output_compressed,
+          block,
+          *Command::pImpl)) {}
 
 PrepareCommand::PrepareCommand(PrepareCommand &&) noexcept = default;
 
 PrepareCommand::~PrepareCommand() = default;
 
-int PrepareCommand::run()
-{
-  return pImpl->run();
-}
+int PrepareCommand::run() { return pImpl->run(); }
 
-void PrepareCommand::accept(MetricVisitor &visitor) const
-{
+void PrepareCommand::accept(MetricVisitor &visitor) const {
   Command::accept(visitor);
   pImpl->accept(visitor, *this);
 }
