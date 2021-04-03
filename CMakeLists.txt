@@ -26,6 +26,13 @@ if ((NOT EXISTS ${DEPS_DIR}) OR (${FORCE_REFRESH_DEPS}))
             COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -B ${DEPS_DIR} -S ${CMAKE_SOURCE_DIR}/deps -G "${CMAKE_GENERATOR}"
     )
     execute_process(
+            ##
+            #FIXME: this started failing on mac first (wihtout removing CC and CXX from the environment)
+            #       it then started failing on linux too (at least on github ci)
+            #       symptoms:
+            #       * rerun fixed it...
+            #       * but if you remove build/CMakeCache.txt then it is not fixed...
+            #       dumped the environment before the call and noticed difference in CC/CXX. made it the same. passed.
             COMMAND ${CMAKE_COMMAND} -E env --unset=CC --unset=CXX ${CMAKE_COMMAND} --build ${DEPS_DIR} --config ${CMAKE_BUILD_TYPE} -j
     )
 else ()

@@ -31,7 +31,10 @@ function(install NAME GIT_REPO GIT_TAG)
 
             ${ARGN}
             CMAKE_ARGS
-            --config ${CMAKE_BUILD_TYPE}
+            ##
+            #TODO: this suddently started failing on GitHub CI... cmake version!?
+            #
+            #--config ${CMAKE_BUILD_TYPE}
             -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
             -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded$<$<CONFIG:Debug>:Debug>
             -DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_BINARY_DIR}/install
