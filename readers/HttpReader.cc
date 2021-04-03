@@ -3,7 +3,8 @@
 #include <glog/logging.h>
 #include <httplib.h>
 
-struct HttpReader::Impl {
+class HttpReader::Impl {
+public:
   const std::string host_;
   const std::string path_;
   httplib::Client cli_;

@@ -2,7 +2,7 @@
 
 // TODO: add a link to the rsync paper / algorithm
 
-uint32_t weakChecksum(const void *buffer, size_t size) {
+uint32_t WeakChecksum(const void *buffer, size_t size) {
   auto data = (uint8_t *)buffer;
 
   uint16_t a = 0;
@@ -16,15 +16,15 @@ uint32_t weakChecksum(const void *buffer, size_t size) {
   return b << 16 | a;
 }
 
-uint32_t weakChecksum(
+uint32_t WeakChecksum(
     const void *buffer,
     size_t size,
-    uint32_t runningChecksum,
+    uint32_t running_checksum,
     const WeakChecksumCallback &callback) {
   auto *data = (uint8_t *)buffer;
 
-  auto a = static_cast<uint16_t>(runningChecksum & 0xFFFF);
-  auto b = static_cast<uint16_t>(runningChecksum >> 16);
+  auto a = static_cast<uint16_t>(running_checksum & 0xFFFF);
+  auto b = static_cast<uint16_t>(running_checksum >> 16);
 
   for (size_t i = 0; i < size; i++) {
     a += data[i] - data[i - size];

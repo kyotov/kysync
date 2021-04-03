@@ -11,7 +11,7 @@ class ExpectationCheckMetricVisitor final : public MetricVisitor {
 public:
   explicit ExpectationCheckMetricVisitor(
       MetricContainer &host,
-      std::map<std::string, uint64_t> &&_expectations);
+      std::map<std::string, uint64_t> &&expectations);
 
   ~ExpectationCheckMetricVisitor();
 
@@ -21,7 +21,7 @@ public:
       override;
 
 private:
-  struct Impl;
+  class Impl;
   std::unique_ptr<Impl> impl_;
 };
 

@@ -4,7 +4,8 @@
 
 namespace fs = std::filesystem;
 
-struct FileReader::Impl {
+class FileReader::Impl {
+public:
   const fs::path path_;
   std::ifstream data_;
 
@@ -14,7 +15,7 @@ struct FileReader::Impl {
 
   [[nodiscard]] size_t GetSize() const { return fs::file_size(path_); }
 
-  size_t Read(void *buffer, size_t offset, size_t size) {
+  auto Read(void *buffer, size_t offset, size_t size) {
     // the seekg was failing if the eof bit was set... :(
     // according to https://devdocs.io/cpp/io/basic_istream/seekg this should
     // not happen since C++11, which is supposed to clear the eof bit, but alas

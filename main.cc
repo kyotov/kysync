@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
 
     LOG(INFO) << "ksync v0.1";
 
-    if (FLAGS_command == "prepare") {
+    if (FLAGS_command == "Prepare") {
       if (FLAGS_output_ksync_filename.empty()) {
         FLAGS_output_ksync_filename = FLAGS_input_filename + ".ksync";
       }

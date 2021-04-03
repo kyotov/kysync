@@ -54,7 +54,7 @@ int PrepareCommand::Impl::Run() {
 
     hash.update(buffer, count);
 
-    weak_checksums_.push_back(weakChecksum(buffer, block_size_));
+    weak_checksums_.push_back(WeakChecksum(buffer, block_size_));
     strong_checksums_.push_back(StrongChecksum::compute(buffer, block_size_));
 
     size_t compressed_size = ZSTD_compress(

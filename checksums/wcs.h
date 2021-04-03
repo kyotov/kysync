@@ -11,7 +11,7 @@
  * @param size
  * @return
  */
-uint32_t weakChecksum(const void *buffer, size_t size);
+uint32_t WeakChecksum(const void *buffer, size_t size);
 
 /**
  * call back function type used by rolling window checksum
@@ -41,14 +41,14 @@ using WeakChecksumCallback = std::function<void(size_t offset, uint32_t wcs)>;
  *
  * @param buffer
  * @param size
- * @param runningChecksum
+ * @param running_checksum
  * @param callback
  * @return
  */
-uint32_t weakChecksum(
+uint32_t WeakChecksum(
     const void *buffer,
     size_t size,
-    uint32_t runningChecksum,
+    uint32_t running_checksum,
     const WeakChecksumCallback &callback);
 
 #endif  // KSYNC_WCS_H

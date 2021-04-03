@@ -1,9 +1,9 @@
 #ifndef KSYNC_CONFIG_H
 #define KSYNC_CONFIG_H
 
-constexpr auto VERIFY = false;
+constexpr auto kVerify = false;
 
 // TODO: document this!
-constexpr auto WARMUP_AFTER_MATCH = true;
+constexpr auto kWarmupAfterMatch = true;
 
 #endif  // KSYNC_CONFIG_H

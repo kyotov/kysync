@@ -18,47 +18,47 @@
 
 namespace fs = std::filesystem;
 
-TEST(WeakChecksum, Simple) {
+TEST(WeakChecksum, Simple) {  // NOLINT(cert-err58-cpp)
   auto data = "0123456789";
-  auto wcs = weakChecksum(data, strlen(data));
+  auto wcs = WeakChecksum(data, strlen(data));
   EXPECT_EQ(wcs, 183829005);
 }
 
-TEST(WeakChecksum, Rolling) {
+TEST(WeakChecksum, Rolling) {  // NOLINT(cert-err58-cpp)
   char data[] = "012345678901234567890123456789";
   ASSERT_EQ(strlen(data), 30);
 
   auto size = strlen(data) / 3;
   memset(data, 0, size);
 
-  std::atomic<int> count = 0;
+  std::atomic<int> count{0};
 
   int64_t warmup = size - 1;
 
   auto check = [&](auto offset, auto wcs) {
     if (--warmup < 0) {
-      auto simple_wcs = weakChecksum(data + 2 * size + offset, size);
+      auto simple_wcs = WeakChecksum(data + 2 * size + offset, size);
       EXPECT_EQ(wcs, simple_wcs);
       count += 1;
     }
   };
 
-  auto cs = weakChecksum(data + size, size, 0, check);
+  auto cs = WeakChecksum(data + size, size, 0, check);
   EXPECT_EQ(count, 1);
   EXPECT_EQ(cs, 183829005);
 
-  cs = weakChecksum(data + 2 * size, size, cs, check);
+  cs = WeakChecksum(data + 2 * size, size, cs, check);
   EXPECT_EQ(count, 11);
   EXPECT_EQ(cs, 183829005);
 }
 
-TEST(StringChecksum, Simple) {
+TEST(StringChecksum, Simple) {  // NOLINT(cert-err58-cpp)
   auto data = "0123456789";
   auto scs = StrongChecksum::compute(data, strlen(data));
   EXPECT_EQ(scs.toString(), "e353667619ec664b49655fc9692165fb");
 }
 
-TEST(StringChecksum, Stream) {
+TEST(StringChecksum, Stream) {  // NOLINT(cert-err58-cpp)
   constexpr int COUNT = 10'000;
   std::stringstream s;
 
@@ -81,8 +81,8 @@ TEST(StringChecksum, Stream) {
   EXPECT_EQ(scs1, scs2);
 }
 
-void testReader(Reader &reader, size_t expectedSize) {
-  ASSERT_EQ(reader.GetSize(), expectedSize);
+void TestReader(Reader &reader, size_t expected_size) {
+  ASSERT_EQ(reader.GetSize(), expected_size);
 
   char buffer[1024];
 
@@ -111,19 +111,19 @@ void testReader(Reader &reader, size_t expectedSize) {
        {"//total_bytes_read_", 5}});
 }
 
-std::string createMemoryReaderUri(const void *address, size_t size) {
+std::string CreateMemoryReaderUri(const void *address, size_t size) {
   std::stringstream result;
   result << "memory://" << address << ":" << std::hex << size;
   return result.str();
 }
 
-std::string createMemoryReaderUri(const std::string &data) {
-  return createMemoryReaderUri(data.data(), data.size());
+std::string CreateMemoryReaderUri(const std::string &data) {
+  return CreateMemoryReaderUri(data.data(), data.size());
 }
 
 class TempPathProvider {
 public:
-  std::string GetPathName() const { return temp_path_.string(); }
+  [[nodiscard]] std::string GetPathName() const { return temp_path_.string(); }
 
   TempPathProvider() { CreateTempDir(); }
 
@@ -146,17 +146,17 @@ private:
   std::filesystem::path temp_path_;
 };
 
-TEST(Readers, MemoryReaderSimple) {
+TEST(Readers, MemoryReaderSimple) {  // NOLINT(cert-err58-cpp)
   auto data = "0123456789";
 
   auto reader = MemoryReader(data, strlen(data));
-  testReader(reader, strlen(data));
+  TestReader(reader, strlen(data));
 
-  auto uri = createMemoryReaderUri(data, strlen(data));
-  testReader(*Reader::Create(uri), strlen(data));
+  auto uri = CreateMemoryReaderUri(data, strlen(data));
+  TestReader(*Reader::Create(uri), strlen(data));
 }
 
-TEST(Readers, FileReaderSimple) {
+TEST(Readers, FileReaderSimple) {  // NOLINT(cert-err58-cpp)
   auto data = "0123456789";
 
   auto path = fs::temp_directory_path() / "kysync.testdata";
@@ -165,12 +165,12 @@ TEST(Readers, FileReaderSimple) {
   f.close();
 
   auto reader = FileReader(path);
-  testReader(reader, fs::file_size(path));
+  TestReader(reader, fs::file_size(path));
 
-  testReader(*Reader::Create("file://" + path.string()), strlen(data));
+  TestReader(*Reader::Create("file://" + path.string()), strlen(data));
 }
 
-TEST(Readers, BadUri) {
+TEST(Readers, BadUri) {  // NOLINT(cert-err58-cpp)
   // invalid protocol
   EXPECT_THROW(Reader::Create("foo://1234"), std::invalid_argument);
 
@@ -187,29 +187,29 @@ TEST(Readers, BadUri) {
 
 class KySyncTest {
 public:
-  static const std::vector<uint32_t> &examineWeakChecksums(
+  static const std::vector<uint32_t> &ExamineWeakChecksums(
       const PrepareCommand &c) {
     return c.impl_->weak_checksums_;
   }
 
-  static const std::vector<StrongChecksum> &examineStrongChecksums(
+  static const std::vector<StrongChecksum> &ExamineStrongChecksums(
       const PrepareCommand &c) {
     return c.impl_->strong_checksums_;
   }
 
-  static const std::vector<uint32_t> &examineWeakChecksums(
+  static const std::vector<uint32_t> &ExamineWeakChecksums(
       const SyncCommand &c) {
     return c.impl_->weak_checksums_;
   }
 
-  static const std::vector<StrongChecksum> &examineStrongChecksums(
+  static const std::vector<StrongChecksum> &ExamineStrongChecksums(
       const SyncCommand &c) {
     return c.impl_->strong_checksums_;
   }
 
-  static void readMetadata(const SyncCommand &c) { c.impl_->ReadMetadata(); }
+  static void ReadMetadata(const SyncCommand &c) { c.impl_->ReadMetadata(); }
 
-  static std::vector<size_t> examineAnalisys(const SyncCommand &c) {
+  static std::vector<size_t> ExamineAnalisys(const SyncCommand &c) {
     std::vector<size_t> result;
 
     for (size_t i = 0; i < c.impl_->block_count_; i++) {
@@ -230,7 +230,7 @@ public:
   }
 };
 
-std::stringstream createInputStream(const std::string &data) {
+std::stringstream CreateInputStream(const std::string &data) {
   std::stringstream result;
   result.write(data.data(), data.size());
   result.seekg(0);
@@ -261,14 +261,14 @@ size_t GetExpectedCompressedSize(
   return compressed_size;
 }
 
-PrepareCommand prepare(
+PrepareCommand Prepare(
     const std::string &data,
     std::ostream &output_ksync,
     std::ostream &output_compressed,
     size_t block) {
   const auto size = data.size();
 
-  auto input = createInputStream(data);
+  auto input = CreateInputStream(data);
   PrepareCommand c(input, output_ksync, output_compressed, block);
   c.Run();
 
@@ -288,80 +288,80 @@ PrepareCommand prepare(
   return std::move(c);
 }
 
-TEST(PrepareCommand, Simple) {
+TEST(PrepareCommand, Simple) {  // NOLINT(cert-err58-cpp)
   auto data = std::string("0123456789");
   auto block = 4;
-  auto blockCount = (data.size() + block - 1) / block;
+  auto block_count = (data.size() + block - 1) / block;
 
   std::stringstream output_ksync;
   std::stringstream output_compressed;
-  auto c = prepare(data, output_ksync, output_compressed, block);
+  auto c = Prepare(data, output_ksync, output_compressed, block);
 
-  const auto &wcs = KySyncTest::examineWeakChecksums(c);
-  EXPECT_EQ(wcs.size(), blockCount);
-  EXPECT_EQ(weakChecksum("0123", block), wcs[0]);
-  EXPECT_EQ(weakChecksum("4567", block), wcs[1]);
-  EXPECT_EQ(weakChecksum("89\0\0", block), wcs[2]);
+  const auto &wcs = KySyncTest::ExamineWeakChecksums(c);
+  EXPECT_EQ(wcs.size(), block_count);
+  EXPECT_EQ(WeakChecksum("0123", block), wcs[0]);
+  EXPECT_EQ(WeakChecksum("4567", block), wcs[1]);
+  EXPECT_EQ(WeakChecksum("89\0\0", block), wcs[2]);
 
-  const auto &scs = KySyncTest::examineStrongChecksums(c);
-  EXPECT_EQ(wcs.size(), blockCount);
+  const auto &scs = KySyncTest::ExamineStrongChecksums(c);
+  EXPECT_EQ(wcs.size(), block_count);
   EXPECT_EQ(StrongChecksum::compute("0123", block), scs[0]);
   EXPECT_EQ(StrongChecksum::compute("4567", block), scs[1]);
   EXPECT_EQ(StrongChecksum::compute("89\0\0", block), scs[2]);
 }
 
-TEST(PrepareCommand, Simple2) {
+TEST(PrepareCommand, Simple2) {  // NOLINT(cert-err58-cpp)
   auto data = std::string("123412341234");
   auto block = 4;
-  auto blockCount = (data.size() + block - 1) / block;
+  auto block_count = (data.size() + block - 1) / block;
 
   std::stringstream output_ksync;
   std::stringstream output_compressed;
-  auto c = prepare(data, output_ksync, output_compressed, block);
+  auto c = Prepare(data, output_ksync, output_compressed, block);
 
-  const auto &wcs = KySyncTest::examineWeakChecksums(c);
-  EXPECT_EQ(wcs.size(), blockCount);
-  EXPECT_EQ(weakChecksum("1234", block), wcs[0]);
-  EXPECT_EQ(weakChecksum("1234", block), wcs[1]);
-  EXPECT_EQ(weakChecksum("1234", block), wcs[2]);
+  const auto &wcs = KySyncTest::ExamineWeakChecksums(c);
+  EXPECT_EQ(wcs.size(), block_count);
+  EXPECT_EQ(WeakChecksum("1234", block), wcs[0]);
+  EXPECT_EQ(WeakChecksum("1234", block), wcs[1]);
+  EXPECT_EQ(WeakChecksum("1234", block), wcs[2]);
 
-  const auto &scs = KySyncTest::examineStrongChecksums(c);
-  EXPECT_EQ(wcs.size(), blockCount);
+  const auto &scs = KySyncTest::ExamineStrongChecksums(c);
+  EXPECT_EQ(wcs.size(), block_count);
   EXPECT_EQ(StrongChecksum::compute("1234", block), scs[0]);
   EXPECT_EQ(StrongChecksum::compute("1234", block), scs[1]);
   EXPECT_EQ(StrongChecksum::compute("1234", block), scs[2]);
 }
 
-TEST(SyncCommand, MetadataRoundtrip) {
+TEST(SyncCommand, MetadataRoundtrip) {  // NOLINT(cert-err58-cpp)
   auto block = 4;
   std::string data = "0123456789";
   std::stringstream metadata;
   std::stringstream compressed;
-  auto pc = prepare(data, metadata, compressed, block);
+  auto pc = Prepare(data, metadata, compressed, block);
 
-  auto input = createMemoryReaderUri(data);
+  auto input = CreateMemoryReaderUri(data);
   // std::stringstream output;
-  auto outputPath = fs::temp_directory_path() / "kysync.temp";
+  auto output_path = fs::temp_directory_path() / "kysync.temp";
 
-  auto metadataStr = metadata.str();
+  auto metadata_str = metadata.str();
 
   auto sc = SyncCommand(
-      createMemoryReaderUri(data),
+      CreateMemoryReaderUri(data),
       false,
-      createMemoryReaderUri(metadataStr),
+      CreateMemoryReaderUri(metadata_str),
       input,
-      outputPath,
+      output_path,
       1);
 
-  KySyncTest::readMetadata(sc);
+  KySyncTest::ReadMetadata(sc);
 
   // expect that the checksums had a successful round trip
   EXPECT_EQ(
-      KySyncTest::examineWeakChecksums(pc),
-      KySyncTest::examineWeakChecksums(sc));
+      KySyncTest::ExamineWeakChecksums(pc),
+      KySyncTest::ExamineWeakChecksums(sc));
   EXPECT_EQ(
-      KySyncTest::examineStrongChecksums(pc),
-      KySyncTest::examineStrongChecksums(sc));
+      KySyncTest::ExamineStrongChecksums(pc),
+      KySyncTest::ExamineStrongChecksums(sc));
 
   ExpectationCheckMetricVisitor(  // NOLINT(bugprone-unused-raii)
       sc,
@@ -373,50 +373,50 @@ TEST(SyncCommand, MetadataRoundtrip) {
 }
 
 void EndToEndTest(
-    const std::string &sourceData,
-    const std::string &seedData,
+    const std::string &source_data,
+    const std::string &seed_data,
     bool compression_disabled,
     size_t block,
-    const std::vector<size_t> &expectedBlockMapping) {
-  LOG(INFO) << "E2E for " << sourceData.substr(0, 40);
+    const std::vector<size_t> &expected_block_mapping) {
+  LOG(INFO) << "E2E for " << source_data.substr(0, 40);
 
   std::stringstream metadata;
   std::stringstream compressed;
-  auto pc = prepare(sourceData, metadata, compressed, block);
+  auto pc = Prepare(source_data, metadata, compressed, block);
 
-  auto input = createMemoryReaderUri(seedData);
+  auto input = CreateMemoryReaderUri(seed_data);
   // std::stringstream output;
   // std::ofstream output(fs::temp_directory_path() / "t", std::ios::binary);
-  auto outputPath = fs::temp_directory_path() / "kysync.temp";
-  if (fs::exists(outputPath)) {
-    fs::remove(outputPath);
+  auto output_path = fs::temp_directory_path() / "kysync.temp";
+  if (fs::exists(output_path)) {
+    fs::remove(output_path);
   }
 
-  auto metadataStr = metadata.str();
+  auto metadata_str = metadata.str();
   auto source_data_to_use =
-      compression_disabled ? sourceData : compressed.str();
+      compression_disabled ? source_data : compressed.str();
 
   auto sc = SyncCommand(
-      createMemoryReaderUri(source_data_to_use),
+      CreateMemoryReaderUri(source_data_to_use),
       compression_disabled,
-      createMemoryReaderUri(metadataStr),
+      CreateMemoryReaderUri(metadata_str),
       input,
-      outputPath,
+      output_path,
       1);
 
   sc.Run();
 
-  EXPECT_EQ(KySyncTest::examineAnalisys(sc), expectedBlockMapping);
+  EXPECT_EQ(KySyncTest::ExamineAnalisys(sc), expected_block_mapping);
 
-  size_t outputSize = fs::file_size(outputPath);
-  EXPECT_EQ(sourceData.size(), outputSize);
+  size_t output_size = fs::file_size(output_path);
+  EXPECT_EQ(source_data.size(), output_size);
 
-  auto output = std::ifstream(outputPath, std::ios::binary);
-  auto buffer = std::make_unique<char[]>(outputSize + 1);
-  output.read(buffer.get(), outputSize);
-  buffer.get()[outputSize] = '\0';
+  auto output = std::ifstream(output_path, std::ios::binary);
+  auto buffer = std::make_unique<char[]>(output_size + 1);
+  output.read(buffer.get(), output_size);
+  buffer.get()[output_size] = '\0';
 
-  EXPECT_EQ(sourceData, buffer.get());
+  EXPECT_EQ(source_data, buffer.get());
 }
 
 void RunEndToEndTests(bool compression_disabled) {
@@ -440,7 +440,7 @@ void RunEndToEndTests(bool compression_disabled) {
       4,
       {16, 21, 11, 6, 1, 26, -1ull /*31*/});
 
-  if (WARMUP_AFTER_MATCH) {
+  if (kWarmupAfterMatch) {
     EndToEndTest(
         "1234234534564567567867897890",
         "1234567890",
@@ -467,7 +467,7 @@ void RunEndToEndTests(bool compression_disabled) {
   EndToEndTest(inputData, "1234", compression_disabled, 4, expected);
 }
 
-TEST(SyncCommand, EndToEnd) {
+TEST(SyncCommand, EndToEnd) {  // NOLINT(cert-err58-cpp)
   RunEndToEndTests(false);
   RunEndToEndTests(true);
 }
@@ -607,7 +607,7 @@ void RunEndToEndFilesTestFor(
 // 3. Use the generated ksync and pzst files to sync to a new output file.
 // Ensure that the new output file matches the original file. A seed file is
 // required and for this, the original file is used.
-TEST(SyncCommand, EndToEndFiles) {
+TEST(SyncCommand, EndToEndFiles) {  // NOLINT(cert-err58-cpp)
   // NOTE: This currently assumes that a test data dir exists one
   // level above the test's working directory
   std::string test_data_path = "../test_data";
@@ -625,7 +625,7 @@ TEST(SyncCommand, EndToEndFiles) {
 //     new version (v2 file that has modifications on the original).
 // 2. Run sync.
 // Ensure that newly sync'd file matches the original non-compressed v2 file.
-TEST(SyncCommand, SyncFileFromSeed) {
+TEST(SyncCommand, SyncFileFromSeed) {  // NOLINT(cert-err58-cpp)
   // NOTE: This currently assumes that a test data dir exists one
   // level above the test's working directory
   std::string test_data_path = "../test_data";
@@ -652,7 +652,7 @@ TEST(SyncCommand, SyncFileFromSeed) {
 }
 
 // Test syncing from a non-compressed file
-TEST(SyncCommand, SyncNonCompressedFile) {
+TEST(SyncCommand, SyncNonCompressedFile) {  // NOLINT(cert-err58-cpp)
   // NOTE: This currently assumes that a test data dir exists one
   // level above the test's working directory
   std::string test_data_path = "../test_data";

@@ -156,16 +156,16 @@ void SyncCommand::Impl::AnalyzeSeedChunk(
 
         if (source_digest == seed_digest) {
           set_[wcs] = false;
-          if (WARMUP_AFTER_MATCH) {
+          if (kWarmupAfterMatch) {
             warmup = block - 1;
           }
           strong_checksum_matches_++;
           data.seedOffset = seed_offset + offset;
 
-          if (VERIFY) {
+          if (kVerify) {
             auto t = std::make_unique<char[]>(block);
             seed_reader->Read(t.get(), data.seedOffset, block);
-            LOG_ASSERT(wcs == weakChecksum(t.get(), block));
+            LOG_ASSERT(wcs == WeakChecksum(t.get(), block));
             LOG_ASSERT(seed_digest == StrongChecksum::compute(t.get(), block));
           }
         } else {
@@ -185,7 +185,7 @@ void SyncCommand::Impl::AnalyzeSeedChunk(
      * abandon the idea completely.
      * https://github.com/kyotov/ksync/blob/2d98f83cd1516066416e8319fbfa995e3f49f3dd/commands/SyncCommand.cpp#L166-L220
      */
-    _wcs = weakChecksum((const void *)buffer, block, _wcs, callback);
+    _wcs = WeakChecksum((const void *)buffer, block, _wcs, callback);
 
     base_impl_.progress_current_bytes_ += block;
   }
@@ -334,10 +334,10 @@ void SyncCommand::Impl::ReconstructSourceChunk(
 
     output.write(buffer, count);
 
-    if (VERIFY) {
+    if (kVerify) {
       LOG_ASSERT(wcs == weak_checksums_[data.index]);
       if (count == block) {
-        LOG_ASSERT(wcs == weakChecksum(buffer, count));
+        LOG_ASSERT(wcs == WeakChecksum(buffer, count));
         LOG_ASSERT(scs == StrongChecksum::compute(buffer, count));
       }
     }

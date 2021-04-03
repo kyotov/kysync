@@ -16,7 +16,7 @@ public:
   size_t Read(void *buffer, size_t offset, size_t size) const override;
 
 private:
-  struct Impl;
+  class Impl;
   std::unique_ptr<Impl> impl_;
 };
 

@@ -1,6 +1,7 @@
 #include "ExpectationCheckMetricsVisitor.h"
 
-struct ExpectationCheckMetricVisitor::Impl {
+class ExpectationCheckMetricVisitor::Impl {
+public:
   std::map<std::string, uint64_t> expectations_;
   std::map<std::string, uint64_t> unchecked_;
   std::string context_;
@@ -52,8 +53,8 @@ struct ExpectationCheckMetricVisitor::Impl {
 
 ExpectationCheckMetricVisitor::ExpectationCheckMetricVisitor(
     MetricContainer &host,
-    std::map<std::string, uint64_t> &&_expectations)
-    : impl_(std::make_unique<Impl>(std::move(_expectations))) {
+    std::map<std::string, uint64_t> &&expectations)
+    : impl_(std::make_unique<Impl>(std::move(expectations))) {
   host.Accept(*this);
 }
 

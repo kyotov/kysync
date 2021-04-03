@@ -18,7 +18,7 @@ public:
   void Accept(MetricVisitor &visitor) const override;
 
 protected:
-  struct Impl;
+  class Impl;
   std::unique_ptr<Impl> impl_;
 };
 
