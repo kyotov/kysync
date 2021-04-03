@@ -28,7 +28,7 @@ SyncCommand::Impl::Impl(
       threads_(threads),
       base_impl_(base_impl) {}
 
-void SyncCommand::Impl::parseHeader(const Reader &metadata_reader) {
+void SyncCommand::Impl::ParseHeader(const Reader &metadata_reader) {
   constexpr size_t MAX_HEADER_SIZE = 1024;
   char buffer[MAX_HEADER_SIZE];
 
@@ -104,7 +104,7 @@ void SyncCommand::Impl::ReadMetadata() {
 
   auto &offset = base_impl_.progress_current_bytes_;
 
-  parseHeader(*metadata_reader);
+  ParseHeader(*metadata_reader);
   offset = header_size_;
 
   // NOTE: The current logic reads all metadata information regardless of
