@@ -37,8 +37,8 @@ class SyncCommand::Impl final {
 
   std::vector<uint32_t> weak_checksums_;
   std::vector<StrongChecksum> strong_checksums_;
-  std::vector<uint64_t> compressed_sizes_;
-  std::vector<uint64_t> compressed_file_offsets_;
+  std::vector<size_t> compressed_sizes_;
+  std::vector<size_t> compressed_file_offsets_;
 
   const int threads_;
 
