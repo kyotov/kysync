@@ -21,7 +21,7 @@ public:
   static std::unique_ptr<Reader> Create(const std::string &uri);
 
 private:
-  struct Impl;
+  class Impl;
   std::unique_ptr<Impl> impl_;
 };
 

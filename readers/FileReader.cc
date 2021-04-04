@@ -4,25 +4,26 @@
 
 namespace fs = std::filesystem;
 
-struct FileReader::Impl {
-  const fs::path path;
-  std::ifstream data;
+class FileReader::Impl {
+public:
+  const fs::path path_;
+  std::ifstream data_;
 
-  explicit Impl(fs::path _path) : path(std::move(_path)) {
-    data.open(path, std::ios::binary);
+  explicit Impl(fs::path path) : path_(std::move(path)) {
+    data_.open(path_, std::ios::binary);
   }
 
-  [[nodiscard]] size_t size() const { return fs::file_size(path); }
+  [[nodiscard]] size_t GetSize() const { return fs::file_size(path_); }
 
-  size_t read(void *buffer, size_t offset, size_t size) {
+  auto Read(void *buffer, size_t offset, size_t size) {
     // the seekg was failing if the eof bit was set... :(
     // according to https://devdocs.io/cpp/io/basic_istream/seekg this should
     // not happen since C++11, which is supposed to clear the eof bit, but alas
-    data.clear();
+    data_.clear();
 
-    data.seekg(offset);
-    data.read((char *)buffer, size);
-    return data.gcount();
+    data_.seekg(offset);
+    data_.read((char *)buffer, size);
+    return data_.gcount();
   }
 };
 
@@ -31,9 +32,9 @@ FileReader::FileReader(const std::filesystem::path &path)
 
 FileReader::~FileReader() = default;
 
-size_t FileReader::GetSize() const { return impl_->size(); }
+size_t FileReader::GetSize() const { return impl_->GetSize(); }
 
 size_t FileReader::Read(void *buffer, size_t offset, size_t size) const {
-  auto count = impl_->read(buffer, offset, size);
+  auto count = impl_->Read(buffer, offset, size);
   return Reader::Read(buffer, offset, count);
 }

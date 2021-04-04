@@ -9,11 +9,11 @@
 class SyncCommand final : public Command {
 public:
   explicit SyncCommand(
-      std::string dataUri,
+      std::string data_uri,
       bool compression_disabled,
-      std::string metadataUri,
-      std::string seedUri,
-      std::filesystem::path outputPath,
+      std::string metadata_uri,
+      std::string seed_uri,
+      std::filesystem::path output_path,
       int threads);
 
   ~SyncCommand() override;

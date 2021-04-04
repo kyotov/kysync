@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
 
     LOG(INFO) << "ksync v0.1";
 
-    if (FLAGS_command == "prepare") {
+    if (FLAGS_command == "Prepare") {
       if (FLAGS_output_ksync_filename.empty()) {
         FLAGS_output_ksync_filename = FLAGS_input_filename + ".ksync";
       }
@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
       auto input = std::ifstream(FLAGS_input_filename, std::ios::binary);
       auto c =
           PrepareCommand(input, output_ksync, output_compressed, FLAGS_block);
-      return Monitor(c).run();
+      return Monitor(c).Run();
     }
 
     if (FLAGS_command == "sync") {
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
           "file://" + FLAGS_input_filename,
           FLAGS_output_filename,
           FLAGS_threads);
-      return Monitor(c).run();
+      return Monitor(c).Run();
     }
 
     CHECK(false) << "unhandled command";

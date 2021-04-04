@@ -4,7 +4,6 @@
 #include <zstd.h>
 
 #include <cinttypes>
-#include <cstring>
 
 #include "../checksums/StrongChecksumBuilder.h"
 #include "../checksums/wcs.h"
@@ -15,12 +14,12 @@ PrepareCommand::Impl::Impl(
     std::ostream &output_ksync,
     std::ostream &output_compressed,
     size_t block_size,
-    Command::Impl &baseImpl)
+    Command::Impl &base_impl)
     : input_(input),
       output_ksync_(output_ksync),
       output_compressed_(output_compressed),
       block_size_(block_size),
-      base_impl_(baseImpl) {}
+      base_impl_(base_impl) {}
 
 template <typename T>
 void PrepareCommand::Impl::WriteToMetadataStream(
@@ -53,10 +52,10 @@ int PrepareCommand::Impl::Run() {
   while (auto count = input_.read(buffer, block_size_).gcount()) {
     memset(buffer + count, 0, block_size_ - count);
 
-    hash.update(buffer, count);
+    hash.Update(buffer, count);
 
-    weak_checksums_.push_back(weakChecksum(buffer, block_size_));
-    strong_checksums_.push_back(StrongChecksum::compute(buffer, block_size_));
+    weak_checksums_.push_back(WeakChecksum(buffer, block_size_));
+    strong_checksums_.push_back(StrongChecksum::Compute(buffer, block_size_));
 
     size_t compressed_size = ZSTD_compress(
         compression_buffer,
@@ -88,7 +87,7 @@ int PrepareCommand::Impl::Run() {
       "eof: 1\n",
       base_impl_.progress_current_bytes_.load(),
       block_size_,
-      hash.digest().toString().c_str());
+      hash.Digest().ToString().c_str());
 
   output_ksync_.write(header, strlen(header));
 

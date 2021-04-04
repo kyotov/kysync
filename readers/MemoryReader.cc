@@ -2,11 +2,12 @@
 
 #include <cstring>
 
-struct MemoryReader::Impl {
-  const void* buffer;
-  const size_t size;
+class MemoryReader::Impl {
+public:
+  const void* buffer_;
+  const size_t size_;
 
-  Impl(const void* _buffer, size_t _size) : buffer(_buffer), size(_size) {}
+  Impl(const void* buffer, size_t size) : buffer_(buffer), size_(size) {}
 };
 
 MemoryReader::MemoryReader(const void* buffer, size_t size)
@@ -14,13 +15,13 @@ MemoryReader::MemoryReader(const void* buffer, size_t size)
 
 MemoryReader::~MemoryReader() = default;
 
-size_t MemoryReader::GetSize() const { return impl_->size; }
+size_t MemoryReader::GetSize() const { return impl_->size_; }
 
 size_t MemoryReader::Read(void* buffer, size_t offset, size_t size) const {
-  auto limit = std::min(impl_->size, offset + size);
+  auto limit = std::min(impl_->size_, offset + size);
   auto count = offset < limit ? limit - offset : 0;
 
-  memcpy(buffer, (uint8_t*)impl_->buffer + offset, count);
+  memcpy(buffer, (uint8_t*)impl_->buffer_ + offset, count);
 
   // make sure the metrics are captured!
   return Reader::Read(buffer, offset, count);

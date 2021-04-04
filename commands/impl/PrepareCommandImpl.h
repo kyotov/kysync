@@ -22,7 +22,6 @@ class PrepareCommand::Impl final {
 
   std::vector<uint32_t> weak_checksums_;
   std::vector<StrongChecksum> strong_checksums_;
-  // NOTE: This attempts to use the new style despite inconsistency
   std::vector<uint64_t> compressed_sizes_;
   const int compression_level_ = 1;
 
@@ -33,7 +32,7 @@ class PrepareCommand::Impl final {
       std::ostream& output_ksync,
       std::ostream& output_compressed,
       size_t block_size,
-      Command::Impl& baseImpl);
+      Command::Impl& base_impl);
 
   template <typename T>
   void WriteToMetadataStream(const std::vector<T>& container);

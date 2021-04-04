@@ -1,7 +1,8 @@
 #ifndef KSYNC_COMMANDIMPL_H
 #define KSYNC_COMMANDIMPL_H
 
-struct Command::Impl final {
+class Command::Impl final {
+public:
   Metric progress_phase_;
   Metric progress_total_bytes_;
   Metric progress_current_bytes_;
