@@ -5,7 +5,7 @@
 #include <istream>
 #include <string>
 
-// FIXME: rename header to StrongChecksum.h
+namespace kysync {
 
 /**
  * A class for computing 128bit strong checksums.
@@ -28,5 +28,7 @@ public:
 
   [[nodiscard]] std::string ToString() const;
 };
+
+}  // namespace kysync
 
 #endif  // KSYNC_STRONGCHECKSUM_H

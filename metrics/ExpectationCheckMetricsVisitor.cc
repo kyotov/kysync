@@ -1,5 +1,7 @@
 #include "ExpectationCheckMetricsVisitor.h"
 
+namespace kysync {
+
 class ExpectationCheckMetricVisitor::Impl {
 public:
   std::map<std::string, uint64_t> expectations_;
@@ -71,3 +73,5 @@ void ExpectationCheckMetricVisitor::Visit(
     const MetricContainer &container) {
   impl_->Visit(name, container, *this);
 }
+
+}  // namespace kysync

@@ -4,6 +4,8 @@
 #include "../metrics/MetricVisitor.h"
 #include "impl/CommandImpl.h"
 
+namespace kysync {
+
 void Command::Impl::Accept(MetricVisitor &visitor) const {
   VISIT(visitor, progress_phase_);
   VISIT(visitor, progress_total_bytes_);
@@ -20,3 +22,5 @@ Command::~Command() = default;
 void Command::Accept(MetricVisitor &visitor) const {
   return impl_->Accept(visitor);
 }
+
+}  // namespace kysync

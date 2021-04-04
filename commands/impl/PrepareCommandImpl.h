@@ -11,6 +11,8 @@
 #include "../PrepareCommand.h"
 #include "CommandImpl.h"
 
+namespace kysync {
+
 class PrepareCommand::Impl final {
   friend class PrepareCommand;
   friend class KySyncTest;
@@ -41,5 +43,7 @@ class PrepareCommand::Impl final {
 
   void Accept(MetricVisitor& visitor, const PrepareCommand& host);
 };
+
+}  // namespace kysync
 
 #endif  // KSYNC_PREPARECOMMANDIMPL_H

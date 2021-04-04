@@ -5,6 +5,8 @@
 
 #include "Reader.h"
 
+namespace kysync {
+
 class FileReader : public Reader {
 public:
   explicit FileReader(const std::filesystem::path &path);
@@ -19,5 +21,7 @@ private:
   class Impl;
   std::unique_ptr<Impl> impl_;
 };
+
+}  // namespace kysync
 
 #endif  // KSYNC_FILEREADER_H

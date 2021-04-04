@@ -8,6 +8,8 @@
 #include "HttpReader.h"
 #include "MemoryReader.h"
 
+namespace kysync {
+
 namespace fs = std::filesystem;
 
 class Reader::Impl {
@@ -78,3 +80,5 @@ std::unique_ptr<Reader> Reader::Create(const std::string &uri) {
   LOG(ERROR) << "unknown protocol for uri=" << uri;
   throw std::invalid_argument(uri);
 }
+
+}  // namespace kysync

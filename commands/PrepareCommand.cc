@@ -9,6 +9,8 @@
 #include "../checksums/wcs.h"
 #include "impl/PrepareCommandImpl.h"
 
+namespace kysync {
+
 PrepareCommand::Impl::Impl(
     std::istream &input,
     std::ostream &output_ksync,
@@ -126,3 +128,5 @@ void PrepareCommand::Accept(MetricVisitor &visitor) const {
   Command::Accept(visitor);
   impl_->Accept(visitor, *this);
 }
+
+}  // namespace kysync

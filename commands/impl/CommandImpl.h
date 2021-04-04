@@ -1,6 +1,8 @@
 #ifndef KSYNC_COMMANDIMPL_H
 #define KSYNC_COMMANDIMPL_H
 
+namespace kysync {
+
 class Command::Impl final {
 public:
   Metric progress_phase_;
@@ -10,5 +12,7 @@ public:
 
   void Accept(MetricVisitor &visitor) const;
 };
+
+}  // namespace kysync
 
 #endif  // KSYNC_COMMANDIMPL_H

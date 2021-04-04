@@ -7,6 +7,8 @@
 #include "commands/PrepareCommand.h"
 #include "commands/SyncCommand.h"
 
+namespace kysync {
+
 namespace fs = std::filesystem;
 
 DEFINE_string(command, "", "prepare, sync, ...");  // NOLINT(cert-err58-cpp)
@@ -30,7 +32,11 @@ DEFINE_bool(                                        // NOLINT(cert-err58-cpp)
     false,
     "true implies source file does not have compression");
 
+}  // namespace kysync
+
 int main(int argc, char **argv) {
+  using namespace kysync;
+
   try {
     google::InitGoogleLogging(argv[0]);
     gflags::ParseCommandLineFlags(&argc, &argv, true);

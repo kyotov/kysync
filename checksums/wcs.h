@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <functional>
 
+namespace kysync {
+
 /**
  * computes a simple buffer checksum ala rsync
  *
@@ -50,5 +52,7 @@ uint32_t WeakChecksum(
     size_t size,
     uint32_t running_checksum,
     const WeakChecksumCallback &callback);
+
+}  // namespace kysync
 
 #endif  // KSYNC_WCS_H

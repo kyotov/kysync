@@ -11,6 +11,8 @@
 
 #include "metrics/MetricVisitor.h"
 
+namespace kysync {
+
 class Monitor::Impl : public MetricVisitor {
 public:
   std::vector<std::string> metric_keys_;
@@ -109,3 +111,5 @@ Monitor::Monitor(Command& command) : impl_(std::make_unique<Impl>(command)) {}
 Monitor::~Monitor() = default;
 
 int Monitor::Run() { return impl_->Run(); }
+
+}  // namespace kysync

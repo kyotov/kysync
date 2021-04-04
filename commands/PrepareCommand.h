@@ -7,6 +7,8 @@
 #include "../readers/Reader.h"
 #include "Command.h"
 
+namespace kysync {
+
 namespace fs = std::filesystem;
 
 class KySyncTest;
@@ -34,5 +36,7 @@ private:
 
   friend class KySyncTest;
 };
+
+}  // namespace kysync
 
 #endif  // KSYNC_PREPARECOMMAND_H

@@ -16,6 +16,8 @@
 #include "readers/FileReader.h"
 #include "readers/MemoryReader.h"
 
+namespace kysync {
+
 namespace fs = std::filesystem;
 
 TEST(WeakChecksum, Simple) {  // NOLINT(cert-err58-cpp)
@@ -440,7 +442,7 @@ void RunEndToEndTests(bool compression_disabled) {
       4,
       {16, 21, 11, 6, 1, 26, -1ull /*31*/});
 
-  if (kWarmupAfterMatch) { //NOLINT(readability-simplify-boolean-expr)
+  if (kWarmupAfterMatch) {  // NOLINT(readability-simplify-boolean-expr)
     EndToEndTest(
         "1234234534564567567867897890",
         "1234567890",
@@ -672,3 +674,5 @@ TEST(SyncCommand, SyncNonCompressedFile) {  // NOLINT(cert-err58-cpp)
       sync_file_name,
       std::move(expected_metrics));
 }
+
+}  // namespace kysync

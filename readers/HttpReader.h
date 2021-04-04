@@ -3,6 +3,8 @@
 
 #include "Reader.h"
 
+namespace kysync {
+
 class HttpReader : public Reader {
 public:
   explicit HttpReader(const std::string &url);
@@ -17,5 +19,7 @@ private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
 };
+
+}  // namespace kysync
 
 #endif  // KSYNC_HTTPREADER_H

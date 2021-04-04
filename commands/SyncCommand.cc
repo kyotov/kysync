@@ -12,6 +12,8 @@
 #include "glog/logging.h"
 #include "impl/SyncCommandImpl.h"
 
+namespace kysync {
+
 SyncCommand::Impl::Impl(
     std::string data_uri,
     bool compression_disabled,
@@ -442,3 +444,5 @@ void SyncCommand::Accept(MetricVisitor &visitor) const {
   Command::Accept(visitor);
   impl_->Accept(visitor, *this);
 }
+
+}  // namespace kysync

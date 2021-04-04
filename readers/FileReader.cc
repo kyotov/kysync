@@ -2,6 +2,8 @@
 
 #include <fstream>
 
+namespace kysync {
+
 namespace fs = std::filesystem;
 
 class FileReader::Impl {
@@ -38,3 +40,5 @@ size_t FileReader::Read(void *buffer, size_t offset, size_t size) const {
   auto count = impl_->Read(buffer, offset, size);
   return Reader::Read(buffer, offset, count);
 }
+
+}  // namespace kysync

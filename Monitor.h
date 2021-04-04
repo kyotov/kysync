@@ -5,6 +5,8 @@
 
 #include "commands/Command.h"
 
+namespace kysync {
+
 class Monitor final {
 public:
   explicit Monitor(Command &);
@@ -17,5 +19,7 @@ private:
   class Impl;
   std::unique_ptr<Impl> impl_;
 };
+
+}  // namespace kysync
 
 #endif  // KSYNC_MONITOR_H

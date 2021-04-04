@@ -7,6 +7,8 @@
 
 #include "MetricVisitor.h"
 
+namespace kysync {
+
 class ExpectationCheckMetricVisitor final : public MetricVisitor {
 public:
   explicit ExpectationCheckMetricVisitor(
@@ -24,5 +26,7 @@ private:
   class Impl;
   std::unique_ptr<Impl> impl_;
 };
+
+}  // namespace kysync
 
 #endif  // KSYNC_EXPECTATIONCHECKMETRICSVISITOR_H

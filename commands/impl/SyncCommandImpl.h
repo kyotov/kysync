@@ -8,6 +8,8 @@
 #include "../SyncCommand.h"
 #include "CommandImpl.h"
 
+namespace kysync {
+
 class SyncCommand::Impl final {
   friend class SyncCommand;
   friend class KySyncTest;
@@ -77,5 +79,7 @@ class SyncCommand::Impl final {
 
   void Accept(MetricVisitor &visitor, const SyncCommand &host);
 };
+
+}  // namespace kysync
 
 #endif  // KSYNC_SYNCCOMMANDIMPL_H

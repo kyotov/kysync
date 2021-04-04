@@ -5,6 +5,8 @@
 #include <iomanip>
 #include <sstream>
 
+namespace kysync {
+
 StrongChecksum StrongChecksum::Compute(const void *buffer, size_t size) {
   auto digest = XXH3_128bits(buffer, size);
 
@@ -37,3 +39,5 @@ std::string StrongChecksum::ToString() const {
   s << std::hex << std::setw(16) << std::setfill('0') << hi_ << lo_;
   return s.str();
 }
+
+}  // namespace kysync

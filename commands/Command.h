@@ -5,6 +5,8 @@
 
 #include "../metrics/MetricContainer.h"
 
+namespace kysync {
+
 class Command : public MetricContainer {
 public:
   Command();
@@ -21,5 +23,7 @@ protected:
   class Impl;
   std::unique_ptr<Impl> impl_;
 };
+
+}  // namespace kysync
 
 #endif  // KSYNC_COMMAND_H

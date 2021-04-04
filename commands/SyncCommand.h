@@ -6,6 +6,8 @@
 #include "../readers/Reader.h"
 #include "Command.h"
 
+namespace kysync {
+
 class SyncCommand final : public Command {
 public:
   explicit SyncCommand(
@@ -28,5 +30,7 @@ private:
 
   friend class KySyncTest;
 };
+
+}  // namespace kysync
 
 #endif  // KSYNC_SYNCCOMMAND_H

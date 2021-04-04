@@ -2,6 +2,8 @@
 
 #include "xxhash.h"
 
+namespace kysync {
+
 struct StrongChecksumBuilder::Impl {
   XXH3_state_t* state;
 
@@ -30,3 +32,5 @@ StrongChecksum StrongChecksumBuilder::Digest() {
 
   return {.hi_ = digest.high64, .lo_ = digest.low64};
 }
+
+}  // namespace kysync

@@ -5,6 +5,8 @@
 
 #include "StrongChecksum.h"
 
+namespace kysync {
+
 class StrongChecksumBuilder {
 public:
   StrongChecksumBuilder();
@@ -19,5 +21,7 @@ private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
 };
+
+}  // namespace kysync
 
 #endif  // KSYNC_STRONGCHECKSUMBUILDER_H

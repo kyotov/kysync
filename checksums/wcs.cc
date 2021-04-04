@@ -2,6 +2,8 @@
 
 // TODO: add a link to the rsync paper / algorithm
 
+namespace kysync {
+
 uint32_t WeakChecksum(const void *buffer, size_t size) {
   auto data = (uint8_t *)buffer;
 
@@ -34,3 +36,5 @@ uint32_t WeakChecksum(
 
   return b << 16 | a;
 }
+
+}  // namespace kysync

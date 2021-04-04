@@ -5,6 +5,8 @@
 
 #include "Reader.h"
 
+namespace kysync {
+
 class MemoryReader final : public Reader {
 public:
   MemoryReader(const void *buffer, size_t size);
@@ -19,5 +21,7 @@ private:
   struct Impl;
   std::unique_ptr<Impl> impl_;
 };
+
+}  // namespace kysync
 
 #endif  // KSYNC_MEMORYREADER_H

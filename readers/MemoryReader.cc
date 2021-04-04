@@ -2,6 +2,8 @@
 
 #include <cstring>
 
+namespace kysync {
+
 class MemoryReader::Impl {
 public:
   const void* buffer_;
@@ -26,3 +28,5 @@ size_t MemoryReader::Read(void* buffer, size_t offset, size_t size) const {
   // make sure the metrics are captured!
   return Reader::Read(buffer, offset, count);
 }
+
+}  // namespace kysync

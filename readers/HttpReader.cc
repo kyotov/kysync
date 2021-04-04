@@ -3,6 +3,8 @@
 #include <glog/logging.h>
 #include <httplib.h>
 
+namespace kysync {
+
 class HttpReader::Impl {
 public:
   const std::string host_;
@@ -57,3 +59,5 @@ size_t HttpReader::Read(void *buffer, size_t offset, size_t size) const {
   auto count = impl_->Read(buffer, offset, size);
   return Reader::Read(buffer, offset, count);
 }
+
+}  // namespace kysync

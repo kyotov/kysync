@@ -8,6 +8,8 @@
 
 #define VISIT(visitor, host) visitor.Visit(std::string(#host), host)
 
+namespace kysync {
+
 class MetricVisitor {
 public:
   virtual void Visit(const std::string &name, const Metric &value) = 0;
@@ -16,5 +18,7 @@ public:
       const std::string &name,
       const MetricContainer &container) = 0;
 };
+
+}  // namespace kysync
 
 #endif  // KSYNC_METRICVISITOR_H
