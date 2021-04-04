@@ -92,3 +92,9 @@ add_test(
         NAME tests
         COMMAND tests
 )
+
+set_tests_properties(
+        tests
+        PROPERTIES
+        ENVIRONMENT TEST_DATA_DIR=${CMAKE_SOURCE_DIR}/test_data
+)
