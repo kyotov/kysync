@@ -46,10 +46,12 @@ class SyncCommand::Impl final {
 
   struct WcsMapData {
     size_t index{};
-    size_t seed_offset{-1ull};
+    size_t seed_offset{-1ULL};
   };
 
-  std::bitset<0x100000000ull> set_;
+  static constexpr auto k4Gb = 0x100000000ULL;
+
+  std::bitset<k4Gb> set_;
   std::unordered_map<uint32_t, WcsMapData> analysis_;
 
   Impl(

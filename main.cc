@@ -9,25 +9,23 @@
 
 namespace kysync {
 
-namespace fs = std::filesystem;
-
-DEFINE_string(command, "", "prepare, sync, ...");  // NOLINT(cert-err58-cpp)
-DEFINE_string(input_filename, "", "input file");   // NOLINT(cert-err58-cpp)
+DEFINE_string(command, "", "prepare, sync, ...");  // NOLINT
+DEFINE_string(input_filename, "", "input file");   // NOLINT
 // TODO: maybe output_path? it is used elsewhere...
-DEFINE_string(  // NOLINT(cert-err58-cpp)
+DEFINE_string(  // NOLINT
     output_ksync_filename,
     "",
     "output ksync file");
-DEFINE_string(  // NOLINT(cert-err58-cpp)
+DEFINE_string(  // NOLINT
     output_compressed_filename,
     "",
     "output compressed file");
-DEFINE_string(output_filename, "", "output file");  // NOLINT(cert-err58-cpp)
-DEFINE_string(data_uri, "", "data uri");            // NOLINT(cert-err58-cpp)
-DEFINE_string(metadata_uri, "", "data uri");        // NOLINT(cert-err58-cpp)
-DEFINE_uint32(block, 1024, "block size");           // NOLINT(cert-err58-cpp)
-DEFINE_uint32(threads, 32, "number of threads");    // NOLINT(cert-err58-cpp)
-DEFINE_bool(                                        // NOLINT(cert-err58-cpp)
+DEFINE_string(output_filename, "", "output file");  // NOLINT
+DEFINE_string(data_uri, "", "data uri");            // NOLINT
+DEFINE_string(metadata_uri, "", "data uri");        // NOLINT
+DEFINE_uint32(block, 1024, "block size");           // NOLINT
+DEFINE_uint32(threads, 32, "number of threads");    // NOLINT
+DEFINE_bool(                                        // NOLINT
     compression_disabled,
     false,
     "true implies source file does not have compression");
