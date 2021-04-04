@@ -20,13 +20,13 @@ namespace kysync {
 
 namespace fs = std::filesystem;
 
-TEST(WeakChecksum, Simple) {  // NOLINT(cert-err58-cpp)
-  auto data = "0123456789";
+TEST(WeakChecksum, Simple) {  // NOLINT
+  const auto *data = "0123456789";
   auto wcs = WeakChecksum(data, strlen(data));
   EXPECT_EQ(wcs, 183829005);
 }
 
-TEST(WeakChecksum, Rolling) {  // NOLINT(cert-err58-cpp)
+TEST(WeakChecksum, Rolling) {  // NOLINT
   char data[] = "012345678901234567890123456789";
   ASSERT_EQ(strlen(data), 30);
 
@@ -54,17 +54,17 @@ TEST(WeakChecksum, Rolling) {  // NOLINT(cert-err58-cpp)
   EXPECT_EQ(cs, 183829005);
 }
 
-TEST(StringChecksum, Simple) {  // NOLINT(cert-err58-cpp)
-  auto data = "0123456789";
+TEST(StringChecksum, Simple) {  // NOLINT
+  const auto *data = "0123456789";
   auto scs = StrongChecksum::Compute(data, strlen(data));
   EXPECT_EQ(scs.ToString(), "e353667619ec664b49655fc9692165fb");
 }
 
-TEST(StringChecksum, Stream) {  // NOLINT(cert-err58-cpp)
+TEST(StringChecksum, Stream) {  // NOLINT
   constexpr int kCount = 10'000;
   std::stringstream s;
 
-  auto data = "0123456789";
+  const auto *data = "0123456789";
 
   for (int i = 0; i < kCount; i++) {
     s.write(data, strlen(data));
@@ -73,7 +73,7 @@ TEST(StringChecksum, Stream) {  // NOLINT(cert-err58-cpp)
   auto str = s.str();
   ASSERT_EQ(str.length(), kCount * strlen(data));
 
-  auto buffer = str.c_str();
+  const auto *buffer = str.c_str();
 
   auto scs_1 = StrongChecksum::Compute(buffer, kCount * strlen(data));
 
@@ -148,8 +148,8 @@ private:
   std::filesystem::path temp_path_;
 };
 
-TEST(Readers, MemoryReaderSimple) {  // NOLINT(cert-err58-cpp)
-  auto data = "0123456789";
+TEST(Readers, MemoryReaderSimple) {  // NOLINT
+  const auto *data = "0123456789";
 
   auto reader = MemoryReader(data, strlen(data));
   TestReader(reader, strlen(data));
@@ -158,8 +158,8 @@ TEST(Readers, MemoryReaderSimple) {  // NOLINT(cert-err58-cpp)
   TestReader(*Reader::Create(uri), strlen(data));
 }
 
-TEST(Readers, FileReaderSimple) {  // NOLINT(cert-err58-cpp)
-  auto data = "0123456789";
+TEST(Readers, FileReaderSimple) {  // NOLINT
+  const auto *data = "0123456789";
 
   auto path = fs::temp_directory_path() / "kysync.testdata";
   std::ofstream f(path, std::ios::binary);
@@ -172,19 +172,31 @@ TEST(Readers, FileReaderSimple) {  // NOLINT(cert-err58-cpp)
   TestReader(*Reader::Create("file://" + path.string()), strlen(data));
 }
 
-TEST(Readers, BadUri) {  // NOLINT(cert-err58-cpp)
+TEST(Readers, BadUri) {  // NOLINT
   // invalid protocol
-  EXPECT_THROW(Reader::Create("foo://1234"), std::invalid_argument);
+  EXPECT_THROW(  // NOLINT{cppcoreguidelines-avoid-goto}
+      Reader::Create("foo://1234"),
+      std::invalid_argument);
 
   // invalid buffer
-  EXPECT_THROW(Reader::Create("memory://G:0"), std::invalid_argument);
+  EXPECT_THROW(  // NOLINT{cppcoreguidelines-avoid-goto}
+      Reader::Create("memory://G:0"),
+      std::invalid_argument);
+
   // invalid size
-  EXPECT_THROW(Reader::Create("memory://0:G"), std::invalid_argument);
+  EXPECT_THROW(  // NOLINT{cppcoreguidelines-avoid-goto}
+      Reader::Create("memory://0:G"),
+      std::invalid_argument);
+
   // invalid separator
-  EXPECT_THROW(Reader::Create("memory://0+0"), std::invalid_argument);
+  EXPECT_THROW(  // NOLINT{cppcoreguidelines-avoid-goto}
+      Reader::Create("memory://0+0"),
+      std::invalid_argument);
 
   // non-existent file
-  EXPECT_THROW(Reader::Create("file://foo"), std::invalid_argument);
+  EXPECT_THROW(  // NOLINT{cppcoreguidelines-avoid-goto}
+      Reader::Create("file://foo"),
+      std::invalid_argument);
 }
 
 class KySyncTest {
@@ -290,7 +302,7 @@ PrepareCommand Prepare(
   return std::move(c);
 }
 
-TEST(PrepareCommand, Simple) {  // NOLINT(cert-err58-cpp)
+TEST(PrepareCommand, Simple) {  // NOLINT
   auto data = std::string("0123456789");
   auto block = 4;
   auto block_count = (data.size() + block - 1) / block;
@@ -312,7 +324,7 @@ TEST(PrepareCommand, Simple) {  // NOLINT(cert-err58-cpp)
   EXPECT_EQ(StrongChecksum::Compute("89\0\0", block), scs[2]);
 }
 
-TEST(PrepareCommand, Simple2) {  // NOLINT(cert-err58-cpp)
+TEST(PrepareCommand, Simple2) {  // NOLINT
   auto data = std::string("123412341234");
   auto block = 4;
   auto block_count = (data.size() + block - 1) / block;
@@ -334,7 +346,7 @@ TEST(PrepareCommand, Simple2) {  // NOLINT(cert-err58-cpp)
   EXPECT_EQ(StrongChecksum::Compute("1234", block), scs[2]);
 }
 
-TEST(SyncCommand, MetadataRoundtrip) {  // NOLINT(cert-err58-cpp)
+TEST(SyncCommand, MetadataRoundtrip) {  // NOLINT
   auto block = 4;
   std::string data = "0123456789";
   std::stringstream metadata;
@@ -424,23 +436,23 @@ void EndToEndTest(
 void RunEndToEndTests(bool compression_disabled) {
   // FIXME: research if we can do parametrized testing...
   std::string data = "0123456789";
-  EndToEndTest(data, data, compression_disabled, 4, {0, 4, -1ull /*8*/});
-  EndToEndTest(data, data, compression_disabled, 6, {0, -1ull /*6*/});
+  EndToEndTest(data, data, compression_disabled, 4, {0, 4, -1ULL /*8*/});
+  EndToEndTest(data, data, compression_disabled, 6, {0, -1ULL /*6*/});
 
   EndToEndTest(
       "0123456789",
       "001234004567",
       compression_disabled,
       4,
-      {1, 8, -1ull});
+      {1, 8, -1ULL});
   EndToEndTest("123412341234", "00123400", compression_disabled, 4, {2, 2, 2});
-  EndToEndTest("12345678", "", compression_disabled, 4, {-1ull, -1ull});
+  EndToEndTest("12345678", "", compression_disabled, 4, {-1ULL, -1ULL});
   EndToEndTest(
       "abcdefjhijklmnopqrstuvwxyz",
       "_qrst_mnop_ijkl_abcd_efjh_uvwx_yz",
       compression_disabled,
       4,
-      {16, 21, 11, 6, 1, 26, -1ull /*31*/});
+      {16, 21, 11, 6, 1, 26, -1ULL /*31*/});
 
   if (kWarmupAfterMatch) {  // NOLINT(readability-simplify-boolean-expr)
     EndToEndTest(
@@ -448,7 +460,7 @@ void RunEndToEndTests(bool compression_disabled) {
         "1234567890",
         compression_disabled,
         4,
-        {0, -1ull, -1ull, -1ull, 4, -1ull, -1ull});
+        {0, -1ULL, -1ULL, -1ULL, 4, -1ULL, -1ULL});
   } else {
     EndToEndTest(
         "1234234534564567567867897890",
@@ -469,7 +481,7 @@ void RunEndToEndTests(bool compression_disabled) {
   EndToEndTest(input_data, "1234", compression_disabled, 4, expected);
 }
 
-TEST(SyncCommand, EndToEnd) {  // NOLINT(cert-err58-cpp)
+TEST(SyncCommand, EndToEnd) {  // NOLINT
   RunEndToEndTests(false);
   RunEndToEndTests(true);
 }
@@ -607,7 +619,7 @@ void RunEndToEndFilesTestFor(
 // 3. Use the generated ksync and pzst files to sync to a new output file.
 // Ensure that the new output file matches the original file. A seed file is
 // required and for this, the original file is used.
-TEST(SyncCommand, EndToEndFiles) {  // NOLINT(cert-err58-cpp)
+TEST(SyncCommand, EndToEndFiles) {  // NOLINT
   // NOTE: This currently assumes that a test data dir exists one
   // level above the test's working directory
   std::string test_data_path = "../test_data";
@@ -625,7 +637,7 @@ TEST(SyncCommand, EndToEndFiles) {  // NOLINT(cert-err58-cpp)
 //     new version (v2 file that has modifications on the original).
 // 2. Run sync.
 // Ensure that newly sync'd file matches the original non-compressed v2 file.
-TEST(SyncCommand, SyncFileFromSeed) {  // NOLINT(cert-err58-cpp)
+TEST(SyncCommand, SyncFileFromSeed) {  // NOLINT
   // NOTE: This currently assumes that a test data dir exists one
   // level above the test's working directory
   std::string test_data_path = "../test_data";
@@ -651,7 +663,7 @@ TEST(SyncCommand, SyncFileFromSeed) {  // NOLINT(cert-err58-cpp)
 }
 
 // Test syncing from a non-compressed file
-TEST(SyncCommand, SyncNonCompressedFile) {  // NOLINT(cert-err58-cpp)
+TEST(SyncCommand, SyncNonCompressedFile) {  // NOLINT
   // NOTE: This currently assumes that a test data dir exists one
   // level above the test's working directory
   std::string test_data_path = "../test_data";

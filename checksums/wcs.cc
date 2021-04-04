@@ -5,7 +5,7 @@
 namespace kysync {
 
 uint32_t WeakChecksum(const void *buffer, size_t size) {
-  auto data = (uint8_t *)buffer;
+  auto *data = (uint8_t *)buffer;
 
   uint16_t a = 0;
   uint16_t b = 0;

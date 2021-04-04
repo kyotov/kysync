@@ -61,7 +61,7 @@ public:
     auto total_s = duration_cast<ms>(total_duration).count() / 1000.0;
     auto phase_s = duration_cast<ms>(phase_duration).count() / 1000.0;
     auto percent = size == 0 ? 0 : 100 * position / size;
-    auto mbps = phase_s == 0 ? 0 : position / phase_s / (1ll << 20);
+    auto mbps = phase_s == 0 ? 0 : position / phase_s / (1LL << 20);
 
     auto new_phase = metrics_["//progress_phase_"]->load();
     if (phase_ != new_phase) {
@@ -74,7 +74,7 @@ public:
 
     std::stringstream ss;
     ss << "phase " << phase_ << std::fixed                                 //
-       << " | " << std::setw(5) << position / (1ll << 20) << " MB"         //
+       << " | " << std::setw(5) << position / (1LL << 20) << " MB"         //
        << " | " << std::setw(5) << std::setprecision(1) << phase_s << "s"  //
        << " | " << std::setw(7) << mbps << " MB/s"                         //
        << " | " << std::setw(3) << percent << "%"                          //

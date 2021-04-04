@@ -121,7 +121,7 @@ void SyncCommand::Impl::ReadMetadata() {
 
   for (size_t index = 0; index < block_count_; index++) {
     set_[weak_checksums_[index]] = true;
-    analysis_[weak_checksums_[index]] = {index, -1ull};
+    analysis_[weak_checksums_[index]] = {index, -1ULL};
   }
 }
 
@@ -130,7 +130,7 @@ void SyncCommand::Impl::AnalyzeSeedChunk(
     size_t start_offset,
     size_t end_offset) {
   auto smart_buffer = std::make_unique<uint8_t[]>(2 * block_);
-  auto buffer = smart_buffer.get() + block_;
+  auto *buffer = smart_buffer.get() + block_;
   memset(buffer, 0, block_);
 
   auto seed_reader = Reader::Create(seed_uri_);
@@ -187,7 +187,8 @@ void SyncCommand::Impl::AnalyzeSeedChunk(
      * abandon the idea completely.
      * https://github.com/kyotov/ksync/blob/2d98f83cd1516066416e8319fbfa995e3f49f3dd/commands/SyncCommand.cpp#L166-L220
      */
-    _wcs = WeakChecksum((const void *)buffer, block_, _wcs, callback);
+    _wcs =
+        WeakChecksum(static_cast<const void *>(buffer), block_, _wcs, callback);
 
     base_impl_.progress_current_bytes_ += block_;
   }
@@ -262,11 +263,11 @@ void SyncCommand::Impl::ReconstructSourceChunk(
   LOG_ASSERT(start_offset % block_ == 0);
 
   auto smart_buffer = std::make_unique<char[]>(block_);
-  auto buffer = smart_buffer.get();
+  auto *buffer = smart_buffer.get();
 
   auto smart_decompression_buffer =
       std::make_unique<char[]>(max_compressed_size_);
-  auto decompression_buffer = smart_decompression_buffer.get();
+  auto *decompression_buffer = smart_decompression_buffer.get();
 
   auto seed_reader = Reader::Create(seed_uri_);
   auto data_reader = Reader::Create(data_uri_);
@@ -296,7 +297,7 @@ void SyncCommand::Impl::ReconstructSourceChunk(
 
     size_t count;
 
-    if (data.seed_offset != -1ull && scs == strong_checksums_[data.index]) {
+    if (data.seed_offset != -1ULL && scs == strong_checksums_[data.index]) {
       count = seed_reader->Read(buffer, data.seed_offset, block_);
       reused_bytes_ += count;
     } else {
@@ -385,7 +386,7 @@ void SyncCommand::Impl::ReconstructSource() {
 
   constexpr auto kBufferSize = 1024 * 1024;
   auto smart_buffer = std::make_unique<char[]>(kBufferSize);
-  auto buffer = smart_buffer.get();
+  auto *buffer = smart_buffer.get();
 
   StrongChecksumBuilder output_hash;
 
@@ -410,9 +411,7 @@ int SyncCommand::Impl::Run() {
   return 0;
 }
 
-void SyncCommand::Impl::Accept(
-    MetricVisitor &visitor,
-    const SyncCommand &host) {
+void SyncCommand::Impl::Accept(MetricVisitor &visitor) {
   VISIT(visitor, weak_checksum_matches_);
   VISIT(visitor, weak_checksum_false_positive_);
   VISIT(visitor, strong_checksum_matches_);
@@ -422,14 +421,14 @@ void SyncCommand::Impl::Accept(
 
 SyncCommand::SyncCommand(
     std::string data_uri,
-    bool compression_diabled,
+    bool compression_disabled,
     std::string metadata_uri,
     std::string seed_uri,
     std::filesystem::path output_path,
     int threads)
     : impl_(new Impl(
           std::move(data_uri),
-          compression_diabled,
+          compression_disabled,
           std::move(metadata_uri),
           std::move(seed_uri),
           std::move(output_path),
@@ -442,7 +441,7 @@ int SyncCommand::Run() { return impl_->Run(); }
 
 void SyncCommand::Accept(MetricVisitor &visitor) const {
   Command::Accept(visitor);
-  impl_->Accept(visitor, *this);
+  impl_->Accept(visitor);
 }
 
 }  // namespace kysync

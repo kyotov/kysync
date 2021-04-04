@@ -7,10 +7,10 @@ namespace kysync {
 namespace fs = std::filesystem;
 
 class FileReader::Impl {
-public:
   const fs::path path_;
   std::ifstream data_;
 
+public:
   explicit Impl(fs::path path) : path_(std::move(path)) {
     data_.open(path_, std::ios::binary);
   }
@@ -24,7 +24,7 @@ public:
     data_.clear();
 
     data_.seekg(offset);
-    data_.read((char *)buffer, size);
+    data_.read(static_cast<char *>(buffer), size);
     return data_.gcount();
   }
 };

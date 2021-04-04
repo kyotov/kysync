@@ -6,11 +6,11 @@
 namespace kysync {
 
 class HttpReader::Impl {
-public:
   const std::string host_;
   const std::string path_;
   httplib::Client cli_;
 
+public:
   explicit Impl(std::string host, std::string path)
       : host_(std::move(host)),
         path_(std::move(path)),

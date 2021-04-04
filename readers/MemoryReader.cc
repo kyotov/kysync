@@ -6,7 +6,7 @@ namespace kysync {
 
 class MemoryReader::Impl {
 public:
-  const void* buffer_;
+  const void* const buffer_;
   const size_t size_;
 
   Impl(const void* buffer, size_t size) : buffer_(buffer), size_(size) {}

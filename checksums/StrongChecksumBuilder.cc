@@ -4,17 +4,18 @@
 
 namespace kysync {
 
-struct StrongChecksumBuilder::Impl {
-  XXH3_state_t* state;
+class StrongChecksumBuilder::Impl {
+  XXH3_state_t* state_;
 
-  Impl() : state(XXH3_createState()) { XXH3_128bits_reset(state); }
+public:
+  Impl() : state_(XXH3_createState()) { XXH3_128bits_reset(state_); }
 
   void Update(const void* buffer, size_t size) const {
-    XXH3_128bits_update(state, buffer, size);
+    XXH3_128bits_update(state_, buffer, size);
   }
 
   [[nodiscard]] XXH128_hash_t Digest() const {
-    return XXH3_128bits_digest(state);
+    return XXH3_128bits_digest(state_);
   }
 };
 

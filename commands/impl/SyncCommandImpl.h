@@ -79,7 +79,7 @@ class SyncCommand::Impl final {
 
   int Run();
 
-  void Accept(MetricVisitor &visitor, const SyncCommand &host);
+  void Accept(MetricVisitor &visitor);
 };
 
 }  // namespace kysync
