@@ -1,6 +1,8 @@
 #ifndef KSYNC_COMMANDIMPL_H
 #define KSYNC_COMMANDIMPL_H
 
+#include "../metrics/Metric.h"
+
 namespace kysync {
 
 class Command::Impl final {

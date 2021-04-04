@@ -91,6 +91,7 @@ target_link_libraries(tests
 add_executable(gendata
         src/tests/gendata.cc)
 target_link_libraries(gendata
+        main
         gflags
         glog::glog)
 
