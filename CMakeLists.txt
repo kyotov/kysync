@@ -8,6 +8,11 @@ if (CMAKE_BUILD_TYPE STREQUAL "")
     set(CMAKE_BUILD_TYPE Debug)
 endif ()
 
+# TODO: figure out how to make sure we have enabled IPO/WPO/LTO
+#       e.g. on Windows:
+#       set_target_properties(kysync PROPERTIES COMPILE_FLAGS /GL)
+#       set_target_properties(kysync PROPERTIES LINK_FLAGS /LTCG)
+
 #
 # see https://cliutils.gitlab.io/modern-cmake/chapters/basics/variables.html
 #
@@ -52,38 +57,32 @@ find_package(httplib REQUIRED NO_MODULE PATHS ${CMAKE_PREFIX_PATH}/CMake/httplib
 find_package(zstd REQUIRED NO_MODULE)
 
 add_library(main STATIC
-        readers/Reader.cc
-        readers/MemoryReader.cc
-        readers/FileReader.cc
-        readers/HttpReader.cc
-        commands/Command.cc
-        commands/PrepareCommand.cc
-        commands/SyncCommand.cc
-        checksums/wcs.cc
-        checksums/StrongChecksum.cc
-        checksums/StrongChecksumBuilder.cc
-        Monitor.cc)
+        src/readers/Reader.cc
+        src/readers/MemoryReader.cc
+        src/readers/FileReader.cc
+        src/readers/HttpReader.cc
+        src/commands/Command.cc
+        src/commands/PrepareCommand.cc
+        src/commands/SyncCommand.cc
+        src/checksums/wcs.cc
+        src/checksums/StrongChecksum.cc
+        src/checksums/StrongChecksumBuilder.cc
+        src/Monitor.cc)
 target_link_libraries(main
         zstd::libzstd_static
         xxHash::xxhash
         httplib::httplib
         glog::glog)
 
-#FIXME: this is not portable and also not clear it works well for debug...
-#set_target_properties(main PROPERTIES COMPILE_FLAGS /GL)
-#set_target_properties(main PROPERTIES LINK_FLAGS /LTCG)
-
 add_executable(kysync
-        main.cc)
+        src/main.cc)
 target_link_libraries(kysync
         main
         gflags)
-#set_target_properties(kysync PROPERTIES COMPILE_FLAGS /GL)
-#set_target_properties(kysync PROPERTIES LINK_FLAGS /LTCG)
 
 add_executable(tests
-        tests.cc
-        metrics/ExpectationCheckMetricsVisitor.cc)
+        src/tests.cc
+        src/metrics/ExpectationCheckMetricsVisitor.cc)
 target_link_libraries(tests
         main
         GTest::gtest

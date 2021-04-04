@@ -6,9 +6,9 @@
 #include <future>
 #include <map>
 
-#include "../Config.h"
 #include "../checksums/StrongChecksumBuilder.h"
 #include "../checksums/wcs.h"
+#include "../Config.h"
 #include "glog/logging.h"
 #include "impl/SyncCommandImpl.h"
 
