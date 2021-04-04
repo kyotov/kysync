@@ -412,11 +412,11 @@ int SyncCommand::Impl::Run() {
 }
 
 void SyncCommand::Impl::Accept(MetricVisitor &visitor) {
-  VISIT(visitor, weak_checksum_matches_);
-  VISIT(visitor, weak_checksum_false_positive_);
-  VISIT(visitor, strong_checksum_matches_);
-  VISIT(visitor, reused_bytes_);
-  VISIT(visitor, downloaded_bytes_);
+  VISIT_METRICS(weak_checksum_matches_);
+  VISIT_METRICS(weak_checksum_false_positive_);
+  VISIT_METRICS(strong_checksum_matches_);
+  VISIT_METRICS(reused_bytes_);
+  VISIT_METRICS(downloaded_bytes_);
 }
 
 SyncCommand::SyncCommand(

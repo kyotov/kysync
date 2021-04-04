@@ -18,8 +18,8 @@ public:
   Metric total_bytes_read_;
 
   void Accept(MetricVisitor &visitor) const {
-    VISIT(visitor, total_reads_);
-    VISIT(visitor, total_bytes_read_);
+    VISIT_METRICS(total_reads_);
+    VISIT_METRICS(total_bytes_read_);
   }
 };
 

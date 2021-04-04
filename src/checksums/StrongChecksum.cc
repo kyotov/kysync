@@ -16,7 +16,7 @@ StrongChecksum StrongChecksum::Compute(const void *buffer, size_t size) {
 StrongChecksum StrongChecksum::Compute(std::istream &input) {
   constexpr size_t kBufSize = 64 * 1024;
 
-  auto state = XXH3_createState();
+  auto *state = XXH3_createState();
 
   char buffer[kBufSize];
 

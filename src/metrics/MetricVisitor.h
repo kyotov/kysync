@@ -6,7 +6,7 @@
 #include "Metric.h"
 #include "MetricContainer.h"
 
-#define VISIT(visitor, host) visitor.Visit(std::string(#host), host)
+#define VISIT_METRICS(host) visitor.Visit(std::string(#host), host)
 
 namespace kysync {
 
