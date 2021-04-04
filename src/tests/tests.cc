@@ -5,16 +5,16 @@
 #include <filesystem>
 #include <fstream>
 
-#include "Config.h"
-#include "checksums/StrongChecksum.h"
-#include "checksums/wcs.h"
-#include "commands/PrepareCommand.h"
-#include "commands/SyncCommand.h"
-#include "commands/impl/PrepareCommandImpl.h"
-#include "commands/impl/SyncCommandImpl.h"
-#include "metrics/ExpectationCheckMetricsVisitor.h"
-#include "readers/FileReader.h"
-#include "readers/MemoryReader.h"
+#include "../Config.h"
+#include "../checksums/StrongChecksum.h"
+#include "../checksums/wcs.h"
+#include "../commands/PrepareCommand.h"
+#include "../commands/SyncCommand.h"
+#include "../commands/impl/PrepareCommandImpl.h"
+#include "../commands/impl/SyncCommandImpl.h"
+#include "../metrics/ExpectationCheckMetricsVisitor.h"
+#include "../readers/FileReader.h"
+#include "../readers/MemoryReader.h"
 
 namespace kysync {
 

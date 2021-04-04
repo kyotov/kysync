@@ -81,12 +81,18 @@ target_link_libraries(kysync
         gflags)
 
 add_executable(tests
-        src/tests.cc
+        src/tests/tests.cc
         src/metrics/ExpectationCheckMetricsVisitor.cc)
 target_link_libraries(tests
         main
         GTest::gtest
         GTest::gtest_main)
+
+add_executable(gendata
+        src/tests/gendata.cc)
+target_link_libraries(gendata
+        gflags
+        glog::glog)
 
 add_test(
         NAME tests
