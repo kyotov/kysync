@@ -32,7 +32,7 @@ class PrepareCommand::Impl final {
       std::ostream& output_ksync,
       std::ostream& output_compressed,
       size_t block_size,
-      Command::Impl& baseImpl);
+      Command::Impl& base_impl);
 
   template <typename T>
   void WriteToMetadataStream(const std::vector<T>& container);

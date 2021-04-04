@@ -7,26 +7,26 @@ struct StrongChecksumBuilder::Impl {
 
   Impl() : state(XXH3_createState()) { XXH3_128bits_reset(state); }
 
-  void update(const void* buffer, size_t size) const {
+  void Update(const void* buffer, size_t size) const {
     XXH3_128bits_update(state, buffer, size);
   }
 
-  [[nodiscard]] XXH128_hash_t digest() const {
+  [[nodiscard]] XXH128_hash_t Digest() const {
     return XXH3_128bits_digest(state);
   }
 };
 
 StrongChecksumBuilder::StrongChecksumBuilder()
-    : pImpl(std::make_unique<Impl>()) {}
+    : impl_(std::make_unique<Impl>()) {}
 
 StrongChecksumBuilder::~StrongChecksumBuilder() = default;
 
-void StrongChecksumBuilder::update(const void* buffer, size_t size) {
-  pImpl->update(buffer, size);
+void StrongChecksumBuilder::Update(const void* buffer, size_t size) {
+  impl_->Update(buffer, size);
 }
 
-StrongChecksum StrongChecksumBuilder::digest() {
-  auto digest = pImpl->digest();
+StrongChecksum StrongChecksumBuilder::Digest() {
+  auto digest = impl_->Digest();
 
-  return {.hi = digest.high64, .lo = digest.low64};
+  return {.hi_ = digest.high64, .lo_ = digest.low64};
 }

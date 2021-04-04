@@ -9,7 +9,7 @@ public:
   const fs::path path_;
   std::ifstream data_;
 
-  explicit Impl(fs::path _path) : path_(std::move(_path)) {
+  explicit Impl(fs::path path) : path_(std::move(path)) {
     data_.open(path_, std::ios::binary);
   }
 

@@ -17,16 +17,16 @@ public:
    * - you can create instances with initializer list, e.g. {2, 2}
    * - the initializers below are necessary for generating a default constructor
    */
-  const uint64_t hi = 0;
-  const uint64_t lo = 0;
+  const uint64_t hi_ = 0;
+  const uint64_t lo_ = 0;
 
-  static StrongChecksum compute(const void *buffer, size_t size);
+  static StrongChecksum Compute(const void *buffer, size_t size);
 
-  static StrongChecksum compute(std::istream &input);
+  static StrongChecksum Compute(std::istream &input);
 
   bool operator==(const StrongChecksum &other) const;
 
-  [[nodiscard]] std::string toString() const;
+  [[nodiscard]] std::string ToString() const;
 };
 
 #endif  // KSYNC_STRONGCHECKSUM_H

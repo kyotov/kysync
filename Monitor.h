@@ -14,8 +14,8 @@ public:
   int Run();
 
 private:
-  struct Impl;
-  std::unique_ptr<Impl> pImpl;
+  class Impl;
+  std::unique_ptr<Impl> impl_;
 };
 
 #endif  // KSYNC_MONITOR_H

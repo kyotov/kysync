@@ -29,11 +29,11 @@ class SyncCommand::Impl final {
 
   size_t size_{};
   size_t header_size_{};
-  size_t block{};
+  size_t block_{};
   size_t block_count_{};
   size_t max_compressed_size_{};
 
-  std::string hash;
+  std::string hash_;
 
   std::vector<uint32_t> weak_checksums_;
   std::vector<StrongChecksum> strong_checksums_;
@@ -44,7 +44,7 @@ class SyncCommand::Impl final {
 
   struct WcsMapData {
     size_t index{};
-    size_t seedOffset{-1ull};
+    size_t seed_offset{-1ull};
   };
 
   std::bitset<0x100000000ull> set_;

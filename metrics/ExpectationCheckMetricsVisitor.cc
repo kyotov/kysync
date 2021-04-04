@@ -6,8 +6,8 @@ public:
   std::map<std::string, uint64_t> unchecked_;
   std::string context_;
 
-  explicit Impl(std::map<std::string, uint64_t> &&_expectations)
-      : expectations_(_expectations),
+  explicit Impl(std::map<std::string, uint64_t> &&expectations)
+      : expectations_(expectations),
         context_("//") {}
 
   ~Impl() {

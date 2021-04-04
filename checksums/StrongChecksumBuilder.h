@@ -11,13 +11,13 @@ public:
 
   ~StrongChecksumBuilder();
 
-  void update(const void* buffer, size_t size);
+  void Update(const void* buffer, size_t size);
 
-  StrongChecksum digest();
+  StrongChecksum Digest();
 
 private:
   struct Impl;
-  std::unique_ptr<Impl> pImpl;
+  std::unique_ptr<Impl> impl_;
 };
 
 #endif  // KSYNC_STRONGCHECKSUMBUILDER_H

@@ -54,31 +54,31 @@ TEST(WeakChecksum, Rolling) {  // NOLINT(cert-err58-cpp)
 
 TEST(StringChecksum, Simple) {  // NOLINT(cert-err58-cpp)
   auto data = "0123456789";
-  auto scs = StrongChecksum::compute(data, strlen(data));
-  EXPECT_EQ(scs.toString(), "e353667619ec664b49655fc9692165fb");
+  auto scs = StrongChecksum::Compute(data, strlen(data));
+  EXPECT_EQ(scs.ToString(), "e353667619ec664b49655fc9692165fb");
 }
 
 TEST(StringChecksum, Stream) {  // NOLINT(cert-err58-cpp)
-  constexpr int COUNT = 10'000;
+  constexpr int kCount = 10'000;
   std::stringstream s;
 
   auto data = "0123456789";
 
-  for (int i = 0; i < COUNT; i++) {
+  for (int i = 0; i < kCount; i++) {
     s.write(data, strlen(data));
   }
 
   auto str = s.str();
-  ASSERT_EQ(str.length(), COUNT * strlen(data));
+  ASSERT_EQ(str.length(), kCount * strlen(data));
 
   auto buffer = str.c_str();
 
-  auto scs1 = StrongChecksum::compute(buffer, COUNT * strlen(data));
+  auto scs_1 = StrongChecksum::Compute(buffer, kCount * strlen(data));
 
   s.seekg(0);
-  auto scs2 = StrongChecksum::compute(s);
+  auto scs_2 = StrongChecksum::Compute(s);
 
-  EXPECT_EQ(scs1, scs2);
+  EXPECT_EQ(scs_1, scs_2);
 }
 
 void TestReader(Reader &reader, size_t expected_size) {
@@ -215,7 +215,7 @@ public:
     for (size_t i = 0; i < c.impl_->block_count_; i++) {
       auto wcs = c.impl_->weak_checksums_[i];
       auto data = c.impl_->analysis_[wcs];
-      result.push_back(data.seedOffset);
+      result.push_back(data.seed_offset);
     }
 
     return result;
@@ -305,9 +305,9 @@ TEST(PrepareCommand, Simple) {  // NOLINT(cert-err58-cpp)
 
   const auto &scs = KySyncTest::ExamineStrongChecksums(c);
   EXPECT_EQ(wcs.size(), block_count);
-  EXPECT_EQ(StrongChecksum::compute("0123", block), scs[0]);
-  EXPECT_EQ(StrongChecksum::compute("4567", block), scs[1]);
-  EXPECT_EQ(StrongChecksum::compute("89\0\0", block), scs[2]);
+  EXPECT_EQ(StrongChecksum::Compute("0123", block), scs[0]);
+  EXPECT_EQ(StrongChecksum::Compute("4567", block), scs[1]);
+  EXPECT_EQ(StrongChecksum::Compute("89\0\0", block), scs[2]);
 }
 
 TEST(PrepareCommand, Simple2) {  // NOLINT(cert-err58-cpp)
@@ -327,9 +327,9 @@ TEST(PrepareCommand, Simple2) {  // NOLINT(cert-err58-cpp)
 
   const auto &scs = KySyncTest::ExamineStrongChecksums(c);
   EXPECT_EQ(wcs.size(), block_count);
-  EXPECT_EQ(StrongChecksum::compute("1234", block), scs[0]);
-  EXPECT_EQ(StrongChecksum::compute("1234", block), scs[1]);
-  EXPECT_EQ(StrongChecksum::compute("1234", block), scs[2]);
+  EXPECT_EQ(StrongChecksum::Compute("1234", block), scs[0]);
+  EXPECT_EQ(StrongChecksum::Compute("1234", block), scs[1]);
+  EXPECT_EQ(StrongChecksum::Compute("1234", block), scs[2]);
 }
 
 TEST(SyncCommand, MetadataRoundtrip) {  // NOLINT(cert-err58-cpp)
@@ -440,9 +440,7 @@ void RunEndToEndTests(bool compression_disabled) {
       4,
       {16, 21, 11, 6, 1, 26, -1ull /*31*/});
 
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "Simplify"
-  if (kWarmupAfterMatch) {
+  if (kWarmupAfterMatch) { //NOLINT(readability-simplify-boolean-expr)
     EndToEndTest(
         "1234234534564567567867897890",
         "1234567890",
@@ -457,7 +455,6 @@ void RunEndToEndTests(bool compression_disabled) {
         4,
         {0, 1, 2, 3, 4, 5, 6});
   }
-#pragma clang diagnostic pop
 
   std::string chunk = "1234";
   std::stringstream input;
@@ -466,8 +463,8 @@ void RunEndToEndTests(bool compression_disabled) {
     input << chunk;
     expected.push_back(0);
   }
-  auto inputData = input.str();
-  EndToEndTest(inputData, "1234", compression_disabled, 4, expected);
+  auto input_data = input.str();
+  EndToEndTest(input_data, "1234", compression_disabled, 4, expected);
 }
 
 TEST(SyncCommand, EndToEnd) {  // NOLINT(cert-err58-cpp)
@@ -612,13 +609,13 @@ TEST(SyncCommand, EndToEndFiles) {  // NOLINT(cert-err58-cpp)
   // NOTE: This currently assumes that a test data dir exists one
   // level above the test's working directory
   std::string test_data_path = "../test_data";
-  const uint64_t expected_compressed_size = 42;
+  const uint64_t kExpectedCompressedSize = 42;
   RunEndToEndFilesTestFor(
       test_data_path + "/test_file_small.txt",
-      expected_compressed_size);
+      kExpectedCompressedSize);
   RunEndToEndFilesTestFor(
       test_data_path + "/test_file.txt",
-      expected_compressed_size);
+      kExpectedCompressedSize);
 }
 
 // Test summary:

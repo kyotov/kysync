@@ -29,13 +29,13 @@ SyncCommand::Impl::Impl(
       base_impl_(base_impl) {}
 
 void SyncCommand::Impl::ParseHeader(const Reader &metadata_reader) {
-  constexpr size_t MAX_HEADER_SIZE = 1024;
-  char buffer[MAX_HEADER_SIZE];
+  constexpr size_t kMaxHeaderSize = 1024;
+  char buffer[kMaxHeaderSize];
 
-  metadata_reader.Read(buffer, 0, MAX_HEADER_SIZE);
+  metadata_reader.Read(buffer, 0, kMaxHeaderSize);
 
   std::stringstream header;
-  header.write(buffer, MAX_HEADER_SIZE);
+  header.write(buffer, kMaxHeaderSize);
   header.seekg(0);
 
   std::map<std::string, std::string> metadata;
@@ -50,10 +50,10 @@ void SyncCommand::Impl::ParseHeader(const Reader &metadata_reader) {
     } else if (key == "size:") {
       size_ = strtoull(value.c_str(), nullptr, 10);
     } else if (key == "block:") {
-      block = strtoull(value.c_str(), nullptr, 10);
-      block_count_ = (size_ + block - 1) / block;
+      block_ = strtoull(value.c_str(), nullptr, 10);
+      block_count_ = (size_ + block_ - 1) / block_;
     } else if (key == "hash:") {
-      hash = value;
+      hash_ = value;
     } else if (key == "eof:") {
       CHECK(value == "1") << "bad eof marker (1)";
       break;
@@ -127,59 +127,56 @@ void SyncCommand::Impl::AnalyzeSeedChunk(
     int /*id*/,
     size_t start_offset,
     size_t end_offset) {
-  auto smart_buffer = std::make_unique<uint8_t[]>(2 * block);
-  auto buffer = smart_buffer.get() + block;
-  memset(buffer, 0, block);
+  auto smart_buffer = std::make_unique<uint8_t[]>(2 * block_);
+  auto buffer = smart_buffer.get() + block_;
+  memset(buffer, 0, block_);
 
   auto seed_reader = Reader::Create(seed_uri_);
   auto seed_size = seed_reader->GetSize();
 
   uint32_t _wcs = 0;
 
-  int64_t warmup = block - 1;
+  int64_t warmup = block_ - 1;
 
   for (size_t seed_offset = start_offset;  //
        seed_offset < end_offset;
-       seed_offset += block)
+       seed_offset += block_)
   {
     auto callback = [&](size_t offset, uint32_t wcs) {
       /* The `set` seems to improve performance. Previously the code was:
        * https://github.com/kyotov/ksync/blob/2d98f83cd1516066416e8319fbfa995e3f49f3dd/commands/SyncCommand.cpp#L128-L132
        */
-      if (--warmup < 0 && seed_offset + offset + block <= seed_size && set_[wcs])
+      if (--warmup < 0 && seed_offset + offset + block_ <= seed_size && set_[wcs])
       {
         weak_checksum_matches_++;
         auto &data = analysis_[wcs];
 
         auto source_digest = strong_checksums_[data.index];
-        auto seed_digest = StrongChecksum::compute(buffer + offset, block);
+        auto seed_digest = StrongChecksum::Compute(buffer + offset, block_);
 
         if (source_digest == seed_digest) {
           set_[wcs] = false;
           if (kWarmupAfterMatch) {
-            warmup = block - 1;
+            warmup = block_ - 1;
           }
           strong_checksum_matches_++;
-          data.seedOffset = seed_offset + offset;
+          data.seed_offset = seed_offset + offset;
 
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "Simplify"
           if (kVerify) {
-            auto t = std::make_unique<char[]>(block);
-            seed_reader->Read(t.get(), data.seedOffset, block);
-            LOG_ASSERT(wcs == WeakChecksum(t.get(), block));
-            LOG_ASSERT(seed_digest == StrongChecksum::compute(t.get(), block));
+            auto t = std::make_unique<char[]>(block_);
+            seed_reader->Read(t.get(), data.seed_offset, block_);
+            LOG_ASSERT(wcs == WeakChecksum(t.get(), block_));
+            LOG_ASSERT(seed_digest == StrongChecksum::Compute(t.get(), block_));
           }
-#pragma clang diagnostic pop
         } else {
           weak_checksum_false_positive_++;
         }
       }
     };
 
-    memcpy(buffer - block, buffer, block);
-    auto count = seed_reader->Read(buffer, seed_offset, block);
-    memset(buffer + count, 0, block - count);
+    memcpy(buffer - block_, buffer, block_);
+    auto count = seed_reader->Read(buffer, seed_offset, block_);
+    memset(buffer + count, 0, block_ - count);
 
     /* I tried to "optimize" the following by manually inlining `weakChecksum`
      * and then unrolling the inner loop. To my surprise this did not help...
@@ -188,14 +185,14 @@ void SyncCommand::Impl::AnalyzeSeedChunk(
      * abandon the idea completely.
      * https://github.com/kyotov/ksync/blob/2d98f83cd1516066416e8319fbfa995e3f49f3dd/commands/SyncCommand.cpp#L166-L220
      */
-    _wcs = WeakChecksum((const void *)buffer, block, _wcs, callback);
+    _wcs = WeakChecksum((const void *)buffer, block_, _wcs, callback);
 
-    base_impl_.progress_current_bytes_ += block;
+    base_impl_.progress_current_bytes_ += block_;
   }
 }
 
 // TODO: make this a member function
-int parallelize(
+int Parallelize(
     size_t data_size,
     size_t block_size,
     size_t overlap_size,
@@ -210,7 +207,7 @@ int parallelize(
     chunk = blocks;
   }
 
-  VLOG(1) << "parallelize GetSize=" << data_size  //
+  VLOG(1) << "Parallelize GetSize=" << data_size  //
           << " block=" << block_size              //
           << " threads=" << threads;
 
@@ -247,10 +244,10 @@ void SyncCommand::Impl::AnalyzeSeed() {
   base_impl_.progress_current_bytes_ = 0;
   base_impl_.progress_compressed_bytes_ = 0;
 
-  parallelize(
+  Parallelize(
       seed_data_size,
-      block,
-      block,
+      block_,
+      block_,
       threads_,
       // TODO: fold this function in here so we would not need the lambda
       [this](auto id, auto beg, auto end) { AnalyzeSeedChunk(id, beg, end); });
@@ -260,9 +257,9 @@ void SyncCommand::Impl::ReconstructSourceChunk(
     int /*id*/,
     size_t start_offset,
     size_t end_offset) {
-  LOG_ASSERT(start_offset % block == 0);
+  LOG_ASSERT(start_offset % block_ == 0);
 
-  auto smart_buffer = std::make_unique<char[]>(block);
+  auto smart_buffer = std::make_unique<char[]>(block_);
   auto buffer = smart_buffer.get();
 
   auto smart_decompression_buffer =
@@ -289,20 +286,20 @@ void SyncCommand::Impl::ReconstructSourceChunk(
   output.exceptions(std::fstream::failbit | std::fstream::badbit);
   output.seekp(start_offset);
 
-  for (auto offset = start_offset; offset < end_offset; offset += block) {
-    auto i = offset / block;
+  for (auto offset = start_offset; offset < end_offset; offset += block_) {
+    auto i = offset / block_;
     auto wcs = weak_checksums_[i];
     auto scs = strong_checksums_[i];
     auto data = analysis_[wcs];
 
     size_t count;
 
-    if (data.seedOffset != -1ull && scs == strong_checksums_[data.index]) {
-      count = seed_reader->Read(buffer, data.seedOffset, block);
+    if (data.seed_offset != -1ull && scs == strong_checksums_[data.index]) {
+      count = seed_reader->Read(buffer, data.seed_offset, block_);
       reused_bytes_ += count;
     } else {
       if (compression_diabled_) {
-        count = data_reader->Read(buffer, i * block, block);
+        count = data_reader->Read(buffer, i * block_, block_);
         downloaded_bytes_ += count;
       } else {
         auto size_to_read = compressed_sizes_[i];
@@ -322,36 +319,33 @@ void SyncCommand::Impl::ReconstructSourceChunk(
         CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_UNKNOWN)
             << "Original GetSize unknown when decompressing from offset "
             << offset_to_read_from;
-        CHECK(expected_size_after_decompression <= block)
+        CHECK(expected_size_after_decompression <= block_)
             << "Expected decompressed GetSize is greater than block GetSize. "
                "Starting offset "
             << offset_to_read_from;
         auto decompressed_size =
-            ZSTD_decompress(buffer, block, decompression_buffer, count);
+            ZSTD_decompress(buffer, block_, decompression_buffer, count);
         CHECK(!ZSTD_isError(decompressed_size))
             << ZSTD_getErrorName(decompressed_size);
-        LOG_ASSERT(decompressed_size <= block);
+        LOG_ASSERT(decompressed_size <= block_);
         count = decompressed_size;
       }
     }
 
     output.write(buffer, count);
 
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "Simplify"
     if (kVerify) {
       LOG_ASSERT(wcs == weak_checksums_[data.index]);
-      if (count == block) {
+      if (count == block_) {
         LOG_ASSERT(wcs == WeakChecksum(buffer, count));
-        LOG_ASSERT(scs == StrongChecksum::compute(buffer, count));
+        LOG_ASSERT(scs == StrongChecksum::Compute(buffer, count));
       }
     }
-#pragma clang diagnostic pop
 
-    if (i < block_count_ - 1 || size_ % block == 0) {
-      CHECK_EQ(count, block);
+    if (i < block_count_ - 1 || size_ % block_ == 0) {
+      CHECK_EQ(count, block_);
     } else {
-      CHECK_EQ(count, size_ % block);
+      CHECK_EQ(count, size_ % block_);
     }
 
     base_impl_.progress_current_bytes_ += count;
@@ -370,9 +364,9 @@ void SyncCommand::Impl::ReconstructSource() {
   std::ofstream output(output_path_, std::ios::binary);
   std::filesystem::resize_file(output_path_, data_size);
 
-  parallelize(
+  Parallelize(
       data_size,
-      block,
+      block_,
       0,
       threads_,
       [this](auto id, auto beg, auto end) {
@@ -387,20 +381,20 @@ void SyncCommand::Impl::ReconstructSource() {
   // source does not change compressed bytes read. downloadedBytes follows a
   // similar pattern.
 
-  constexpr auto buffer_size = 1024 * 1024;
-  auto smart_buffer = std::make_unique<char[]>(buffer_size);
+  constexpr auto kBufferSize = 1024 * 1024;
+  auto smart_buffer = std::make_unique<char[]>(kBufferSize);
   auto buffer = smart_buffer.get();
 
-  StrongChecksumBuilder outputHash;
+  StrongChecksumBuilder output_hash;
 
   std::ifstream read_for_hash_check(output_path_, std::ios::binary);
   while (read_for_hash_check) {
-    auto count = read_for_hash_check.read(buffer, buffer_size).gcount();
-    outputHash.update(buffer, count);
+    auto count = read_for_hash_check.read(buffer, kBufferSize).gcount();
+    output_hash.Update(buffer, count);
     base_impl_.progress_current_bytes_ += count;
   }
 
-  CHECK_EQ(hash, outputHash.digest().toString())
+  CHECK_EQ(hash_, output_hash.Digest().ToString())
       << "mismatch in hash of reconstructed data";
 }
 

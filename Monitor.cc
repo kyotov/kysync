@@ -7,10 +7,12 @@
 #include <iomanip>
 #include <iostream>
 #include <stack>
+#include <unordered_map>
 
 #include "metrics/MetricVisitor.h"
 
-struct Monitor::Impl : public MetricVisitor {
+class Monitor::Impl : public MetricVisitor {
+public:
   std::vector<std::string> metric_keys_;
   std::unordered_map<std::string, const Metric*> metrics_;
 
@@ -24,7 +26,7 @@ struct Monitor::Impl : public MetricVisitor {
   decltype(std::chrono::high_resolution_clock::now()) ts_total_begin_;
   decltype(std::chrono::high_resolution_clock::now()) ts_phase_begin_;
 
-  explicit Impl(Command& _command) : command_(_command) { context_.push(""); }
+  explicit Impl(Command& command) : command_(command) { context_.push(""); }
 
   void Visit(const std::string& name, const Metric& value) override {
     auto key = context_.top() + "/" + name;
@@ -45,7 +47,7 @@ struct Monitor::Impl : public MetricVisitor {
     }
   }
 
-  void update(bool last) {
+  void Update(bool last) {
     auto size = metrics_["//progress_total_bytes_"]->load();
     auto position = metrics_["//progress_current_bytes_"]->load();
 
@@ -94,16 +96,16 @@ struct Monitor::Impl : public MetricVisitor {
     std::chrono::milliseconds period(100);
 
     while (result.wait_for(period) != std::future_status::ready) {
-      update(false);
+      Update(false);
     }
-    update(true);
+    Update(true);
 
     return result.get();
   }
 };
 
-Monitor::Monitor(Command& command) : pImpl(std::make_unique<Impl>(command)) {}
+Monitor::Monitor(Command& command) : impl_(std::make_unique<Impl>(command)) {}
 
 Monitor::~Monitor() = default;
 
-int Monitor::Run() { return pImpl->Run(); }
+int Monitor::Run() { return impl_->Run(); }
