@@ -31,7 +31,7 @@ TEST(WeakChecksum, Rolling) {  // NOLINT(cert-err58-cpp)
   auto size = strlen(data) / 3;
   memset(data, 0, size);
 
-  std::atomic<int> count{0};
+  std::atomic<int> count = 0;
 
   int64_t warmup = size - 1;
 
