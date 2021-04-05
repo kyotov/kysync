@@ -51,12 +51,12 @@ public:
   }
 
   void GenChunk(int id, size_t beg, size_t end) {
-    std::fstream data(kData, std::ios::binary | std::ios::in | std::ios::out);
+    auto mode = std::ios::binary | std::ios::in | std::ios::out;
+
+    std::fstream data(kData, mode);
     data.seekp(beg);
 
-    std::fstream seed_data(
-        kSeedData,
-        std::ios::binary | std::ios::in | std::ios::out);
+    std::fstream seed_data(kSeedData, mode);
     seed_data.seekp(beg);
 
     auto random = R(id);
