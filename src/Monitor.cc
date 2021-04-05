@@ -15,29 +15,38 @@ namespace kysync {
 
 class Monitor::Impl : public MetricVisitor {
 public:
+  using TimeStamp = decltype(std::chrono::high_resolution_clock::now());
+  using Milliseconds = std::chrono::milliseconds;
+
+  struct Phase {
+    Metric::value_type total_bytes;
+    Metric::value_type processed_bytes;
+    Metric::value_type elapsed_ms;
+  };
+
+  std::vector<Phase> phases;
+
   std::vector<std::string> metric_keys_;
-  std::unordered_map<std::string, const Metric*> metrics_;
+  std::unordered_map<std::string, Metric*> metrics_;
 
   std::stack<std::string> context_;
 
   Command& command_;
 
-  uint64_t phase_ = 0;
   std::string last_update_;
 
-  decltype(std::chrono::high_resolution_clock::now()) ts_total_begin_;
-  decltype(std::chrono::high_resolution_clock::now()) ts_phase_begin_;
+  TimeStamp ts_total_begin_;
+  TimeStamp ts_phase_begin_;
 
   explicit Impl(Command& command) : command_(command) { context_.push(""); }
 
-  void Visit(const std::string& name, const Metric& value) override {
+  void Visit(const std::string& name, Metric& value) override {
     auto key = context_.top() + "/" + name;
     metric_keys_.push_back(key);
     metrics_[key] = &value;
   }
 
-  void Visit(const std::string& name, const MetricContainer& container)
-      override {
+  void Visit(const std::string& name, MetricContainer& container) override {
     context_.push(context_.top() + "/" + name);
     container.Accept(*this);
     context_.pop();
@@ -47,49 +56,60 @@ public:
     for (const auto& key : metric_keys_) {
       LOG(INFO) << key << "=" << metrics_[key]->load();
     }
+    auto phase = 0;
+    for (const auto& v : phases) {
+      phase++;
+      LOG(INFO) << "//phases/" << phase << "/total_bytes=" << v.total_bytes;
+      LOG(INFO) << "//phases/" << phase
+                << "/processed_bytes=" << v.processed_bytes;
+      LOG(INFO) << "//phases/" << phase << "/elapsed_ms=" << v.elapsed_ms;
+    }
   }
 
-  void Update(bool last) {
-    auto size = metrics_["//progress_total_bytes_"]->load();
-    auto position = metrics_["//progress_current_bytes_"]->load();
+  void Update() {
+    static auto& phase = *metrics_["//progress_phase_"];
+    static auto& total_bytes = *metrics_["//progress_total_bytes_"];
+    static auto& processed_bytes = *metrics_["//progress_current_bytes_"];
 
-    using ms = std::chrono::milliseconds;
     auto now = std::chrono::high_resolution_clock::now();
 
-    auto total_duration = now - ts_total_begin_;
-    auto phase_duration = now - ts_phase_begin_;
-    auto total_s = duration_cast<ms>(total_duration).count() / 1000.0;
-    auto phase_s = duration_cast<ms>(phase_duration).count() / 1000.0;
-    auto percent = size == 0 ? 0 : 100 * position / size;
-    auto mbps = phase_s == 0 ? 0 : position / phase_s / (1LL << 20);
+    auto delta_ms = [&](auto duration) {
+      return static_cast<size_t>(duration_cast<Milliseconds>(duration).count());
+    };
 
-    auto new_phase = metrics_["//progress_phase_"]->load();
-    if (phase_ != new_phase) {
-      if (phase_ > 0) {
-        LOG(INFO) << last_update_;
-      }
-      phase_ = new_phase;
-      ts_phase_begin_ = now;
-    }
+    auto total_ms = delta_ms(now - ts_total_begin_);
+    auto phase_ms = delta_ms(now - ts_phase_begin_);
+    auto percent = total_bytes != 0 ? 100 * processed_bytes / total_bytes : 0;
+    auto mb = processed_bytes / (1LL << 20);
+    auto mbps = phase_ms != 0 ? 1000.0 * mb / phase_ms : 0;
 
     std::stringstream ss;
-    ss << "phase " << phase_ << std::fixed                                 //
-       << " | " << std::setw(5) << position / (1LL << 20) << " MB"         //
-       << " | " << std::setw(5) << std::setprecision(1) << phase_s << "s"  //
-       << " | " << std::setw(7) << mbps << " MB/s"                         //
-       << " | " << std::setw(3) << percent << "%"                          //
-       << " | " << std::setw(5) << total_s << "s total";
-    last_update_ = ss.str();
-    std::cout << last_update_ << "\t\r";
+    ss << "phase " << phase << std::fixed << std::setprecision(1)  //
+       << " | " << std::setw(5) << mb << " MB"                     //
+       << " | " << std::setw(5) << phase_ms / 1000.0 << "s"        //
+       << " | " << std::setw(7) << mbps << " MB/s"                 //
+       << " | " << std::setw(3) << percent << "%"                  //
+       << " | " << std::setw(5) << total_ms / 1000.0 << "s total";
+    std::cout << ss.str() << "\t\r";
 
-    if (last) {
-      LOG(INFO) << last_update_;
-      Dump();
+    if (metrics_["//progress_next_phase_"]->load() !=
+        metrics_["//progress_phase_"]->load())
+    {
+      if (phase > 0) {
+        LOG(INFO) << ss.str();
+        phases.push_back(
+            {.total_bytes = total_bytes,
+             .processed_bytes = processed_bytes,
+             .elapsed_ms = delta_ms(now - ts_phase_begin_)});
+      }
+      phase++;
+      ts_phase_begin_ = now;
     }
   }
 
   int Run() {
     Visit("", command_);
+    metrics_["//progress_monitor_enabled_"]->store(1);
 
     ts_total_begin_ = std::chrono::high_resolution_clock::now();
 
@@ -98,9 +118,9 @@ public:
     std::chrono::milliseconds period(100);
 
     while (result.wait_for(period) != std::future_status::ready) {
-      Update(false);
+      Update();
     }
-    Update(true);
+    Dump();
 
     return result.get();
   }

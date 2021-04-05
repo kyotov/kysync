@@ -17,10 +17,9 @@ public:
 
   ~ExpectationCheckMetricVisitor();
 
-  void Visit(const std::string &name, const Metric &value) override;
+  void Visit(const std::string &name, Metric &value) override;
 
-  void Visit(const std::string &name, const MetricContainer &container)
-      override;
+  void Visit(const std::string &name, MetricContainer &container) override;
 
 private:
   class Impl;

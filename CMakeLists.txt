@@ -68,6 +68,7 @@ add_library(main STATIC
         src/checksums/wcs.cc
         src/checksums/StrongChecksum.cc
         src/checksums/StrongChecksumBuilder.cc
+        src/tests/commands/GenData.cc
         src/Monitor.cc)
 target_link_libraries(main
         zstd::libzstd_static
@@ -90,7 +91,7 @@ target_link_libraries(tests
         GTest::gtest_main)
 
 add_executable(gendata
-        src/tests/gendata.cc)
+        src/tests/gendata_main.cc)
 target_link_libraries(gendata
         main
         gflags

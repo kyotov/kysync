@@ -3,6 +3,7 @@
 
 #include <memory>
 
+#include "../metrics/Metric.h"
 #include "../metrics/MetricContainer.h"
 
 namespace kysync {
@@ -17,7 +18,10 @@ public:
 
   virtual int Run() = 0;
 
-  void Accept(MetricVisitor &visitor) const override;
+  void Accept(MetricVisitor &visitor) override;
+
+  void StartNextPhase(Metric::value_type size) const;
+  Metric::value_type AdvanceProgress(Metric::value_type amount) const;
 
 protected:
   class Impl;

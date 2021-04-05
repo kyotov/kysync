@@ -7,7 +7,7 @@ class MetricVisitor;
 
 class MetricContainer {
 public:
-  virtual void Accept(MetricVisitor &visitor) const = 0;
+  virtual void Accept(MetricVisitor &visitor) = 0;
 };
 
 }  // namespace kysync

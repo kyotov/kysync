@@ -14,20 +14,19 @@ class SyncCommand::Impl final {
   friend class SyncCommand;
   friend class KySyncTest;
 
-  const std::string data_uri_;
-  const bool compression_diabled_;
-  const std::string metadata_uri_;
-  const std::string seed_uri_;
-  const std::filesystem::path output_path_;
-
-  Command::Impl &base_impl_;
+  const SyncCommand &kParent;
+  const std::string kDataUri;
+  const bool kCompressionDiabled;
+  const std::string kMetadataUri;
+  const std::string kSeedUri;
+  const std::filesystem::path kOutputPath;
 
   Metric weak_checksum_matches_;
   Metric weak_checksum_false_positive_;
   Metric strong_checksum_matches_;
-
   Metric reused_bytes_;
   Metric downloaded_bytes_;
+  Metric decompressed_bytes_;
 
   size_t size_{};
   size_t header_size_{};
@@ -55,13 +54,13 @@ class SyncCommand::Impl final {
   std::unordered_map<uint32_t, WcsMapData> analysis_;
 
   Impl(
+      const SyncCommand &parent,
       std::string data_uri,
       bool compression_diabled,
       std::string metadata_uri,
       std::string seed_uri,
       std::filesystem::path output_path,
-      int threads,
-      Command::Impl &base_impl);
+      int threads);
 
   template <typename T>
   size_t ReadIntoContainer(

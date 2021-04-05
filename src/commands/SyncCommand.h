@@ -22,7 +22,7 @@ public:
 
   int Run() override;
 
-  void Accept(MetricVisitor &visitor) const override;
+  void Accept(MetricVisitor &visitor) override;
 
 private:
   class Impl;

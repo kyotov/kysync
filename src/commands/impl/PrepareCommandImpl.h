@@ -17,6 +17,8 @@ class PrepareCommand::Impl final {
   friend class PrepareCommand;
   friend class KySyncTest;
 
+  const PrepareCommand& kParent;
+
   std::istream& input_;
   std::ostream& output_ksync_;
   std::ostream& output_compressed_;
@@ -27,14 +29,14 @@ class PrepareCommand::Impl final {
   std::vector<uint64_t> compressed_sizes_;
   const int compression_level_ = 1;
 
-  Command::Impl& base_impl_;
+  Metric compressed_bytes_;
 
   Impl(
+      const PrepareCommand &parent,
       std::istream& input,
       std::ostream& output_ksync,
       std::ostream& output_compressed,
-      size_t block_size,
-      Command::Impl& base_impl);
+      size_t block_size);
 
   template <typename T>
   void WriteToMetadataStream(const std::vector<T>& container);
