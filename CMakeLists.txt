@@ -69,12 +69,18 @@ add_library(main STATIC
         src/checksums/wcs.cc
         src/checksums/StrongChecksum.cc
         src/checksums/StrongChecksumBuilder.cc
-        src/tests/commands/GenData.cc
         src/Monitor.cc)
 target_link_libraries(main
         zstd::libzstd_static
         xxHash::xxhash
         httplib::httplib
+        glog::glog)
+
+add_library(test_main STATIC
+        src/tests/TempPath.cc)
+target_link_libraries(test_main
+        main
+        gflags
         glog::glog)
 
 add_executable(kysync
@@ -85,18 +91,19 @@ target_link_libraries(kysync
 
 add_executable(tests
         src/tests/tests.cc
-        src/metrics/ExpectationCheckMetricsVisitor.cc)
+        src/tests/ExpectationCheckMetricsVisitor.cc)
 target_link_libraries(tests
         main
+        test_main
         GTest::gtest
         GTest::gtest_main)
 
-add_executable(gendata
-        src/tests/gendata_main.cc)
-target_link_libraries(gendata
+add_executable(tests_main
+        src/tests/commands/GenData.cc
+        src/tests/tests_main.cc)
+target_link_libraries(tests_main
         main
-        gflags
-        glog::glog)
+        test_main)
 
 add_test(
         NAME tests

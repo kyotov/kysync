@@ -22,13 +22,11 @@ DEFINE_string(  // NOLINT
     "output compressed file");
 DEFINE_string(output_filename, "", "output file");  // NOLINT
 DEFINE_string(data_uri, "", "data uri");            // NOLINT
-DEFINE_string(metadata_uri, "", "data uri");        // NOLINT
-DEFINE_uint32(block, 1024, "block size");           // NOLINT
+DEFINE_string(metadata_uri, "", "metadata uri");    // NOLINT
+DEFINE_string(seed_data_uri, "", "seed data uri");  // NOLINT
+DEFINE_uint32(block_size, 1024, "block size");      // NOLINT
 DEFINE_uint32(threads, 32, "number of threads");    // NOLINT
-DEFINE_bool(                                        // NOLINT
-    compression_disabled,
-    false,
-    "true implies source file does not have compression");
+DEFINE_bool(compression, true, "use compression");  // NOLINT
 
 }  // namespace kysync
 
@@ -45,44 +43,29 @@ int main(int argc, char **argv) {
     LOG(INFO) << "ksync v0.1";
 
     if (FLAGS_command == "prepare") {
-      if (FLAGS_output_ksync_filename.empty()) {
-        FLAGS_output_ksync_filename = FLAGS_input_filename + ".ksync";
-      }
-      auto output_ksync =
-          std::ofstream(FLAGS_output_ksync_filename, std::ios::binary);
-      CHECK(output_ksync) << "unable to write to "
-                          << FLAGS_output_ksync_filename;
+      auto command = PrepareCommand::Create(
+          FLAGS_input_filename,
+          FLAGS_output_ksync_filename,
+          FLAGS_output_compressed_filename,
+          FLAGS_block_size);
 
-      if (FLAGS_output_compressed_filename.empty()) {
-        FLAGS_output_compressed_filename = FLAGS_input_filename + ".pzst";
-      }
-      auto output_compressed =
-          std::ofstream(FLAGS_output_compressed_filename, std::ios::binary);
-      CHECK(output_compressed)
-          << "unable to write to " << FLAGS_output_compressed_filename;
-
-      auto input = std::ifstream(FLAGS_input_filename, std::ios::binary);
-      auto c =
-          PrepareCommand(input, output_ksync, output_compressed, FLAGS_block);
-      return Monitor(c).Run();
+      return Monitor(command).Run();
     }
 
     if (FLAGS_command == "sync") {
-      if (FLAGS_metadata_uri.empty()) {
-        FLAGS_metadata_uri = FLAGS_data_uri + ".ksync";
-      }
-
       auto output = std::ofstream(FLAGS_output_filename, std::ios::binary);
       CHECK(output) << "unable to write to " << FLAGS_output_filename;
 
-      auto c = SyncCommand(
-          FLAGS_data_uri + (FLAGS_compression_disabled ? "" : ".pzst"),
-          FLAGS_compression_disabled,
+      auto command = SyncCommand(
+          FLAGS_data_uri,
           FLAGS_metadata_uri,
-          "file://" + FLAGS_input_filename,
+          !FLAGS_seed_data_uri.empty() ? FLAGS_seed_data_uri
+                                       : "file://" + FLAGS_input_filename,
           FLAGS_output_filename,
+          !FLAGS_compression,
           FLAGS_threads);
-      return Monitor(c).Run();
+
+      return Monitor(command).Run();
     }
 
     CHECK(false) << "unhandled command";

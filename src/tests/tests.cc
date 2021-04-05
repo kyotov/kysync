@@ -12,9 +12,10 @@
 #include "../commands/SyncCommand.h"
 #include "../commands/impl/PrepareCommandImpl.h"
 #include "../commands/impl/SyncCommandImpl.h"
-#include "../metrics/ExpectationCheckMetricsVisitor.h"
 #include "../readers/FileReader.h"
 #include "../readers/MemoryReader.h"
+#include "ExpectationCheckMetricsVisitor.h"
+#include "TempPath.h"
 
 namespace kysync {
 
@@ -123,31 +124,6 @@ std::string CreateMemoryReaderUri(const std::string &data) {
   return CreateMemoryReaderUri(data.data(), data.size());
 }
 
-class TempPathProvider {
-public:
-  [[nodiscard]] std::string GetPathName() const { return temp_path_.string(); }
-
-  TempPathProvider() { CreateTempDir(); }
-
-  ~TempPathProvider() { ClearTempDir(); }
-
-private:
-  void CreateTempDir() {
-    // NOTE: We can use a temporary/random dirname to enable multiple test runs
-    // on the same machine. We currently use the same name mostly for
-    // convenience.
-    temp_path_ = fs::temp_directory_path() / "ksync_files_test";
-    if (fs::exists(temp_path_)) {
-      fs::remove_all(temp_path_);
-    }
-    fs::create_directories(temp_path_);
-  }
-
-  void ClearTempDir() { fs::remove_all(temp_path_); }
-
-  std::filesystem::path temp_path_;
-};
-
 TEST(Readers, MemoryReaderSimple) {  // NOLINT
   const auto *data = "0123456789";
 
@@ -161,14 +137,15 @@ TEST(Readers, MemoryReaderSimple) {  // NOLINT
 TEST(Readers, FileReaderSimple) {  // NOLINT
   const auto *data = "0123456789";
 
-  auto path = fs::temp_directory_path() / "kysync.testdata";
+  TempPath tmp;
+  auto path = tmp.GetPath() / "data.bin";
+
   std::ofstream f(path, std::ios::binary);
   f.write(data, strlen(data));
   f.close();
 
   auto reader = FileReader(path);
   TestReader(reader, fs::file_size(path));
-
   TestReader(*Reader::Create("file://" + path.string()), strlen(data));
 }
 
@@ -363,10 +340,10 @@ TEST(SyncCommand, MetadataRoundtrip) {  // NOLINT
 
   auto sc = SyncCommand(
       CreateMemoryReaderUri(data),
-      false,
       CreateMemoryReaderUri(metadata_str),
       input,
       output_path,
+      true,
       1);
 
   KySyncTest::ReadMetadata(sc);
@@ -416,10 +393,10 @@ void EndToEndTest(
 
   auto sc = SyncCommand(
       CreateMemoryReaderUri(source_data_to_use),
-      compression_disabled,
       CreateMemoryReaderUri(metadata_str),
       input,
       output_path,
+      compression_disabled,
       1);
 
   sc.Run();
@@ -492,10 +469,10 @@ TEST(SyncCommand, EndToEnd) {  // NOLINT
 
 // NOTE: This attempts to use the new style despite inconsistency
 int PrepareFile(
-    const std::string &source_file_name,
+    const fs::path &source_file_name,
     size_t block_size,
-    const std::string &output_metadata_file_name,
-    const std::string &output_compressed_file_name) {
+    const fs::path &output_metadata_file_name,
+    const fs::path &output_compressed_file_name) {
   auto output_metadata =
       std::ofstream(output_metadata_file_name, std::ios::binary);
   CHECK(output_metadata) << "unable to write to " << output_metadata_file_name;
@@ -510,8 +487,8 @@ int PrepareFile(
 }
 
 bool DoFilesMatch(
-    const std::string &first_file_name,
-    const std::string &second_file_name) {
+    const fs::path &first_file_name,
+    const fs::path &second_file_name) {
   if (std::filesystem::file_size(first_file_name) !=
       std::filesystem::file_size(second_file_name))
   {
@@ -533,27 +510,28 @@ bool DoFilesMatch(
 }
 
 void SyncFile(
-    const std::string &source_file_name,
+    const fs::path &source_file_name,
     const bool compression_disabled,
-    const std::string &metadata_file_name,
-    const std::string &seed_data_file_name,
-    const std::string &temp_path_name,
-    const std::string &expected_output_file_name,
+    const fs::path &metadata_file_name,
+    const fs::path &seed_data_file_name,
+    const fs::path &temp_path_name,
+    const fs::path &expected_output_file_name,
     std::map<std::string, uint64_t> &&expected_metrics) {
   std::string file_uri_prefix = "file://";
-  std::string output_file_name = temp_path_name + "/syncd_output_file";
+  fs::path output_file_name = temp_path_name / "syncd_output_file";
   auto sync_command = SyncCommand(
-      file_uri_prefix + source_file_name,
-      compression_disabled,
-      file_uri_prefix + metadata_file_name,
-      file_uri_prefix + seed_data_file_name,
+      file_uri_prefix + source_file_name.string(),
+      file_uri_prefix + metadata_file_name.string(),
+      file_uri_prefix + seed_data_file_name.string(),
       output_file_name,
+      compression_disabled,
       32);
   auto return_code = sync_command.Run();
-  CHECK(return_code == 0) << "Sync command failed for " + source_file_name;
+  CHECK(return_code == 0) << "Sync command failed for " +
+                                 source_file_name.string();
   EXPECT_TRUE(DoFilesMatch(expected_output_file_name, output_file_name))
       << "Sync'd output file does not match expectations";
-  //ExpectationCheckMetricVisitor(sync_command, std::move(expected_metrics));
+  // ExpectationCheckMetricVisitor(sync_command, std::move(expected_metrics));
 }
 
 void EndToEndFilesTest(
@@ -567,10 +545,10 @@ void EndToEndFilesTest(
   LOG(INFO) << "E2E Files Test for " << source_file_name;
   LOG(INFO) << "Using seed file " << seed_data_file_name;
 
-  TempPathProvider temp_path_provider;
-  std::string temp_path_name = temp_path_provider.GetPathName();
-  std::string metadata_file_name = temp_path_name + "/i.ksync";
-  std::string compressed_file_name = temp_path_name + "/i.pzst";
+  TempPath tmp;
+  auto temp_path_name = tmp.GetPath();
+  auto metadata_file_name = temp_path_name / "i.ksync";
+  auto compressed_file_name = temp_path_name / "i.pzst";
   auto return_code = PrepareFile(
       source_file_name,
       block_size,
@@ -655,7 +633,7 @@ TEST(SyncCommand, SyncFileFromSeed) {  // NOLINT
 
   std::string sync_file_name = test_data_path + "/test_file_v2.txt";
   std::string seed_file_name = test_data_path + "/test_file.txt";
-  TempPathProvider temp_path_provider;
+  TempPath tmp;
 
   std::map<std::string, uint64_t> expected_metrics = {
 
@@ -669,7 +647,7 @@ TEST(SyncCommand, SyncFileFromSeed) {  // NOLINT
       false,
       sync_file_name + ".ksync",
       seed_file_name,
-      temp_path_provider.GetPathName(),
+      tmp.GetPath(),
       sync_file_name,
       std::move(expected_metrics));
 }
@@ -681,7 +659,7 @@ TEST(SyncCommand, SyncNonCompressedFile) {  // NOLINT
 
   std::string sync_file_name = test_data_path + "/test_file_v2.txt";
   std::string seed_file_name = test_data_path + "/test_file.txt";
-  TempPathProvider temp_path_provider;
+  TempPath tmp;
 
   std::map<std::string, uint64_t> expected_metrics = {
       {"//progress_current_bytes_", 10340},
@@ -694,7 +672,7 @@ TEST(SyncCommand, SyncNonCompressedFile) {  // NOLINT
       true,
       sync_file_name + ".ksync",
       seed_file_name,
-      temp_path_provider.GetPathName(),
+      tmp.GetPath(),
       sync_file_name,
       std::move(expected_metrics));
 }

@@ -5,7 +5,7 @@
 
 #include <map>
 
-#include "MetricVisitor.h"
+#include "../metrics/MetricVisitor.h"
 
 namespace kysync {
 

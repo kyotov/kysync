@@ -4,6 +4,7 @@
 #include <zstd.h>
 
 #include <cinttypes>
+#include <fstream>
 
 #include "../checksums/StrongChecksumBuilder.h"
 #include "../checksums/wcs.h"
@@ -90,6 +91,32 @@ int PrepareCommand::Impl::Run() {
 
   kParent.StartNextPhase(0);
   return 0;
+}
+
+PrepareCommand PrepareCommand::Create(
+    const std::string &input_filename,
+    const std::string &output_ksync_filename,
+    const std::string &output_compressed_filename,
+    size_t block_size) {
+  auto input = std::ifstream(input_filename, std::ios::binary);
+  CHECK(input) << "error reading from " << input_filename;
+
+  auto new_output_ksync_filename = !output_ksync_filename.empty()
+                                       ? output_ksync_filename
+                                       : input_filename + ".kysync";
+  auto output_ksync =
+      std::ofstream(new_output_ksync_filename, std::ios::binary);
+  CHECK(output_ksync) << "unable to write to " << new_output_ksync_filename;
+
+  auto new_output_compressed_filename = !output_compressed_filename.empty()
+                                            ? output_compressed_filename
+                                            : input_filename + ".pzst";
+  auto output_compressed =
+      std::ofstream(new_output_compressed_filename, std::ios::binary);
+  CHECK(output_compressed) << "unable to write to "
+                           << new_output_compressed_filename;
+
+  return PrepareCommand(input, output_ksync, output_compressed, block_size);
 }
 
 PrepareCommand::PrepareCommand(

@@ -1,6 +1,8 @@
 #ifndef KSYNC_UTILITIES_H
 #define KSYNC_UTILITIES_H
 
+#include <memory>
+
 #define NO_COPY_OR_MOVE(X)         \
 private:                           \
   X(const X &) = delete;           \

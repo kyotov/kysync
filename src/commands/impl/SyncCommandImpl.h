@@ -16,10 +16,11 @@ class SyncCommand::Impl final {
 
   const SyncCommand &kParent;
   const std::string kDataUri;
-  const bool kCompressionDiabled;
   const std::string kMetadataUri;
   const std::string kSeedUri;
   const std::filesystem::path kOutputPath;
+  const bool kCompressionDiabled;
+  const int kThreads;
 
   Metric weak_checksum_matches_;
   Metric weak_checksum_false_positive_;
@@ -41,8 +42,6 @@ class SyncCommand::Impl final {
   std::vector<size_t> compressed_sizes_;
   std::vector<size_t> compressed_file_offsets_;
 
-  const int threads_;
-
   struct WcsMapData {
     size_t index{};
     size_t seed_offset{-1ULL};
@@ -55,11 +54,11 @@ class SyncCommand::Impl final {
 
   Impl(
       const SyncCommand &parent,
-      std::string data_uri,
-      bool compression_diabled,
-      std::string metadata_uri,
-      std::string seed_uri,
-      std::filesystem::path output_path,
+      const std::string &data_uri,
+      const std::string &metadata_uri,
+      const std::string &seed_uri,
+      const std::filesystem::path &output_path,
+      bool compression_disabled,
       int threads);
 
   template <typename T>

@@ -17,19 +17,19 @@ namespace kysync {
 
 SyncCommand::Impl::Impl(
     const SyncCommand &parent,
-    std::string data_uri,
+    const std::string &data_uri,
+    const std::string &metadata_uri,
+    const std::string &seed_uri,
+    const std::filesystem::path &output_path,
     bool compression_disabled,
-    std::string metadata_uri,
-    std::string seed_uri,
-    std::filesystem::path output_path,
     int threads)
     : kParent(parent),
-      kDataUri(std::move(data_uri)),
+      kDataUri(data_uri),
+      kMetadataUri(metadata_uri),
+      kSeedUri(seed_uri),
+      kOutputPath(output_path),
       kCompressionDiabled(compression_disabled),
-      kMetadataUri(std::move(metadata_uri)),
-      kSeedUri(std::move(seed_uri)),
-      kOutputPath(std::move(output_path)),
-      threads_(threads) {}
+      kThreads(threads) {}
 
 void SyncCommand::Impl::ParseHeader(const Reader &metadata_reader) {
   constexpr size_t kMaxHeaderSize = 1024;
@@ -199,7 +199,7 @@ void SyncCommand::Impl::AnalyzeSeed() {
       seed_data_size,
       block_,
       block_,
-      threads_,
+      kThreads,
       // TODO: fold this function in here so we would not need the lambda
       [this](auto id, auto beg, auto end) { AnalyzeSeedChunk(id, beg, end); });
 }
@@ -311,13 +311,14 @@ void SyncCommand::Impl::ReconstructSource() {
   LOG(INFO) << "reconstructing target...";
 
   std::ofstream output(kOutputPath, std::ios::binary);
+  CHECK(output);
   std::filesystem::resize_file(kOutputPath, data_size);
 
   Parallelize(
       data_size,
       block_,
       0,
-      threads_,
+      kThreads,
       [this](auto id, auto beg, auto end) {
         ReconstructSourceChunk(id, beg, end);
       });
@@ -361,19 +362,22 @@ void SyncCommand::Impl::Accept(MetricVisitor &visitor) {
 }
 
 SyncCommand::SyncCommand(
-    std::string data_uri,
+    const std::string &data_uri,
+    const std::string &metadata_uri,
+    const std::string &seed_uri,
+    const std::filesystem::path &output_path,
     bool compression_disabled,
-    std::string metadata_uri,
-    std::string seed_uri,
-    std::filesystem::path output_path,
     int threads)
     : impl_(new Impl(
           *this,
-          std::move(data_uri),
+          compression_disabled || data_uri.starts_with("memory://") ||
+                  data_uri.ends_with(".pzst")
+              ? data_uri
+              : data_uri + ".pzst",
+          !metadata_uri.empty() ? metadata_uri : data_uri + ".kysync",
+          seed_uri,
+          output_path,
           compression_disabled,
-          std::move(metadata_uri),
-          std::move(seed_uri),
-          std::move(output_path),
           threads)) {}
 
 SyncCommand::~SyncCommand() = default;

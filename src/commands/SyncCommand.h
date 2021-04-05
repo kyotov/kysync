@@ -11,11 +11,11 @@ namespace kysync {
 class SyncCommand final : public Command {
 public:
   explicit SyncCommand(
-      std::string data_uri,
+      const std::string &data_uri,
+      const std::string &metadata_uri,
+      const std::string &seed_uri,
+      const std::filesystem::path &output_path,
       bool compression_disabled,
-      std::string metadata_uri,
-      std::string seed_uri,
-      std::filesystem::path output_path,
       int threads);
 
   ~SyncCommand() override;

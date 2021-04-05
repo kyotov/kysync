@@ -15,6 +15,12 @@ class KySyncTest;
 
 class PrepareCommand final : public Command {
 public:
+  static PrepareCommand Create(
+      const std::string &input_filename,
+      const std::string &output_ksync_filename,
+      const std::string &output_compressed_filename,
+      size_t block_size);
+
   PrepareCommand(
       std::istream &input,
       std::ostream &output_ksync,
