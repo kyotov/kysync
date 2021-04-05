@@ -16,8 +16,6 @@ void Command::Impl::Accept(MetricVisitor &visitor) {
 
 Command::Command() : impl_(std::make_unique<Impl>()) {}
 
-Command::Command(Command &&) noexcept = default;
-
 Command::~Command() = default;
 
 void Command::Accept(MetricVisitor &visitor) { return impl_->Accept(visitor); }

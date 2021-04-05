@@ -5,14 +5,16 @@
 
 #include "../metrics/Metric.h"
 #include "../metrics/MetricContainer.h"
+#include "../utilities/utilities.h"
 
 namespace kysync {
 
 class Command : public MetricContainer {
+  PIMPL;
+  NO_COPY_OR_MOVE(Command);
+
 public:
   Command();
-
-  Command(Command &&) noexcept;
 
   virtual ~Command();
 
@@ -23,10 +25,6 @@ public:
   void StartNextPhase(MetricValueType size) const;
   MetricValueType AdvanceProgress(  // NOLINT{modernize-use-nodiscard}
       MetricValueType amount) const;
-
-protected:
-  class Impl;
-  std::unique_ptr<Impl> impl_;
 };
 
 }  // namespace kysync

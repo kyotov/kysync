@@ -127,8 +127,6 @@ PrepareCommand::PrepareCommand(
               : input_filename.string() + ".pzst",
           block_size)){};
 
-PrepareCommand::PrepareCommand(PrepareCommand &&) noexcept = default;
-
 PrepareCommand::~PrepareCommand() = default;
 
 int PrepareCommand::Run() { return impl_->Run(); }

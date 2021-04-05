@@ -6,10 +6,14 @@
 #include <map>
 
 #include "../metrics/MetricVisitor.h"
+#include "../utilities/utilities.h"
 
 namespace kysync {
 
 class ExpectationCheckMetricVisitor final : public MetricVisitor {
+  PIMPL;
+  NO_COPY_OR_MOVE(ExpectationCheckMetricVisitor);
+
 public:
   explicit ExpectationCheckMetricVisitor(
       MetricContainer &host,
@@ -20,10 +24,6 @@ public:
   void Visit(const std::string &name, Metric &value) override;
 
   void Visit(const std::string &name, MetricContainer &container) override;
-
-private:
-  class Impl;
-  std::unique_ptr<Impl> impl_;
 };
 
 }  // namespace kysync

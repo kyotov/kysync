@@ -17,8 +17,8 @@ public:
    * - you can create instances with initializer list, e.g. {2, 2}
    * - the initializers below are necessary for generating a default constructor
    */
-  const uint64_t hi_ = 0;
-  const uint64_t lo_ = 0;
+  const uint64_t kHi = 0;
+  const uint64_t kLo = 0;
 
   static StrongChecksum Compute(const void *buffer, size_t size);
 

@@ -9,6 +9,10 @@
 namespace kysync {
 
 class SyncCommand final : public Command {
+  friend class KySyncTest;
+  PIMPL;
+  NO_COPY_OR_MOVE(SyncCommand);
+
 public:
   explicit SyncCommand(
       const std::string &data_uri,
@@ -23,12 +27,6 @@ public:
   int Run() override;
 
   void Accept(MetricVisitor &visitor) override;
-
-private:
-  class Impl;
-  std::unique_ptr<Impl> impl_;
-
-  friend class KySyncTest;
 };
 
 }  // namespace kysync

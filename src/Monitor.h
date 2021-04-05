@@ -4,20 +4,20 @@
 #include <memory>
 
 #include "commands/Command.h"
+#include "utilities/utilities.h"
 
 namespace kysync {
 
 class Monitor final {
+  PIMPL;
+  NO_COPY_OR_MOVE(Monitor);
+
 public:
   explicit Monitor(Command &);
 
   ~Monitor();
 
   int Run();
-
-private:
-  class Impl;
-  std::unique_ptr<Impl> impl_;
 };
 
 }  // namespace kysync

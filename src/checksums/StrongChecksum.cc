@@ -31,12 +31,12 @@ StrongChecksum StrongChecksum::Compute(std::istream &input) {
 }
 
 bool StrongChecksum::operator==(const StrongChecksum &other) const {
-  return hi_ == other.hi_ && lo_ == other.lo_;
+  return kHi == other.kHi && kLo == other.kLo;
 }
 
 std::string StrongChecksum::ToString() const {
   std::stringstream s;
-  s << std::hex << std::setw(16) << std::setfill('0') << hi_ << lo_;
+  s << std::hex << std::setw(16) << std::setfill('0') << kHi << kLo;
   return s.str();
 }
 

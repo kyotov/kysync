@@ -20,7 +20,7 @@ int Parallelize(
   }
 
   VLOG(1)                                  //
-      << "Parallelize size=" << data_size  //
+      << "parallelize size=" << data_size  //
       << " block=" << block_size           //
       << " threads=" << threads;
 
