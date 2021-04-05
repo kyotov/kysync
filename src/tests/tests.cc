@@ -611,6 +611,14 @@ void RunEndToEndFilesTestFor(
       expected_compressed_size);
 }
 
+std::string GetTestDataPath() {
+  // NOTE: This expects that either the test data path is provided through
+  // the TEST_DATA_DIR environment variable or that the test data dir exists one
+  // level above the test's working directory
+  auto dir_name = std::getenv("TEST_DATA_DIR");
+  return dir_name == nullptr ? "../test_data" : dir_name;
+}
+
 // Test summary:
 // For a small file (less than block size) and a general file (a few blocks
 //   plus a few additional bytes):
@@ -620,9 +628,9 @@ void RunEndToEndFilesTestFor(
 // Ensure that the new output file matches the original file. A seed file is
 // required and for this, the original file is used.
 TEST(SyncCommand, EndToEndFiles) {  // NOLINT
-  // NOTE: This currently assumes that a test data dir exists one
-  // level above the test's working directory
-  std::string test_data_path = "../test_data";
+  std::string test_data_path = GetTestDataPath();
+  LOG(INFO) << "Using test data path: " << test_data_path;  
+
   const uint64_t kExpectedCompressedSize = 42;
   RunEndToEndFilesTestFor(
       test_data_path + "/test_file_small.txt",
@@ -638,9 +646,9 @@ TEST(SyncCommand, EndToEndFiles) {  // NOLINT
 // 2. Run sync.
 // Ensure that newly sync'd file matches the original non-compressed v2 file.
 TEST(SyncCommand, SyncFileFromSeed) {  // NOLINT
-  // NOTE: This currently assumes that a test data dir exists one
-  // level above the test's working directory
-  std::string test_data_path = "../test_data";
+  std::string test_data_path = GetTestDataPath();
+  LOG(INFO) << "Using test data path: " << test_data_path;
+
   std::string sync_file_name = test_data_path + "/test_file_v2.txt";
   std::string seed_file_name = test_data_path + "/test_file.txt";
   TempPathProvider temp_path_provider;
@@ -664,9 +672,9 @@ TEST(SyncCommand, SyncFileFromSeed) {  // NOLINT
 
 // Test syncing from a non-compressed file
 TEST(SyncCommand, SyncNonCompressedFile) {  // NOLINT
-  // NOTE: This currently assumes that a test data dir exists one
-  // level above the test's working directory
-  std::string test_data_path = "../test_data";
+  std::string test_data_path = GetTestDataPath();
+  LOG(INFO) << "Using test data path: " << test_data_path;
+
   std::string sync_file_name = test_data_path + "/test_file_v2.txt";
   std::string seed_file_name = test_data_path + "/test_file.txt";
   TempPathProvider temp_path_provider;
