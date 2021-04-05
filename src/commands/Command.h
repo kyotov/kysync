@@ -11,7 +11,6 @@ namespace kysync {
 
 class Command : public MetricContainer {
   PIMPL;
-  NO_COPY_OR_MOVE(Command);
 
 public:
   Command();
