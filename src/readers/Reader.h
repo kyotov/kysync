@@ -11,7 +11,6 @@ namespace kysync {
 
 class Reader : public MetricContainer {
   PIMPL;
-  NO_COPY_OR_MOVE(Reader);
 
 public:
   Reader();
