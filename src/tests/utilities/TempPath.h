@@ -3,7 +3,7 @@
 
 #include <filesystem>
 
-#include "../utilities/utilities.h"
+#include "../../utilities/utilities.h"
 
 namespace kysync {
 
@@ -12,7 +12,7 @@ class TempPath {
   NO_COPY_OR_MOVE(TempPath);
 
 public:
-  TempPath(bool keep = false);
+  explicit TempPath(bool keep = false);
 
   ~TempPath();
 

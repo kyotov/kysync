@@ -89,7 +89,7 @@ target_link_libraries(gendata
         main)
 
 add_executable(tests
-        src/tests/TempPath.cc
+        src/tests/utilities/TempPath.cc
         src/tests/tests.cc
         src/tests/ExpectationCheckMetricsVisitor.cc)
 target_link_libraries(tests
@@ -99,7 +99,7 @@ target_link_libraries(tests
 
 add_executable(perf_tests
         src/tests/perf_tests.cc
-        src/tests/TempPath.cc
+        src/tests/utilities/TempPath.cc
         src/tests/commands/GenDataCommand.cc)
 target_link_libraries(perf_tests
         main

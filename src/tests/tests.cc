@@ -15,7 +15,7 @@
 #include "../readers/FileReader.h"
 #include "../readers/MemoryReader.h"
 #include "ExpectationCheckMetricsVisitor.h"
-#include "TempPath.h"
+#include "utilities/TempPath.h"
 
 namespace kysync {
 
@@ -375,17 +375,16 @@ void EndToEndTest(
 
   WriteFile(data_path, data);
   WriteFile(seed_data_path, seed_data);
-  auto pc = PrepareCommand(data_path, kysync_path, pzst_path, block);
-  pc.Run();
+  PrepareCommand(data_path, kysync_path, pzst_path, block).Run();
 
-  auto sc = SyncCommand(
+  SyncCommand(
       "file://" + (compression_disabled ? data_path : pzst_path).string(),
       "file://" + kysync_path.string(),
       "file://" + data_path.string(),
       output_path,
       compression_disabled,
-      1);
-  sc.Run();
+      1)
+      .Run();
 
   EXPECT_EQ(data, ReadFile(output_path));
 }

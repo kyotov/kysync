@@ -3,8 +3,8 @@
 #include "../Monitor.h"
 #include "../commands/PrepareCommand.h"
 #include "../commands/SyncCommand.h"
-#include "TempPath.h"
 #include "commands/GenDataCommand.h"
+#include "utilities/TempPath.h"
 
 namespace kysync {
 
