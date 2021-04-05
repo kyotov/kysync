@@ -17,9 +17,12 @@ size_t StreamWrite(
     std::ostream &stream,
     std::vector<T> data,
     size_t max_size_to_write) {
-  auto size_to_write =
-      std::max(0ULL, std::min(data.size() * sizeof(T), max_size_to_write));
-  return StreamWrite(stream, data.data(), size_to_write);
+  auto size_to_write = std::min(data.size() * sizeof(T), max_size_to_write);
+
+  return StreamWrite(
+      stream,
+      data.data(),
+      std::max(static_cast<size_t>(0), size_to_write));
 }
 
 // StreamWrite specializations

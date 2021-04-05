@@ -8,6 +8,10 @@
 
 namespace kysync {
 
+std::string GetFileUri(const fs::path &path) {
+  return "file://" + path.string();
+}
+
 TEST(Performance, 1G_same) {  // NOLINT
   auto tmp = TempPath(true);
 
@@ -27,9 +31,9 @@ TEST(Performance, 1G_same) {  // NOLINT
   EXPECT_EQ(Monitor(prepare).Run(), 0);
 
   auto sync = SyncCommand(  //
-      "file://" + (tmp.GetPath() / "data.bin").string(),
-      "file://" + (tmp.GetPath() / "data.bin.kysync").string(),
-      "file://" + (tmp.GetPath() / "data.bin").string(),
+      GetFileUri(tmp.GetPath() / "data.bin"),
+      GetFileUri(tmp.GetPath() / "data.bin.kysync"),
+      GetFileUri(tmp.GetPath() / "data.bin"),
       tmp.GetPath() / "output.bin",
       true,
       32);
