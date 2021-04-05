@@ -6,7 +6,8 @@
 
 namespace kysync {
 
-using Metric = std::atomic<uint64_t>;
+using MetricValueType = uint64_t;
+using Metric = std::atomic<MetricValueType>;
 
 }  // namespace kysync
 

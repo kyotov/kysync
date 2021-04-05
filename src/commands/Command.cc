@@ -22,7 +22,7 @@ Command::~Command() = default;
 
 void Command::Accept(MetricVisitor &visitor) { return impl_->Accept(visitor); }
 
-void Command::StartNextPhase(Metric::value_type size) const {
+void Command::StartNextPhase(MetricValueType size) const {
   impl_->progress_next_phase_++;
   if (impl_->progress_monitor_enabled_ != 0) {
     while (impl_->progress_next_phase_ != impl_->progress_phase_.load()) {
@@ -34,7 +34,7 @@ void Command::StartNextPhase(Metric::value_type size) const {
   impl_->progress_current_bytes_ = 0;
 }
 
-Metric::value_type Command::AdvanceProgress(Metric::value_type amount) const {
+MetricValueType Command::AdvanceProgress(MetricValueType amount) const {
   impl_->progress_current_bytes_ += amount;
   impl_->progress_total_bytes_.store(
       std::max(impl_->progress_total_bytes_, impl_->progress_current_bytes_));

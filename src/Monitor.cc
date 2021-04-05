@@ -19,9 +19,9 @@ public:
   using Milliseconds = std::chrono::milliseconds;
 
   struct Phase {
-    Metric::value_type total_bytes;
-    Metric::value_type processed_bytes;
-    Metric::value_type elapsed_ms;
+    MetricValueType total_bytes;
+    MetricValueType processed_bytes;
+    MetricValueType elapsed_ms;
   };
 
   std::vector<Phase> phases;

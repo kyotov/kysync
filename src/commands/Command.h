@@ -20,8 +20,9 @@ public:
 
   void Accept(MetricVisitor &visitor) override;
 
-  void StartNextPhase(Metric::value_type size) const;
-  Metric::value_type AdvanceProgress(Metric::value_type amount) const;
+  void StartNextPhase(MetricValueType size) const;
+  MetricValueType AdvanceProgress(  // NOLINT{modernize-use-nodiscard}
+      MetricValueType amount) const;
 
 protected:
   class Impl;
