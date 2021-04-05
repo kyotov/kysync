@@ -5,6 +5,7 @@
 
 #include <cinttypes>
 #include <fstream>
+#include <utility>
 
 #include "../checksums/StrongChecksumBuilder.h"
 #include "../checksums/wcs.h"
@@ -15,48 +16,63 @@ namespace kysync {
 
 PrepareCommand::Impl::Impl(
     const PrepareCommand &parent,
-    std::istream &input,
-    std::ostream &output_ksync,
-    std::ostream &output_compressed,
+    fs::path input_filename,
+    fs::path output_ksync_filename,
+    fs::path output_compressed_filename,
     size_t block_size)
     : kParent(parent),
-      input_(input),
-      output_ksync_(output_ksync),
-      output_compressed_(output_compressed),
-      block_size_(block_size) {}
+      input_filename_(std::move(input_filename)),
+      output_ksync_filename_(std::move(output_ksync_filename)),
+      output_compressed_filename_(std::move(output_compressed_filename)),
+      kBlockSize(block_size) {}
+//  CHECK(input_) << "error reading from " << input_filename;
+//
+//  auto output_ksync =
+//      std::ofstream(output_ksync_, std::ios::binary);
+//  CHECK(output_ksync) << "unable to write to " << output_ksync_filename;
+//
+//  auto output_compressed =
+//      std::ofstream(output_compressed_, std::ios::binary);
+//  CHECK(output_compressed) << "unable to write to "
+//                           << output_compressed_filename;
 
 int PrepareCommand::Impl::Run() {
-  auto unique_buffer = std::make_unique<char[]>(block_size_);
+  auto unique_buffer = std::make_unique<char[]>(kBlockSize);
   auto buffer = unique_buffer.get();
 
-  auto compression_buffer_size = ZSTD_compressBound(block_size_);
+  auto compression_buffer_size = ZSTD_compressBound(kBlockSize);
   auto unique_compression_buffer =
       std::make_unique<char[]>(compression_buffer_size);
   auto compression_buffer = unique_compression_buffer.get();
 
-  input_.seekg(0, std::ios_base::end);
-  const size_t kDataSize = input_.tellg();
+  auto input = std::ifstream(input_filename_, std::ios::binary);
+  CHECK(input) << "error reading from " << input_filename_;
+
+  auto output = std::ofstream(output_compressed_filename_, std::ios::binary);
+  CHECK(output) << "unable to write to " << output_compressed_filename_;
+
+  const size_t kDataSize = fs::file_size(input_filename_);
   kParent.StartNextPhase(kDataSize);
 
   StrongChecksumBuilder hash;
 
-  input_.seekg(0);
-  while (auto count = input_.read(buffer, block_size_).gcount()) {
-    memset(buffer + count, 0, block_size_ - count);
+  input.seekg(0);
+  while (auto count = input.read(buffer, kBlockSize).gcount()) {
+    memset(buffer + count, 0, kBlockSize - count);
 
     hash.Update(buffer, count);
 
-    weak_checksums_.push_back(WeakChecksum(buffer, block_size_));
-    strong_checksums_.push_back(StrongChecksum::Compute(buffer, block_size_));
+    weak_checksums_.push_back(WeakChecksum(buffer, kBlockSize));
+    strong_checksums_.push_back(StrongChecksum::Compute(buffer, kBlockSize));
 
     size_t compressed_size = ZSTD_compress(
         compression_buffer,
         compression_buffer_size,
         buffer,
         count,
-        compression_level_);
+        kCompressionLevel);
     CHECK(!ZSTD_isError(compressed_size)) << ZSTD_getErrorName(compressed_size);
-    output_compressed_.write(compression_buffer, compressed_size);
+    output.write(compression_buffer, compressed_size);
     compressed_sizes_.push_back(compressed_size);
     compressed_bytes_ += compressed_size;
 
@@ -64,6 +80,9 @@ int PrepareCommand::Impl::Run() {
   }
 
   // produce the ksync metadata output
+
+  auto output_ksync = std::ofstream(output_ksync_filename_, std::ios::binary);
+  CHECK(output_ksync) << "unable to write to " << output_ksync_filename_;
 
   kParent.StartNextPhase(1);
 
@@ -79,53 +98,34 @@ int PrepareCommand::Impl::Run() {
       "hash: %s\n"
       "eof: 1\n",
       kDataSize,
-      block_size_,
+      kBlockSize,
       hash.Digest().ToString().c_str());
 
-  output_ksync_.write(header, strlen(header));
+  output_ksync.write(header, strlen(header));
   kParent.AdvanceProgress(strlen(header));
 
-  kParent.AdvanceProgress(StreamWrite(output_ksync_, weak_checksums_));
-  kParent.AdvanceProgress(StreamWrite(output_ksync_, strong_checksums_));
-  kParent.AdvanceProgress(StreamWrite(output_ksync_, compressed_sizes_));
+  kParent.AdvanceProgress(StreamWrite(output_ksync, weak_checksums_));
+  kParent.AdvanceProgress(StreamWrite(output_ksync, strong_checksums_));
+  kParent.AdvanceProgress(StreamWrite(output_ksync, compressed_sizes_));
 
   kParent.StartNextPhase(0);
   return 0;
 }
 
-PrepareCommand PrepareCommand::Create(
-    const std::string &input_filename,
-    const std::string &output_ksync_filename,
-    const std::string &output_compressed_filename,
-    size_t block_size) {
-  auto input = std::ifstream(input_filename, std::ios::binary);
-  CHECK(input) << "error reading from " << input_filename;
-
-  auto new_output_ksync_filename = !output_ksync_filename.empty()
-                                       ? output_ksync_filename
-                                       : input_filename + ".kysync";
-  auto output_ksync =
-      std::ofstream(new_output_ksync_filename, std::ios::binary);
-  CHECK(output_ksync) << "unable to write to " << new_output_ksync_filename;
-
-  auto new_output_compressed_filename = !output_compressed_filename.empty()
-                                            ? output_compressed_filename
-                                            : input_filename + ".pzst";
-  auto output_compressed =
-      std::ofstream(new_output_compressed_filename, std::ios::binary);
-  CHECK(output_compressed) << "unable to write to "
-                           << new_output_compressed_filename;
-
-  return PrepareCommand(input, output_ksync, output_compressed, block_size);
-}
-
 PrepareCommand::PrepareCommand(
-    std::istream &input,
-    std::ostream &output_ksync,
-    std::ostream &output_compressed,
-    size_t block)
-    // FIXME: due to the privacy declarations, we can't use std::make_unique??
-    : impl_(new Impl(*this, input, output_ksync, output_compressed, block)) {}
+    const fs::path &input_filename,
+    const fs::path &output_ksync_filename,
+    const fs::path &output_compressed_filename,
+    size_t block_size)
+    : impl_(new Impl(
+          *this,
+          input_filename,
+          !output_ksync_filename.empty() ? output_ksync_filename
+                                         : input_filename.string() + ".kysync",
+          !output_compressed_filename.empty()
+              ? output_compressed_filename
+              : input_filename.string() + ".pzst",
+          block_size)){};
 
 PrepareCommand::PrepareCommand(PrepareCommand &&) noexcept = default;
 

@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
     LOG(INFO) << "ksync v0.1";
 
     if (FLAGS_command == "prepare") {
-      auto command = PrepareCommand::Create(
+      auto command = PrepareCommand(
           FLAGS_input_filename,
           FLAGS_output_ksync_filename,
           FLAGS_output_compressed_filename,

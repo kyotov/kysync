@@ -5,19 +5,26 @@ namespace kysync {
 namespace fs = std::filesystem;
 
 struct TempPath::Impl {
-  const fs::path path;
+  const bool kKeep;
+  const fs::path kPath;
 };
 
-TempPath::TempPath()
-    : impl_(new Impl{.path = fs::temp_directory_path() / "ksync_files_test"}) {
-  if (fs::exists(impl_->path)) {
-    fs::remove_all(impl_->path);
+TempPath::TempPath(bool keep)
+    : impl_(new Impl{
+          .kKeep = keep,
+          .kPath = fs::temp_directory_path() / "ksync_files_test"}) {
+  if (fs::exists(impl_->kPath)) {
+    fs::remove_all(impl_->kPath);
   }
-  fs::create_directories(impl_->path);
+  fs::create_directories(impl_->kPath);
 }
 
-TempPath::~TempPath() { fs::remove_all(impl_->path); }
+TempPath::~TempPath() {
+  if (!impl_->kKeep) {
+    fs::remove_all(impl_->kPath);
+  }
+}
 
-std::filesystem::path TempPath::GetPath() const { return impl_->path; }
+std::filesystem::path TempPath::GetPath() const { return impl_->kPath; }
 
 }  // namespace kysync

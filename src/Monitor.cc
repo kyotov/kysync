@@ -67,9 +67,9 @@ public:
   }
 
   void Update() {
-    static auto& phase = *metrics_["//progress_phase_"];
-    static auto& total_bytes = *metrics_["//progress_total_bytes_"];
-    static auto& processed_bytes = *metrics_["//progress_current_bytes_"];
+    auto& phase = *metrics_["//progress_phase_"];
+    auto& total_bytes = *metrics_["//progress_total_bytes_"];
+    auto& processed_bytes = *metrics_["//progress_current_bytes_"];
 
     auto now = std::chrono::high_resolution_clock::now();
 
@@ -116,7 +116,7 @@ public:
 
     auto result = std::async([this]() { return command_.Run(); });
 
-    std::chrono::milliseconds period(100);
+    Milliseconds period(100);
 
     while (result.wait_for(period) != std::future_status::ready) {
       Update();

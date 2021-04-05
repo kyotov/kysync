@@ -5,7 +5,7 @@
 
 #include "../Monitor.h"
 #include "../commands/impl/CommandImpl.h"
-#include "commands/GenData.h"
+#include "commands/GenDataCommand.h"
 
 DEFINE_string(output_path, ".", "output directory");             // NOLINT
 DEFINE_uint64(data_size, 1'000'000'000, "default data size");    // NOLINT
@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
   FLAGS_logtostderr = true;
   FLAGS_colorlogtostderr = true;
 
-  auto c = kysync::GenData(
+  auto c = kysync::GenDataCommand(
       FLAGS_output_path,
       FLAGS_data_size,
       FLAGS_seed_data_size,

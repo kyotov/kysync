@@ -74,40 +74,46 @@ target_link_libraries(main
         zstd::libzstd_static
         xxHash::xxhash
         httplib::httplib
-        glog::glog)
-
-add_library(test_main STATIC
-        src/tests/TempPath.cc)
-target_link_libraries(test_main
-        main
-        gflags
-        glog::glog)
+        glog::glog
+        gflags)
 
 add_executable(kysync
         src/main.cc)
 target_link_libraries(kysync
-        main
-        gflags)
+        main)
+
+add_executable(gendata
+        src/tests/commands/GenDataCommand.cc
+        src/tests/gendata_main.cc)
+target_link_libraries(gendata
+        main)
 
 add_executable(tests
+        src/tests/TempPath.cc
         src/tests/tests.cc
         src/tests/ExpectationCheckMetricsVisitor.cc)
 target_link_libraries(tests
         main
-        test_main
         GTest::gtest
         GTest::gtest_main)
 
-add_executable(tests_main
-        src/tests/commands/GenData.cc
-        src/tests/tests_main.cc)
-target_link_libraries(tests_main
+add_executable(perf_tests
+        src/tests/perf_tests.cc
+        src/tests/TempPath.cc
+        src/tests/commands/GenDataCommand.cc)
+target_link_libraries(perf_tests
         main
-        test_main)
+        GTest::gtest
+        GTest::gtest_main)
 
 add_test(
         NAME tests
         COMMAND tests
+)
+
+add_test(
+        NAME performance_tests
+        COMMAND perf_tests
 )
 
 set_tests_properties(

@@ -176,6 +176,21 @@ TEST(Readers, BadUri) {  // NOLINT
       std::invalid_argument);
 }
 
+void WriteFile(const fs::path &path, const std::string &content) {
+  auto f = std::ofstream(path, std::ios::binary);
+  f.write(content.data(), content.size());
+}
+
+std::string ReadFile(const fs::path &path) {
+  auto result = std::string();
+  result.resize(fs::file_size(path));
+
+  auto f = std::ifstream(path, std::ios::binary);
+  f.read(result.data(), result.size());
+
+  return result;
+}
+
 class KySyncTest {
 public:
   static const std::vector<uint32_t> &ExamineWeakChecksums(
@@ -213,11 +228,11 @@ public:
   }
 
   static int GetCompressionLevel(const PrepareCommand &c) {
-    return c.impl_->compression_level_;
+    return c.impl_->kCompressionLevel;
   }
 
   static size_t GetBlockSize(const PrepareCommand &c) {
-    return c.impl_->block_size_;
+    return c.impl_->kBlockSize;
   }
 };
 
@@ -252,35 +267,6 @@ size_t GetExpectedCompressedSize(
   return compressed_size;
 }
 
-PrepareCommand Prepare(
-    const std::string &data,
-    std::ostream &output_ksync,
-    std::ostream &output_compressed,
-    size_t block) {
-  const auto size = data.size();
-
-  auto input = CreateInputStream(data);
-  PrepareCommand c(input, output_ksync, output_compressed, block);
-  c.Run();
-
-  // FIXME: maybe make the expectation checking in a method??
-  /*
-  ExpectationCheckMetricVisitor(  // NOLINT(bugprone-unused-raii)
-      c,
-      {
-          {"//progress_current_bytes_", size},
-          {"//progress_total_bytes_", size},
-          {"//progress_compressed_bytes_",
-           GetExpectedCompressedSize(
-               data,
-               KySyncTest::GetCompressionLevel(c),
-               KySyncTest::GetBlockSize(c))},
-      });
-*/
-
-  return std::move(c);
-}
-
 TEST(PrepareCommand, Simple) {  // NOLINT
   auto data = std::string("0123456789");
   auto block = 4;
@@ -288,7 +274,15 @@ TEST(PrepareCommand, Simple) {  // NOLINT
 
   std::stringstream output_ksync;
   std::stringstream output_compressed;
-  auto c = Prepare(data, output_ksync, output_compressed, block);
+
+  auto tmp = TempPath();
+  auto data_path = tmp.GetPath() / "data.bin";
+  auto kysync_path = tmp.GetPath() / "data.bin.kysync";
+  auto pzst_path = tmp.GetPath() / "data.bin.pzst";
+
+  WriteFile(data_path, data);
+  auto c = PrepareCommand(data_path, kysync_path, pzst_path, block);
+  c.Run();
 
   const auto &wcs = KySyncTest::ExamineWeakChecksums(c);
   EXPECT_EQ(wcs.size(), block_count);
@@ -308,9 +302,14 @@ TEST(PrepareCommand, Simple2) {  // NOLINT
   auto block = 4;
   auto block_count = (data.size() + block - 1) / block;
 
-  std::stringstream output_ksync;
-  std::stringstream output_compressed;
-  auto c = Prepare(data, output_ksync, output_compressed, block);
+  auto tmp = TempPath();
+  auto data_path = tmp.GetPath() / "data.bin";
+  auto kysync_path = tmp.GetPath() / "data.bin.kysync";
+  auto pzst_path = tmp.GetPath() / "data.bin.pzst";
+
+  WriteFile(data_path, data);
+  auto c = PrepareCommand(data_path, kysync_path, pzst_path, block);
+  c.Run();
 
   const auto &wcs = KySyncTest::ExamineWeakChecksums(c);
   EXPECT_EQ(wcs.size(), block_count);
@@ -328,20 +327,21 @@ TEST(PrepareCommand, Simple2) {  // NOLINT
 TEST(SyncCommand, MetadataRoundtrip) {  // NOLINT
   auto block = 4;
   std::string data = "0123456789";
-  std::stringstream metadata;
-  std::stringstream compressed;
-  auto pc = Prepare(data, metadata, compressed, block);
 
-  auto input = CreateMemoryReaderUri(data);
-  // std::stringstream output;
-  auto output_path = fs::temp_directory_path() / "kysync.temp";
+  auto tmp = TempPath();
+  auto data_path = tmp.GetPath() / "data.bin";
+  auto kysync_path = tmp.GetPath() / "data.bin.kysync";
+  auto pzst_path = tmp.GetPath() / "data.bin.pzst";
+  auto output_path = tmp.GetPath() / "output.bin";
 
-  auto metadata_str = metadata.str();
+  WriteFile(data_path, data);
+  auto pc = PrepareCommand(data_path, kysync_path, pzst_path, block);
+  pc.Run();
 
   auto sc = SyncCommand(
-      CreateMemoryReaderUri(data),
-      CreateMemoryReaderUri(metadata_str),
-      input,
+      "file://" + data_path.string(),
+      "file://" + kysync_path.string(),
+      "file://" + data_path.string(),
       output_path,
       true,
       1);
@@ -355,63 +355,39 @@ TEST(SyncCommand, MetadataRoundtrip) {  // NOLINT
   EXPECT_EQ(
       KySyncTest::ExamineStrongChecksums(pc),
       KySyncTest::ExamineStrongChecksums(sc));
-
-  /*
-  ExpectationCheckMetricVisitor(  // NOLINT(bugprone-unused-raii)
-      sc,
-      {
-          {"//progress_phase_", 1},
-          {"//progress_total_bytes_", 159},
-          {"//progress_current_bytes_", 159},
-      });
-      */
 }
 
 void EndToEndTest(
-    const std::string &source_data,
+    const std::string &data,
     const std::string &seed_data,
     bool compression_disabled,
     size_t block,
     const std::vector<size_t> &expected_block_mapping) {
-  LOG(INFO) << "E2E for " << source_data.substr(0, 40);
+  LOG(INFO) << "E2E for " << data.substr(0, 40);
 
-  std::stringstream metadata;
-  std::stringstream compressed;
-  auto pc = Prepare(source_data, metadata, compressed, block);
+  auto tmp = TempPath();
 
-  auto input = CreateMemoryReaderUri(seed_data);
-  // std::stringstream output;
-  // std::ofstream output(fs::temp_directory_path() / "t", std::ios::binary);
-  auto output_path = fs::temp_directory_path() / "kysync.temp";
-  if (fs::exists(output_path)) {
-    fs::remove(output_path);
-  }
+  auto data_path = tmp.GetPath() / "data.bin";
+  auto kysync_path = tmp.GetPath() / "data.bin.kysync";
+  auto pzst_path = tmp.GetPath() / "data.bin.pzst";
+  auto seed_data_path = tmp.GetPath() / "seed_data.bin";
+  auto output_path = tmp.GetPath() / "output.bin";
 
-  auto metadata_str = metadata.str();
-  auto source_data_to_use =
-      compression_disabled ? source_data : compressed.str();
+  WriteFile(data_path, data);
+  WriteFile(seed_data_path, seed_data);
+  auto pc = PrepareCommand(data_path, kysync_path, pzst_path, block);
+  pc.Run();
 
   auto sc = SyncCommand(
-      CreateMemoryReaderUri(source_data_to_use),
-      CreateMemoryReaderUri(metadata_str),
-      input,
+      "file://" + (compression_disabled ? data_path : pzst_path).string(),
+      "file://" + kysync_path.string(),
+      "file://" + data_path.string(),
       output_path,
       compression_disabled,
       1);
-
   sc.Run();
 
-  EXPECT_EQ(KySyncTest::ExamineAnalisys(sc), expected_block_mapping);
-
-  size_t output_size = fs::file_size(output_path);
-  EXPECT_EQ(source_data.size(), output_size);
-
-  auto output = std::ifstream(output_path, std::ios::binary);
-  auto buffer = std::make_unique<char[]>(output_size + 1);
-  output.read(buffer.get(), output_size);
-  buffer.get()[output_size] = '\0';
-
-  EXPECT_EQ(source_data, buffer.get());
+  EXPECT_EQ(data, ReadFile(output_path));
 }
 
 void RunEndToEndTests(bool compression_disabled) {
@@ -465,25 +441,6 @@ void RunEndToEndTests(bool compression_disabled) {
 TEST(SyncCommand, EndToEnd) {  // NOLINT
   RunEndToEndTests(false);
   RunEndToEndTests(true);
-}
-
-// NOTE: This attempts to use the new style despite inconsistency
-int PrepareFile(
-    const fs::path &source_file_name,
-    size_t block_size,
-    const fs::path &output_metadata_file_name,
-    const fs::path &output_compressed_file_name) {
-  auto output_metadata =
-      std::ofstream(output_metadata_file_name, std::ios::binary);
-  CHECK(output_metadata) << "unable to write to " << output_metadata_file_name;
-  auto output_compressed =
-      std::ofstream(output_compressed_file_name, std::ios::binary);
-  CHECK(output_compressed) << "unable to write to "
-                           << output_compressed_file_name;
-  auto input = std::ifstream(source_file_name, std::ios::binary);
-  CHECK(input) << "unable to Read from " << source_file_name;
-  return PrepareCommand(input, output_metadata, output_compressed, block_size)
-      .Run();
 }
 
 bool DoFilesMatch(
@@ -549,11 +506,12 @@ void EndToEndFilesTest(
   auto temp_path_name = tmp.GetPath();
   auto metadata_file_name = temp_path_name / "i.ksync";
   auto compressed_file_name = temp_path_name / "i.pzst";
-  auto return_code = PrepareFile(
-      source_file_name,
-      block_size,
-      metadata_file_name,
-      compressed_file_name);
+  auto return_code = PrepareCommand(
+                         source_file_name,
+                         metadata_file_name,
+                         compressed_file_name,
+                         block_size)
+                         .Run();
   CHECK(return_code == 0) << "Prepare command failed for " + source_file_name;
   EXPECT_TRUE(DoFilesMatch(expected_metadata_file_name, metadata_file_name))
       << "Generated metadata files does not match expectations";
@@ -563,10 +521,8 @@ void EndToEndFilesTest(
       << "Unexpected match of metadata and compressed files";
 
   std::map<std::string, uint64_t> expected_metrics = {
-
-      {"//progress_current_bytes_",
-       std::filesystem::file_size(source_file_name)},
-      {"//progress_total_bytes_", std::filesystem::file_size(source_file_name)},
+      {"//progress_current_bytes_", fs::file_size(source_file_name)},
+      {"//progress_total_bytes_", fs::file_size(source_file_name)},
       {"//progress_compressed_bytes_", expected_compressed_size},
   };
 

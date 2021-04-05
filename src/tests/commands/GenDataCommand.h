@@ -1,5 +1,5 @@
-#ifndef KSYNC_GENDATA_H
-#define KSYNC_GENDATA_H
+#ifndef KSYNC_GENDATACOMMAND_H
+#define KSYNC_GENDATACOMMAND_H
 
 #include <filesystem>
 #include <utility>
@@ -9,23 +9,23 @@
 
 namespace kysync {
 
-class GenData final : public Command {
+class GenDataCommand final : public Command {
   PIMPL;
-  NO_COPY_OR_MOVE(GenData);
+  NO_COPY_OR_MOVE(GenDataCommand);
 
 public:
-  GenData(
+  GenDataCommand(
       const std::filesystem::path &output_path,
       uint64_t data_size,
       uint64_t seed_data_size,
       uint64_t fragment_size,
       uint32_t similarity);
 
-  ~GenData() noexcept final;
+  ~GenDataCommand() noexcept final;
 
   int Run() override;
 };
 
 }  // namespace kysync
 
-#endif  // KSYNC_GENDATA_H
+#endif  // KSYNC_GENDATACOMMAND_H

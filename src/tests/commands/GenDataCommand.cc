@@ -1,4 +1,4 @@
-#include "GenData.h"
+#include "GenDataCommand.h"
 
 #include <glog/logging.h>
 
@@ -13,8 +13,8 @@ namespace kysync {
 
 namespace fs = std::filesystem;
 
-struct GenData::Impl {
-  const GenData &kParent;
+struct GenDataCommand::Impl {
+  const GenDataCommand &kParent;
   const fs::path kPath;
   const fs::path kData;
   const fs::path kSeedData;
@@ -27,7 +27,7 @@ struct GenData::Impl {
   void GenChunk(int id, size_t beg, size_t end);
 };
 
-GenData::GenData(
+GenDataCommand::GenDataCommand(
     const fs::path &output_path,
     uint64_t data_size,
     uint64_t seed_data_size,
@@ -53,7 +53,7 @@ GenData::GenData(
   LOG(INFO) << "seed data size: " << impl_->kSeedDataSize;
 };
 
-GenData::~GenData() noexcept = default;
+GenDataCommand::~GenDataCommand() noexcept = default;
 
 using R = std::default_random_engine;
 using U = R::result_type;
@@ -66,7 +66,7 @@ std::vector<U> GenVec(size_t size, R &random) {
   return result;
 }
 
-void GenData::Impl::GenChunk(int id, size_t beg, size_t end) {
+void GenDataCommand::Impl::GenChunk(int id, size_t beg, size_t end) {
   auto mode = std::ios::binary | std::ios::in | std::ios::out;
 
   std::fstream data_stream(kData, mode);
@@ -95,19 +95,22 @@ void GenData::Impl::GenChunk(int id, size_t beg, size_t end) {
   }
 }
 
-int GenData::Run() {
+void CreateFile(const fs::path &path, size_t size) {
+  {
+    std::ofstream(path, std::ios::binary);
+  }
+  std::error_code ec;
+  ec.clear();
+  fs::resize_file(path, size, ec);
+  CHECK(ec.value() == 0) << ec.message();
+}
+
+int GenDataCommand::Run() {
   CHECK_EQ(impl_->kDataSize, impl_->kSeedDataSize)
       << "different data and seed data sizes not supported yet";
 
-  std::error_code ec;
-
-  ec.clear();
-  fs::resize_file(impl_->kData, impl_->kDataSize, ec);
-  CHECK(ec.value() == 0) << ec.message();
-
-  ec.clear();
-  fs::resize_file(impl_->kSeedData, impl_->kSeedDataSize, ec);
-  CHECK(ec.value() == 0) << ec.message();
+  CreateFile(impl_->kData, impl_->kDataSize);
+  CreateFile(impl_->kSeedData, impl_->kSeedDataSize);
 
   StartNextPhase(impl_->kDataSize + impl_->kSeedDataSize);
 

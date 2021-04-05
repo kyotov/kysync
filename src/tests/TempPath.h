@@ -12,7 +12,7 @@ class TempPath {
   NO_COPY_OR_MOVE(TempPath);
 
 public:
-  TempPath();
+  TempPath(bool keep = false);
 
   ~TempPath();
 
@@ -20,4 +20,5 @@ public:
 };
 
 }  // namespace kysync
+
 #endif  // KSYNC_TEMPPATH_H
