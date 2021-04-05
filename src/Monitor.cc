@@ -74,7 +74,8 @@ public:
     auto now = std::chrono::high_resolution_clock::now();
 
     auto delta_ms = [&](auto duration) {
-      return static_cast<size_t>(duration_cast<Milliseconds>(duration).count());
+      return static_cast<size_t>(
+          std::chrono::duration_cast<Milliseconds>(duration).count());
     };
 
     auto total_ms = delta_ms(now - ts_total_begin_);
