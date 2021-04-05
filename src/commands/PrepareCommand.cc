@@ -120,10 +120,10 @@ PrepareCommand::PrepareCommand(
     : impl_(new Impl(
           *this,
           input_filename,
-          !output_ksync_filename.empty() ? output_ksync_filename
+          !output_ksync_filename.empty() ? output_ksync_filename.string()
                                          : input_filename.string() + ".kysync",
           !output_compressed_filename.empty()
-              ? output_compressed_filename
+              ? output_compressed_filename.string()
               : input_filename.string() + ".pzst",
           block_size)){};
 
