@@ -58,6 +58,7 @@ find_package(zstd REQUIRED NO_MODULE)
 
 add_library(main STATIC
         src/utilities/parallelize.cc
+        src/utilities/streams.cc
         src/readers/Reader.cc
         src/readers/MemoryReader.cc
         src/readers/FileReader.cc

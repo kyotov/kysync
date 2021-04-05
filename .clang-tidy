@@ -1,1 +1,1 @@
-Checks: '*,-llvmlibc-*,-modernize-use-trailing-return-type,-fuchsia-default-arguments-calls,-hicpp-signed-bitwise'
+Checks: '*,-llvmlibc-*,-modernize-use-trailing-return-type,-fuchsia-default-arguments-calls,-fuchsia-default-arguments-declarations,-hicpp-signed-bitwise'

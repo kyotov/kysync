@@ -7,6 +7,7 @@
 #include <random>
 
 #include "../../utilities/parallelize.h"
+#include "../../utilities/streams.h"
 
 namespace kysync {
 
@@ -65,10 +66,6 @@ std::vector<U> GenVec(size_t size, R &random) {
   return result;
 }
 
-void StreamWrite(std::fstream &stream, const void *data, size_t size) {
-  stream.write(static_cast<const char *>(data), size);
-}
-
 void GenData::Impl::GenChunk(int id, size_t beg, size_t end) {
   auto mode = std::ios::binary | std::ios::in | std::ios::out;
 
@@ -83,19 +80,18 @@ void GenData::Impl::GenChunk(int id, size_t beg, size_t end) {
   for (size_t i = beg; i < end; i += kFragmentSize) {
     auto diff_offset = random() % (kFragmentSize - kDiffSize + 1);
 
-    auto size_to_write = std::min(kFragmentSize, kDataSize - i - kFragmentSize);
     auto v_data = GenVec(kFragmentSize, random);
-    StreamWrite(data_stream, v_data.data(), size_to_write);
-    kParent.AdvanceProgress(size_to_write);
 
-    size_to_write = std::min(kFragmentSize, kSeedDataSize - i - kFragmentSize);
+    size_t s = StreamWrite(data_stream, v_data, std::min(kDataSize, end) - i);
+    kParent.AdvanceProgress(s);
+
     auto v_diff = GenVec(kDiffSize, random);
     std::copy(
         v_diff.begin(),
         v_diff.end(),
         v_data.begin() + diff_offset / sizeof(U));
-    StreamWrite(seed_data_stream, v_data.data(), size_to_write);
-    kParent.AdvanceProgress(size_to_write);
+    s = StreamWrite(seed_data_stream, v_data, std::min(kSeedDataSize, end) - i);
+    kParent.AdvanceProgress(s);
   }
 }
 

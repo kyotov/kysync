@@ -38,9 +38,6 @@ class PrepareCommand::Impl final {
       std::ostream& output_compressed,
       size_t block_size);
 
-  template <typename T>
-  void WriteToMetadataStream(const std::vector<T>& container);
-
   int Run();
 
   void Accept(MetricVisitor& visitor, const PrepareCommand& host);

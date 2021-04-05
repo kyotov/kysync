@@ -7,6 +7,7 @@
 
 #include "../checksums/StrongChecksumBuilder.h"
 #include "../checksums/wcs.h"
+#include "../utilities/streams.h"
 #include "impl/PrepareCommandImpl.h"
 
 namespace kysync {
@@ -22,14 +23,6 @@ PrepareCommand::Impl::Impl(
       output_ksync_(output_ksync),
       output_compressed_(output_compressed),
       block_size_(block_size) {}
-
-template <typename T>
-void PrepareCommand::Impl::WriteToMetadataStream(
-    const std::vector<T> &container) {
-  auto size = container.size() * sizeof(typename std::vector<T>::value_type);
-  output_ksync_.write(reinterpret_cast<const char *>(container.data()), size);
-  kParent.AdvanceProgress(size);
-}
 
 int PrepareCommand::Impl::Run() {
   auto unique_buffer = std::make_unique<char[]>(block_size_);
@@ -91,9 +84,9 @@ int PrepareCommand::Impl::Run() {
   output_ksync_.write(header, strlen(header));
   kParent.AdvanceProgress(strlen(header));
 
-  WriteToMetadataStream(weak_checksums_);
-  WriteToMetadataStream(strong_checksums_);
-  WriteToMetadataStream(compressed_sizes_);
+  kParent.AdvanceProgress(StreamWrite(output_ksync_, weak_checksums_));
+  kParent.AdvanceProgress(StreamWrite(output_ksync_, strong_checksums_));
+  kParent.AdvanceProgress(StreamWrite(output_ksync_, compressed_sizes_));
 
   kParent.StartNextPhase(0);
   return 0;
