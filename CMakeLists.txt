@@ -57,6 +57,7 @@ find_package(httplib REQUIRED NO_MODULE PATHS ${CMAKE_PREFIX_PATH}/CMake/httplib
 find_package(zstd REQUIRED NO_MODULE)
 
 add_library(main STATIC
+        src/utilities/parallelize.cc
         src/readers/Reader.cc
         src/readers/MemoryReader.cc
         src/readers/FileReader.cc

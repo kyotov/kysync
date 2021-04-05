@@ -8,6 +8,7 @@
 
 #include "../Monitor.h"
 #include "../commands/impl/CommandImpl.h"
+#include "../utilities/parallelize.h"
 
 DEFINE_string(output_path, ".", "output directory");          // NOLINT
 DEFINE_int64(data_size, 1'000'000'000, "default data size");  // NOLINT
@@ -20,53 +21,97 @@ namespace fs = std::filesystem;
 namespace kysync {
 
 class Gen : public Command {
+  const fs::path kPath;
+  const fs::path kData;
+  const fs::path kSeedData;
+  const uint64_t kDiffSize =
+      FLAGS_fragment_size * (100 - FLAGS_similarity) / 100;
+
+  using R = std::default_random_engine;
+  using U = R::result_type;
+
 public:
-  Gen() = default;
+  Gen()
+      : kPath(FLAGS_output_path),
+        kData(kPath / "data.bin"),
+        kSeedData(kPath / "seed_data.bin") {
+    LOG(INFO) << "data: " << kData;
+    LOG(INFO) << "seed data: " << kSeedData;
+    CHECK(fs::is_directory(kPath));
+  }
+
   explicit Gen(Command &&c) : Command(std::move(c)) {}
 
-  int Run() override {
-    auto path = fs::path(FLAGS_output_path);
-    CHECK(fs::is_directory(path));
+  static std::vector<U> GenVec(size_t size, R &random) {
+    auto result = std::vector<U>();
+    for (size_t i = 0; i < size; i += sizeof(U)) {
+      result.push_back(random());
+    }
+    return result;
+  }
 
-    std::ofstream data(path / "data.bin", std::ios::binary);
-    std::ofstream seed_data(path / "seed_data.bin", std::ios::binary);
+  void GenChunk(int id, size_t beg, size_t end) {
+    std::fstream data(kData, std::ios::binary | std::ios::in | std::ios::out);
+    data.seekp(beg);
 
-    auto difference = 100 - FLAGS_similarity;
-    CHECK(0 <= difference && difference <= 100);
+    std::fstream seed_data(
+        kSeedData,
+        std::ios::binary | std::ios::in | std::ios::out);
+    seed_data.seekp(beg);
 
-    auto random = std::default_random_engine();
-    random.seed(1);
+    auto random = R(id);
 
-    using U = std::default_random_engine::result_type;
-    std::vector<U> t;
+    for (size_t i = beg; i < end; i += FLAGS_fragment_size) {
+      auto diff_offset = random() % (FLAGS_fragment_size - kDiffSize + 1);
 
-    impl_->progress_phase_++;
-    impl_->progress_total_bytes_ =
-        std::max(FLAGS_data_size, FLAGS_seed_data_size);
-    impl_->progress_current_bytes_ = 0;
-
-    for (auto curr = 0ULL;                                        //
-         curr < std::max(FLAGS_data_size, FLAGS_seed_data_size);  //
-         curr += FLAGS_fragment_size)
-    {
-      auto diff_size = FLAGS_fragment_size * difference / 100;
-      auto diff_offset = random() % (FLAGS_fragment_size - diff_size + 1);
-
-      t.clear();
-      for (auto i = 0; i < FLAGS_fragment_size; i += sizeof(U)) {
-        t.push_back(random());
-      }
-      data.write(reinterpret_cast<const char *>(t.data()), FLAGS_fragment_size);
-
-      for (auto i = diff_offset; i < diff_offset + diff_size; i += sizeof(U)) {
-        t[i / sizeof(U)] = random();
-      }
-      seed_data.write(
-          reinterpret_cast<const char *>(t.data()),
+      auto v_data = GenVec(FLAGS_fragment_size, random);
+      data.write(
+          reinterpret_cast<const char *>(v_data.data()),
           FLAGS_fragment_size);
+      impl_->progress_current_bytes_ += FLAGS_fragment_size;
 
+      auto v_diff = GenVec(kDiffSize, random);
+      std::copy(
+          v_diff.begin(),
+          v_diff.end(),
+          v_data.begin() + diff_offset / sizeof(U));
+      seed_data.write(
+          reinterpret_cast<const char *>(v_data.data()),
+          FLAGS_fragment_size);
       impl_->progress_current_bytes_ += FLAGS_fragment_size;
     }
+  }
+
+  int Run() override {
+    // TODO: fix these to be different
+    FLAGS_seed_data_size = FLAGS_data_size;
+
+    LOG(INFO) << "start";
+
+    std::error_code ec;
+
+    std::ofstream data(kData, std::ios::binary);
+    ec.clear();
+    fs::resize_file(kData, FLAGS_data_size, ec);
+    CHECK(ec.value() == 0) << ec.message();
+
+    std::ofstream seed_data(kSeedData, std::ios::binary);
+    ec.clear();
+    fs::resize_file(kSeedData, FLAGS_seed_data_size, ec);
+    CHECK(ec.value() == 0) << ec.message();
+
+    impl_->progress_phase_++;
+    impl_->progress_total_bytes_ = FLAGS_data_size + FLAGS_seed_data_size;
+    impl_->progress_current_bytes_ = 0;
+
+    LOG(INFO) << "data size is " << FLAGS_data_size;
+
+    Parallelize(
+        FLAGS_data_size,
+        FLAGS_fragment_size,
+        0,
+        32,
+        [this](auto id, auto beg, auto end) { GenChunk(id, beg, end); });
 
     return 0;
   }
