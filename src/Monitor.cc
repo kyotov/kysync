@@ -84,11 +84,17 @@ public:
         phases.back().bytes = processed_bytes.load();
         phases.back().ms = DeltaMs(ts_phase_begin_, now);
 
-        auto k_bytes = (S() << "//phases/" << phase << "/bytes").str();
+        auto s = std::stringstream();
+
+        s.clear();
+        s << "//phases/" << phase << "/bytes";
+        auto k_bytes = s.str();
         metric_keys_.push_back(k_bytes);
         metrics_[k_bytes] = &phases.back().bytes;
 
-        auto k_ms = (S() << "//phases/" << phase << "/ms").str();
+        s.clear();
+        s << "//phases/" << phase << "/ms";
+        auto k_ms = s.str();
         metric_keys_.push_back(k_ms);
         metrics_[k_ms] = &phases.back().ms;
       }
