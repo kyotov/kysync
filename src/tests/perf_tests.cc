@@ -55,7 +55,7 @@ private:
                                 : std::filesystem::temp_directory_path();
     LOG(INFO) << "TEST_ROOT_PATH=" << path;
 
-    data_size = GetEnv("TEST_DATA_SIZE", 1'000'000);
+    data_size = GetEnv("TEST_DATA_SIZE", 1'000'000ULL);
     seed_data_size = GetEnv("TEST_SEED_DATA_SIZE", -1ULL);
     fragment_size = GetEnv("TEST_FRAGMENT_SIZE", 123'456);
     block_size = GetEnv("TEST_BLOCK_SIZE", 16'384);
@@ -145,6 +145,7 @@ TEST(Performance, Detect) {  // NOLINT
   size_t target_ms = GetEnv("TEST_TARGET_MS", 1'000);
 
   auto ctx = Context::Default();
+  ctx.data_size = 1'000'000;
   ctx.identity_reconstruction = true;
 
   for (;;) {
