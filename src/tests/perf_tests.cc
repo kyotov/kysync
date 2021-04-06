@@ -11,7 +11,8 @@
 #include "commands/GenDataCommand.h"
 #include "utilities/TempPath.h"
 
-// with inspiration from https://www.sandordargo.com/blog/2019/04/24/parameterized-testing-with-gtest
+// with inspiration from
+// https://www.sandordargo.com/blog/2019/04/24/parameterized-testing-with-gtest
 
 namespace kysync {
 
@@ -155,8 +156,11 @@ TEST(Performance, Detect) {  // NOLINT
     if (DeltaMs(beg, end) > target_ms) {
       break;
     }
-    ctx.data_size *=
-        std::max(2ULL, std::min(16ULL, target_ms / DeltaMs(beg, end)));
+    size_t min_factor = 2;
+    size_t max_factor = 16;
+    ctx.data_size *= std::max(
+        min_factor,
+        std::min(max_factor, target_ms / DeltaMs(beg, end)));
   }
 
   LOG(INFO) << "detected test size = " << ctx.data_size;
