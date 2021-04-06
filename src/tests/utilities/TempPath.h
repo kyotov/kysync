@@ -12,7 +12,9 @@ class TempPath {
   NO_COPY_OR_MOVE(TempPath);
 
 public:
-  explicit TempPath(bool keep = false);
+  explicit TempPath(
+      bool keep = false,
+      std::filesystem::path root = std::filesystem::temp_directory_path());
 
   ~TempPath();
 

@@ -9,10 +9,8 @@ struct TempPath::Impl {
   const fs::path kPath;
 };
 
-TempPath::TempPath(bool keep)
-    : impl_(new Impl{
-          .kKeep = keep,
-          .kPath = fs::temp_directory_path() / "ksync_files_test"}) {
+TempPath::TempPath(bool keep, const std::filesystem::path root)
+    : impl_(new Impl{.kKeep = keep, .kPath = root / "ksync_files_test"}) {
   if (fs::exists(impl_->kPath)) {
     fs::remove_all(impl_->kPath);
   }

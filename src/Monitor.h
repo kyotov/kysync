@@ -1,6 +1,7 @@
 #ifndef KSYNC_MONITOR_H
 #define KSYNC_MONITOR_H
 
+#include <functional>
 #include <memory>
 
 #include "commands/Command.h"
@@ -18,6 +19,9 @@ public:
   ~Monitor();
 
   int Run();
+
+  using MetricCallback = std::function<void(std::string, MetricValueType)>;
+  void MetricSnapshot(const MetricCallback &callback) const;
 };
 
 }  // namespace kysync

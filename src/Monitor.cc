@@ -6,25 +6,23 @@
 #include <future>
 #include <iomanip>
 #include <iostream>
+#include <list>
 #include <stack>
 #include <unordered_map>
 
 #include "metrics/MetricVisitor.h"
+#include "utilities/timer.h"
 
 namespace kysync {
 
 class Monitor::Impl : public MetricVisitor {
 public:
-  using TimeStamp = decltype(std::chrono::high_resolution_clock::now());
-  using Milliseconds = std::chrono::milliseconds;
-
   struct Phase {
-    MetricValueType total_bytes;
-    MetricValueType processed_bytes;
-    MetricValueType elapsed_ms;
+    Metric bytes;
+    Metric ms;
   };
 
-  std::vector<Phase> phases;
+  std::list<Phase> phases;
 
   std::vector<std::string> metric_keys_;
   std::unordered_map<std::string, Metric*> metrics_;
@@ -35,8 +33,8 @@ public:
 
   std::string last_update_;
 
-  TimeStamp ts_total_begin_;
-  TimeStamp ts_phase_begin_;
+  Timestamp ts_total_begin_;
+  Timestamp ts_phase_begin_;
 
   explicit Impl(Command& command) : command_(command) { context_.push(""); }
 
@@ -52,19 +50,7 @@ public:
     context_.pop();
   }
 
-  void Dump() {
-    for (const auto& key : metric_keys_) {
-      LOG(INFO) << key << "=" << metrics_[key]->load();
-    }
-    auto phase = 0;
-    for (const auto& v : phases) {
-      phase++;
-      LOG(INFO) << "//phases/" << phase << "/total_bytes=" << v.total_bytes;
-      LOG(INFO) << "//phases/" << phase
-                << "/processed_bytes=" << v.processed_bytes;
-      LOG(INFO) << "//phases/" << phase << "/elapsed_ms=" << v.elapsed_ms;
-    }
-  }
+  using S = std::stringstream;
 
   void Update() {
     auto& phase = *metrics_["//progress_phase_"];
@@ -73,13 +59,8 @@ public:
 
     auto now = std::chrono::high_resolution_clock::now();
 
-    auto delta_ms = [&](auto duration) {
-      return static_cast<size_t>(
-          std::chrono::duration_cast<Milliseconds>(duration).count());
-    };
-
-    auto total_ms = delta_ms(now - ts_total_begin_);
-    auto phase_ms = delta_ms(now - ts_phase_begin_);
+    auto total_ms = DeltaMs(ts_total_begin_, now);
+    auto phase_ms = DeltaMs(ts_phase_begin_, now);
     auto percent = total_bytes != 0 ? 100 * processed_bytes / total_bytes : 0;
     auto mb = processed_bytes / (1LL << 20);
     auto mbps = phase_ms != 0 ? 1000.0 * mb / phase_ms : 0;
@@ -87,10 +68,10 @@ public:
     std::stringstream ss;
     ss << "phase " << phase << std::fixed << std::setprecision(1)  //
        << " | " << std::setw(5) << mb << " MB"                     //
-       << " | " << std::setw(5) << phase_ms / 1000.0 << "s"        //
+       << " | " << std::setw(5) << phase_ms / 1e3 << "s"           //
        << " | " << std::setw(7) << mbps << " MB/s"                 //
        << " | " << std::setw(3) << percent << "%"                  //
-       << " | " << std::setw(5) << total_ms / 1000.0 << "s total";
+       << " | " << std::setw(5) << total_ms / 1e3 << "s total";
     std::cout << ss.str() << "\t\r";
 
     if (metrics_["//progress_next_phase_"]->load() !=
@@ -98,10 +79,18 @@ public:
     {
       if (phase > 0) {
         LOG(INFO) << ss.str();
-        phases.push_back(
-            {.total_bytes = total_bytes,
-             .processed_bytes = processed_bytes,
-             .elapsed_ms = delta_ms(now - ts_phase_begin_)});
+
+        phases.emplace_back();
+        phases.back().bytes = processed_bytes.load();
+        phases.back().ms = DeltaMs(ts_phase_begin_, now);
+
+        auto k_bytes = (S() << "//phases/" << phase << "/bytes").str();
+        metric_keys_.push_back(k_bytes);
+        metrics_[k_bytes] = &phases.back().bytes;
+
+        auto k_ms = (S() << "//phases/" << phase << "/ms").str();
+        metric_keys_.push_back(k_ms);
+        metrics_[k_ms] = &phases.back().ms;
       }
       phase++;
       ts_phase_begin_ = now;
@@ -121,7 +110,6 @@ public:
     while (result.wait_for(period) != std::future_status::ready) {
       Update();
     }
-    Dump();
 
     return result.get();
   }
@@ -131,6 +119,18 @@ Monitor::Monitor(Command& command) : impl_(std::make_unique<Impl>(command)) {}
 
 Monitor::~Monitor() = default;
 
-int Monitor::Run() { return impl_->Run(); }
+int Monitor::Run() {
+  auto result = impl_->Run();
+  MetricSnapshot([](auto key, auto value) {
+    LOG(INFO) << key << "=" << value;
+  });
+  return result;
+}
+
+void Monitor::MetricSnapshot(const Monitor::MetricCallback &callback) const {
+  for (const auto& key : impl_->metric_keys_) {
+    callback(key, impl_->metrics_[key]->load());
+  }
+}
 
 }  // namespace kysync

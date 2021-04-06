@@ -591,7 +591,6 @@ TEST(SyncCommand, SyncFileFromSeed) {  // NOLINT
   TempPath tmp;
 
   std::map<std::string, uint64_t> expected_metrics = {
-
       {"//progress_current_bytes_", 10340},
       {"//progress_total_bytes_", 10340},
       {"//progress_compressed_bytes_", 140},
