@@ -85,14 +85,12 @@ public:
         phases.back().ms = DeltaMs(ts_phase_begin_, now);
 
         auto s = std::stringstream();
-
-        s.clear();
         s << "//phases/" << phase << "/bytes";
         auto k_bytes = s.str();
         metric_keys_.push_back(k_bytes);
         metrics_[k_bytes] = &phases.back().bytes;
 
-        s.clear();
+        s = std::stringstream();
         s << "//phases/" << phase << "/ms";
         auto k_ms = s.str();
         metric_keys_.push_back(k_ms);
@@ -127,13 +125,12 @@ Monitor::~Monitor() = default;
 
 int Monitor::Run() {
   auto result = impl_->Run();
-  MetricSnapshot([](auto key, auto value) {
-    LOG(INFO) << key << "=" << value;
-  });
+  MetricSnapshot(
+      [](auto key, auto value) { LOG(INFO) << key << "=" << value; });
   return result;
 }
 
-void Monitor::MetricSnapshot(const Monitor::MetricCallback &callback) const {
+void Monitor::MetricSnapshot(const Monitor::MetricCallback& callback) const {
   for (const auto& key : impl_->metric_keys_) {
     callback(key, impl_->metrics_[key]->load());
   }
