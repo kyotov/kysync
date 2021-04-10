@@ -28,7 +28,7 @@ public:
     EXPECT_EQ(expectations_.size(), 0) << s.str();
   }
 
-  void Visit(const std::string &name, const Metric &value) {
+  void Visit(const std::string &name, Metric &value) {
     auto key = context_ + name;
 
     auto i = expectations_.find(key);
@@ -44,7 +44,7 @@ public:
 
   void Visit(
       const std::string &name,
-      const MetricContainer &container,
+      MetricContainer &container,
       ExpectationCheckMetricVisitor &host) {
     auto old_context = context_;
     context_ += name + "/";
@@ -64,13 +64,13 @@ ExpectationCheckMetricVisitor::~ExpectationCheckMetricVisitor() = default;
 
 void ExpectationCheckMetricVisitor::Visit(
     const std::string &name,
-    const Metric &value) {
+    Metric &value) {
   impl_->Visit(name, value);
 }
 
 void ExpectationCheckMetricVisitor::Visit(
     const std::string &name,
-    const MetricContainer &container) {
+    MetricContainer &container) {
   impl_->Visit(name, container, *this);
 }
 

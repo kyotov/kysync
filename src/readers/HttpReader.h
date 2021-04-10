@@ -6,6 +6,9 @@
 namespace kysync {
 
 class HttpReader : public Reader {
+  PIMPL;
+  NO_COPY_OR_MOVE(HttpReader);
+
 public:
   explicit HttpReader(const std::string &url);
 
@@ -14,10 +17,6 @@ public:
   [[nodiscard]] size_t GetSize() const override;
 
   size_t Read(void *buffer, size_t offset, size_t size) const override;
-
-private:
-  struct Impl;
-  std::unique_ptr<Impl> impl_;
 };
 
 }  // namespace kysync

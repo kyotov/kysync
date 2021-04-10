@@ -31,7 +31,7 @@ void StrongChecksumBuilder::Update(const void* buffer, size_t size) {
 StrongChecksum StrongChecksumBuilder::Digest() {
   auto digest = impl_->Digest();
 
-  return {.hi_ = digest.high64, .lo_ = digest.low64};
+  return {.kHi = digest.high64, .kLo = digest.low64};
 }
 
 }  // namespace kysync

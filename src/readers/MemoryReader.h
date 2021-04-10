@@ -8,6 +8,9 @@
 namespace kysync {
 
 class MemoryReader final : public Reader {
+  PIMPL;
+  NO_COPY_OR_MOVE(MemoryReader);
+  
 public:
   MemoryReader(const void *buffer, size_t size);
 
@@ -16,10 +19,6 @@ public:
   [[nodiscard]] size_t GetSize() const override;
 
   size_t Read(void *buffer, size_t offset, size_t size) const override;
-
-private:
-  struct Impl;
-  std::unique_ptr<Impl> impl_;
 };
 
 }  // namespace kysync

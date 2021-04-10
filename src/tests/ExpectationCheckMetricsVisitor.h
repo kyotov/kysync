@@ -5,11 +5,15 @@
 
 #include <map>
 
-#include "MetricVisitor.h"
+#include "../metrics/MetricVisitor.h"
+#include "../utilities/utilities.h"
 
 namespace kysync {
 
 class ExpectationCheckMetricVisitor final : public MetricVisitor {
+  PIMPL;
+  NO_COPY_OR_MOVE(ExpectationCheckMetricVisitor);
+
 public:
   explicit ExpectationCheckMetricVisitor(
       MetricContainer &host,
@@ -17,14 +21,9 @@ public:
 
   ~ExpectationCheckMetricVisitor();
 
-  void Visit(const std::string &name, const Metric &value) override;
+  void Visit(const std::string &name, Metric &value) override;
 
-  void Visit(const std::string &name, const MetricContainer &container)
-      override;
-
-private:
-  class Impl;
-  std::unique_ptr<Impl> impl_;
+  void Visit(const std::string &name, MetricContainer &container) override;
 };
 
 }  // namespace kysync

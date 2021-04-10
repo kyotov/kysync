@@ -9,26 +9,24 @@
 namespace kysync {
 
 class SyncCommand final : public Command {
+  friend class KySyncTest;
+  PIMPL;
+  NO_COPY_OR_MOVE(SyncCommand);
+
 public:
   explicit SyncCommand(
-      std::string data_uri,
+      const std::string &data_uri,
+      const std::string &metadata_uri,
+      const std::string &seed_uri,
+      const std::filesystem::path &output_path,
       bool compression_disabled,
-      std::string metadata_uri,
-      std::string seed_uri,
-      std::filesystem::path output_path,
       int threads);
 
   ~SyncCommand() override;
 
   int Run() override;
 
-  void Accept(MetricVisitor &visitor) const override;
-
-private:
-  class Impl;
-  std::unique_ptr<Impl> impl_;
-
-  friend class KySyncTest;
+  void Accept(MetricVisitor &visitor) override;
 };
 
 }  // namespace kysync

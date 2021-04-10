@@ -3,25 +3,27 @@
 
 #include <memory>
 
+#include "../metrics/Metric.h"
 #include "../metrics/MetricContainer.h"
+#include "../utilities/utilities.h"
 
 namespace kysync {
 
 class Command : public MetricContainer {
+  PIMPL;
+
 public:
   Command();
-
-  Command(Command &&) noexcept;
 
   virtual ~Command();
 
   virtual int Run() = 0;
 
-  void Accept(MetricVisitor &visitor) const override;
+  void Accept(MetricVisitor &visitor) override;
 
-protected:
-  class Impl;
-  std::unique_ptr<Impl> impl_;
+  void StartNextPhase(MetricValueType size) const;
+  MetricValueType AdvanceProgress(  // NOLINT{modernize-use-nodiscard}
+      MetricValueType amount) const;
 };
 
 }  // namespace kysync

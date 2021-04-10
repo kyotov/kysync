@@ -16,7 +16,7 @@
 * make sure the final stats of each phase are shown?
 * make StrongChecksumBuilder a real streambuf
 * figure out if we can have in-memory tests without files
-* create a wcs collision test
+* Create a wcs collision test
 * make the install directory of each project different
 * write benchmarks (e.g. for the running window checksum)
 * write tests for HttpReader

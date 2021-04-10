@@ -14,27 +14,23 @@ namespace fs = std::filesystem;
 class KySyncTest;
 
 class PrepareCommand final : public Command {
+  friend class KySyncTest;
+  PIMPL;
+  NO_COPY_OR_MOVE(PrepareCommand);
+
 public:
   PrepareCommand(
-      std::istream &input,
-      std::ostream &output_ksync,
-      std::ostream &output_compressed,
-      size_t block);
-
-  PrepareCommand(PrepareCommand &&) noexcept;
+      const fs::path &input_filename,
+      const fs::path &output_ksync_filename,
+      const fs::path &output_compressed_filename,
+      size_t block_size);
 
   ~PrepareCommand() override;
 
   // TODO: can this be const??
   int Run() override;
 
-  void Accept(MetricVisitor &visitor) const override;
-
-private:
-  class Impl;
-  std::unique_ptr<Impl> impl_;
-
-  friend class KySyncTest;
+  void Accept(MetricVisitor &visitor) override;
 };
 
 }  // namespace kysync

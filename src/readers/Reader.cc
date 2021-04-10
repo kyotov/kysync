@@ -17,7 +17,7 @@ public:
   Metric total_reads_;
   Metric total_bytes_read_;
 
-  void Accept(MetricVisitor &visitor) const {
+  void Accept(MetricVisitor &visitor) {
     VISIT_METRICS(total_reads_);
     VISIT_METRICS(total_bytes_read_);
   }
@@ -33,7 +33,7 @@ size_t Reader::Read(void * /*buffer*/, size_t /*offset*/, size_t size) const {
   return size;
 }
 
-void Reader::Accept(MetricVisitor &visitor) const { impl_->Accept(visitor); }
+void Reader::Accept(MetricVisitor &visitor) { impl_->Accept(visitor); }
 
 std::unique_ptr<Reader> Reader::Create(const std::string &uri) {
   if (uri.starts_with("http://") || uri.starts_with("https://")) {

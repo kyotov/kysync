@@ -4,10 +4,14 @@
 #include <memory>
 
 #include "StrongChecksum.h"
+#include "../utilities/utilities.h"
 
 namespace kysync {
 
-class StrongChecksumBuilder {
+class StrongChecksumBuilder final {
+  PIMPL;
+  NO_COPY_OR_MOVE(StrongChecksumBuilder);
+
 public:
   StrongChecksumBuilder();
 
@@ -16,10 +20,6 @@ public:
   void Update(const void* buffer, size_t size);
 
   StrongChecksum Digest();
-
-private:
-  class Impl;
-  std::unique_ptr<Impl> impl_;
 };
 
 }  // namespace kysync

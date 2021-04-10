@@ -5,10 +5,13 @@
 
 #include "../metrics/MetricContainer.h"
 #include "../metrics/MetricVisitor.h"
+#include "../utilities/utilities.h"
 
 namespace kysync {
 
 class Reader : public MetricContainer {
+  PIMPL;
+
 public:
   Reader();
 
@@ -18,13 +21,9 @@ public:
 
   virtual size_t Read(void *buffer, size_t offset, size_t size) const;
 
-  void Accept(MetricVisitor &visitor) const override;
+  void Accept(MetricVisitor &visitor) override;
 
   static std::unique_ptr<Reader> Create(const std::string &uri);
-
-private:
-  class Impl;
-  std::unique_ptr<Impl> impl_;
 };
 
 }  // namespace kysync

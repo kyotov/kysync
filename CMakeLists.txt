@@ -57,6 +57,9 @@ find_package(httplib REQUIRED NO_MODULE PATHS ${CMAKE_PREFIX_PATH}/CMake/httplib
 find_package(zstd REQUIRED NO_MODULE)
 
 add_library(main STATIC
+        src/utilities/parallelize.cc
+        src/utilities/streams.cc
+        src/utilities/timer.cc
         src/readers/Reader.cc
         src/readers/MemoryReader.cc
         src/readers/FileReader.cc
@@ -72,18 +75,34 @@ target_link_libraries(main
         zstd::libzstd_static
         xxHash::xxhash
         httplib::httplib
-        glog::glog)
+        glog::glog
+        gflags)
 
 add_executable(kysync
         src/main.cc)
 target_link_libraries(kysync
-        main
-        gflags)
+        main)
+
+add_executable(gendata
+        src/tests/commands/GenDataCommand.cc
+        src/tests/gendata_main.cc)
+target_link_libraries(gendata
+        main)
 
 add_executable(tests
-        src/tests.cc
-        src/metrics/ExpectationCheckMetricsVisitor.cc)
+        src/tests/utilities/TempPath.cc
+        src/tests/tests.cc
+        src/tests/ExpectationCheckMetricsVisitor.cc)
 target_link_libraries(tests
+        main
+        GTest::gtest
+        GTest::gtest_main)
+
+add_executable(perf_tests
+        src/tests/perf_tests.cc
+        src/tests/utilities/TempPath.cc
+        src/tests/commands/GenDataCommand.cc)
+target_link_libraries(perf_tests
         main
         GTest::gtest
         GTest::gtest_main)
@@ -91,6 +110,11 @@ target_link_libraries(tests
 add_test(
         NAME tests
         COMMAND tests
+)
+
+add_test(
+        NAME performance_tests
+        COMMAND perf_tests
 )
 
 set_tests_properties(

@@ -6,29 +6,30 @@
 #include <future>
 #include <map>
 
+#include "../Config.h"
 #include "../checksums/StrongChecksumBuilder.h"
 #include "../checksums/wcs.h"
-#include "../Config.h"
+#include "../utilities/parallelize.h"
 #include "glog/logging.h"
 #include "impl/SyncCommandImpl.h"
 
 namespace kysync {
 
 SyncCommand::Impl::Impl(
-    std::string data_uri,
+    const SyncCommand &parent,
+    const std::string &data_uri,
+    const std::string &metadata_uri,
+    const std::string &seed_uri,
+    const std::filesystem::path &output_path,
     bool compression_disabled,
-    std::string metadata_uri,
-    std::string seed_uri,
-    std::filesystem::path output_path,
-    int threads,
-    Command::Impl &base_impl)
-    : data_uri_(std::move(data_uri)),
-      compression_diabled_(compression_disabled),
-      metadata_uri_(std::move(metadata_uri)),
-      seed_uri_(std::move(seed_uri)),
-      output_path_(std::move(output_path)),
-      threads_(threads),
-      base_impl_(base_impl) {}
+    int threads)
+    : kParent(parent),
+      kDataUri(data_uri),
+      kMetadataUri(metadata_uri),
+      kSeedUri(seed_uri),
+      kOutputPath(output_path),
+      kCompressionDiabled(compression_disabled),
+      kThreads(threads) {}
 
 void SyncCommand::Impl::ParseHeader(const Reader &metadata_reader) {
   constexpr size_t kMaxHeaderSize = 1024;
@@ -81,6 +82,7 @@ size_t SyncCommand::Impl::ReadIntoContainer(
   size_t size_read =
       metadata_reader.Read(container.data(), offset, size_to_read);
   CHECK_EQ(size_to_read, size_read) << "cannot Read metadata";
+  kParent.AdvanceProgress(size_read);
   return size_read;
 }
 
@@ -97,22 +99,14 @@ void SyncCommand::Impl::UpdateCompressedOffsetsAndMaxSize() {
 }
 
 void SyncCommand::Impl::ReadMetadata() {
-  auto metadata_reader = Reader::Create(metadata_uri_);
+  auto metadata_reader = Reader::Create(kMetadataUri);
 
-  base_impl_.progress_phase_++;
-  base_impl_.progress_total_bytes_ = metadata_reader->GetSize();
-  base_impl_.progress_current_bytes_ = 0;
-  base_impl_.progress_compressed_bytes_ = 0;
-
-  auto &offset = base_impl_.progress_current_bytes_;
+  kParent.StartNextPhase(metadata_reader->GetSize());
+  LOG(INFO) << "reading metadata...";
 
   ParseHeader(*metadata_reader);
-  offset = header_size_;
-
-  // NOTE: The current logic reads all metadata information regardless of
-  // whether it is actually used Furthermore, it reads this information up
-  // front. This can potentially be optimized so as to read only when
-  // reconstructing source chunk
+  kParent.AdvanceProgress(header_size_);
+  auto offset = header_size_;
   offset += ReadIntoContainer(*metadata_reader, offset, weak_checksums_);
   offset += ReadIntoContainer(*metadata_reader, offset, strong_checksums_);
   offset += ReadIntoContainer(*metadata_reader, offset, compressed_sizes_);
@@ -133,7 +127,7 @@ void SyncCommand::Impl::AnalyzeSeedChunk(
   auto *buffer = smart_buffer.get() + block_;
   memset(buffer, 0, block_);
 
-  auto seed_reader = Reader::Create(seed_uri_);
+  auto seed_reader = Reader::Create(kSeedUri);
   auto seed_size = seed_reader->GetSize();
 
   uint32_t _wcs = 0;
@@ -190,68 +184,22 @@ void SyncCommand::Impl::AnalyzeSeedChunk(
     _wcs =
         WeakChecksum(static_cast<const void *>(buffer), block_, _wcs, callback);
 
-    base_impl_.progress_current_bytes_ += block_;
+    kParent.AdvanceProgress(block_);
   }
-}
-
-// TODO: make this a member function
-int Parallelize(
-    size_t data_size,
-    size_t block_size,
-    size_t overlap_size,
-    int threads,
-    std::function<void(int /*id*/, size_t /*beg*/, size_t /*end*/)> f) {
-  auto blocks = (data_size + block_size - 1) / block_size;
-  auto chunk = (blocks + threads - 1) / threads;
-
-  if (chunk < 2) {
-    LOG(INFO) << "GetSize too small... not using parallelization";
-    threads = 1;
-    chunk = blocks;
-  }
-
-  VLOG(1) << "Parallelize GetSize=" << data_size  //
-          << " block=" << block_size              //
-          << " threads=" << threads;
-
-  std::vector<std::future<void>> fs;
-
-  for (int id = 0; id < threads; id++) {
-    auto beg = id * chunk * block_size;
-    auto end = (id + 1) * chunk * block_size + overlap_size;
-    VLOG(2) << "thread=" << id << " [" << beg << ", " << end << ")";
-
-    fs.push_back(std::async(f, id, beg, std::min(end, data_size)));
-  }
-
-  std::chrono::milliseconds chill(100);
-  auto done = false;
-  while (!done) {
-    done = true;
-    for (auto &ff : fs) {
-      if (ff.wait_for(chill) != std::future_status::ready) {
-        done = false;
-      }
-    }
-  }
-
-  return threads;
 }
 
 void SyncCommand::Impl::AnalyzeSeed() {
-  auto seed_reader = Reader::Create(seed_uri_);
-
+  auto seed_reader = Reader::Create(kSeedUri);
   auto seed_data_size = seed_reader->GetSize();
-  base_impl_.progress_phase_++;
-  base_impl_.progress_total_bytes_ = seed_data_size;
-  base_impl_.progress_current_bytes_ = 0;
-  base_impl_.progress_compressed_bytes_ = 0;
+
+  kParent.StartNextPhase(seed_data_size);
+  LOG(INFO) << "analyzing seed data...";
 
   Parallelize(
       seed_data_size,
       block_,
       block_,
-      threads_,
+      kThreads,
       // TODO: fold this function in here so we would not need the lambda
       [this](auto id, auto beg, auto end) { AnalyzeSeedChunk(id, beg, end); });
 }
@@ -269,8 +217,8 @@ void SyncCommand::Impl::ReconstructSourceChunk(
       std::make_unique<char[]>(max_compressed_size_);
   auto *decompression_buffer = smart_decompression_buffer.get();
 
-  auto seed_reader = Reader::Create(seed_uri_);
-  auto data_reader = Reader::Create(data_uri_);
+  auto seed_reader = Reader::Create(kSeedUri);
+  auto data_reader = Reader::Create(kDataUri);
 
   // NOTE: The fstream object is consciously initialized with both out and in
   // modes although this function only writes to the file.
@@ -284,7 +232,7 @@ void SyncCommand::Impl::ReconstructSourceChunk(
   // https://stackoverflow.com/questions/39256916/does-stdofstream-truncate-or-append-by-default#:~:text=It%20truncates%20by%20default
   // Using ate or app does not resolve this.
   std::fstream output(
-      output_path_,
+      kOutputPath,
       std::ios::binary | std::fstream::out | std::fstream::in);
   output.exceptions(std::fstream::failbit | std::fstream::badbit);
   output.seekp(start_offset);
@@ -301,7 +249,7 @@ void SyncCommand::Impl::ReconstructSourceChunk(
       count = seed_reader->Read(buffer, data.seed_offset, block_);
       reused_bytes_ += count;
     } else {
-      if (compression_diabled_) {
+      if (kCompressionDiabled) {
         count = data_reader->Read(buffer, i * block_, block_);
         downloaded_bytes_ += count;
       } else {
@@ -313,7 +261,6 @@ void SyncCommand::Impl::ReconstructSourceChunk(
             offset_to_read_from,
             size_to_read);
         downloaded_bytes_ += count;
-        base_impl_.progress_compressed_bytes_ += count;
         auto const expected_size_after_decompression =
             ZSTD_getFrameContentSize(decompression_buffer, count);
         CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_ERROR)
@@ -332,6 +279,7 @@ void SyncCommand::Impl::ReconstructSourceChunk(
             << ZSTD_getErrorName(decompressed_size);
         LOG_ASSERT(decompressed_size <= block_);
         count = decompressed_size;
+        decompressed_bytes_ += count;
       }
     }
 
@@ -351,38 +299,32 @@ void SyncCommand::Impl::ReconstructSourceChunk(
       CHECK_EQ(count, size_ % block_);
     }
 
-    base_impl_.progress_current_bytes_ += count;
+    kParent.AdvanceProgress(count);
   }
 }
 
 void SyncCommand::Impl::ReconstructSource() {
-  auto data_reader = Reader::Create(data_uri_);
+  auto data_reader = Reader::Create(kDataUri);
   auto data_size = size_;
 
-  base_impl_.progress_phase_++;
-  base_impl_.progress_total_bytes_ = data_size;
-  base_impl_.progress_current_bytes_ = 0;
-  base_impl_.progress_compressed_bytes_ = 0;
+  kParent.StartNextPhase(data_size);
+  LOG(INFO) << "reconstructing target...";
 
-  std::ofstream output(output_path_, std::ios::binary);
-  std::filesystem::resize_file(output_path_, data_size);
+  std::ofstream output(kOutputPath, std::ios::binary);
+  CHECK(output);
+  std::filesystem::resize_file(kOutputPath, data_size);
 
   Parallelize(
       data_size,
       block_,
       0,
-      threads_,
+      kThreads,
       [this](auto id, auto beg, auto end) {
         ReconstructSourceChunk(id, beg, end);
       });
 
-  base_impl_.progress_phase_++;
-  base_impl_.progress_total_bytes_ = data_size;
-  base_impl_.progress_current_bytes_ = 0;
-  // NOTE: Compressed bytes is consciously not set to 0 to preserve compressed
-  // bytes information from the last phase as the final reconstruction from
-  // source does not change compressed bytes read. downloadedBytes follows a
-  // similar pattern.
+  kParent.StartNextPhase(data_size);
+  LOG(INFO) << "verifying target...";
 
   constexpr auto kBufferSize = 1024 * 1024;
   auto smart_buffer = std::make_unique<char[]>(kBufferSize);
@@ -390,23 +332,22 @@ void SyncCommand::Impl::ReconstructSource() {
 
   StrongChecksumBuilder output_hash;
 
-  std::ifstream read_for_hash_check(output_path_, std::ios::binary);
+  std::ifstream read_for_hash_check(kOutputPath, std::ios::binary);
   while (read_for_hash_check) {
     auto count = read_for_hash_check.read(buffer, kBufferSize).gcount();
     output_hash.Update(buffer, count);
-    base_impl_.progress_current_bytes_ += count;
+    kParent.AdvanceProgress(count);
   }
 
   CHECK_EQ(hash_, output_hash.Digest().ToString())
       << "mismatch in hash of reconstructed data";
+
+  kParent.StartNextPhase(0);
 }
 
 int SyncCommand::Impl::Run() {
-  LOG(INFO) << "reading metadata...";
   ReadMetadata();
-  LOG(INFO) << "analyzing seed data...";
   AnalyzeSeed();
-  LOG(INFO) << "reconstructing target...";
   ReconstructSource();
   return 0;
 }
@@ -417,29 +358,33 @@ void SyncCommand::Impl::Accept(MetricVisitor &visitor) {
   VISIT_METRICS(strong_checksum_matches_);
   VISIT_METRICS(reused_bytes_);
   VISIT_METRICS(downloaded_bytes_);
+  VISIT_METRICS(decompressed_bytes_);
 }
 
 SyncCommand::SyncCommand(
-    std::string data_uri,
+    const std::string &data_uri,
+    const std::string &metadata_uri,
+    const std::string &seed_uri,
+    const std::filesystem::path &output_path,
     bool compression_disabled,
-    std::string metadata_uri,
-    std::string seed_uri,
-    std::filesystem::path output_path,
     int threads)
     : impl_(new Impl(
-          std::move(data_uri),
+          *this,
+          compression_disabled || data_uri.starts_with("memory://") ||
+                  data_uri.ends_with(".pzst")
+              ? data_uri
+              : data_uri + ".pzst",
+          !metadata_uri.empty() ? metadata_uri : data_uri + ".kysync",
+          seed_uri,
+          output_path,
           compression_disabled,
-          std::move(metadata_uri),
-          std::move(seed_uri),
-          std::move(output_path),
-          threads,
-          *Command::impl_)) {}
+          threads)) {}
 
 SyncCommand::~SyncCommand() = default;
 
 int SyncCommand::Run() { return impl_->Run(); }
 
-void SyncCommand::Accept(MetricVisitor &visitor) const {
+void SyncCommand::Accept(MetricVisitor &visitor) {
   Command::Accept(visitor);
   impl_->Accept(visitor);
 }
