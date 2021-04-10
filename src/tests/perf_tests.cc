@@ -4,12 +4,12 @@
 #include <chrono>
 #include <fstream>
 
-#include "../Monitor.h"
-#include "../commands/PrepareCommand.h"
-#include "../commands/SyncCommand.h"
+#include "../commands/prepare_command.h"
+#include "../commands/sync_command.h"
+#include "../monitor.h"
 #include "../utilities/timer.h"
-#include "commands/GenDataCommand.h"
-#include "utilities/TempPath.h"
+#include "commands/gen_data_command.h"
+#include "utilities/temp_path.h"
 
 // with inspiration from
 // https://www.sandordargo.com/blog/2019/04/24/parameterized-testing-with-gtest

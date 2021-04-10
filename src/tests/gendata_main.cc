@@ -3,9 +3,9 @@
 
 #include <vector>
 
-#include "../Monitor.h"
-#include "../commands/impl/CommandImpl.h"
-#include "commands/GenDataCommand.h"
+#include "../commands/impl/command_impl.h"
+#include "../monitor.h"
+#include "commands/gen_data_command.h"
 
 DEFINE_string(command, "", "command to execute");                // NOLINT
 DEFINE_string(output_path, ".", "output directory");             // NOLINT

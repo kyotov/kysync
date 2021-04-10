@@ -2,7 +2,7 @@
 
 #include <glog/logging.h>
 
-#include "../checksums/StrongChecksum.h"
+#include "../checksums/strong_checksum.h"
 
 namespace kysync {
 

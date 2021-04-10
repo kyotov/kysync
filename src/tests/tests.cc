@@ -5,17 +5,17 @@
 #include <filesystem>
 #include <fstream>
 
-#include "../Config.h"
-#include "../checksums/StrongChecksum.h"
-#include "../checksums/wcs.h"
-#include "../commands/PrepareCommand.h"
-#include "../commands/SyncCommand.h"
-#include "../commands/impl/PrepareCommandImpl.h"
-#include "../commands/impl/SyncCommandImpl.h"
-#include "../readers/FileReader.h"
-#include "../readers/MemoryReader.h"
-#include "ExpectationCheckMetricsVisitor.h"
-#include "utilities/TempPath.h"
+#include "../checksums/strong_checksum.h"
+#include "../checksums/weak_checksum.h"
+#include "../commands/impl/prepare_command_impl.h"
+#include "../commands/impl/sync_command_impl.h"
+#include "../commands/prepare_command.h"
+#include "../commands/sync_command.h"
+#include "../config.h"
+#include "../readers/file_reader.h"
+#include "../readers/memory_reader.h"
+#include "expectation_check_metrics_visitor.h"
+#include "utilities/temp_path.h"
 
 namespace kysync {
 

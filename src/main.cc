@@ -3,9 +3,9 @@
 
 #include <fstream>
 
-#include "Monitor.h"
-#include "commands/PrepareCommand.h"
-#include "commands/SyncCommand.h"
+#include "commands/prepare_command.h"
+#include "commands/sync_command.h"
+#include "monitor.h"
 
 namespace kysync {
 

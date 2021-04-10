@@ -60,17 +60,17 @@ add_library(main STATIC
         src/utilities/parallelize.cc
         src/utilities/streams.cc
         src/utilities/timer.cc
-        src/readers/Reader.cc
-        src/readers/MemoryReader.cc
-        src/readers/FileReader.cc
-        src/readers/HttpReader.cc
-        src/commands/Command.cc
-        src/commands/PrepareCommand.cc
-        src/commands/SyncCommand.cc
-        src/checksums/wcs.cc
-        src/checksums/StrongChecksum.cc
-        src/checksums/StrongChecksumBuilder.cc
-        src/Monitor.cc)
+        src/readers/reader.cc
+        src/readers/memory_reader.cc
+        src/readers/file_reader.cc
+        src/readers/http_reader.cc
+        src/commands/command.cc
+        src/commands/prepare_command.cc
+        src/commands/sync_command.cc
+        src/checksums/weak_checksum.cc
+        src/checksums/strong_checksum.cc
+        src/checksums/strong_checksum_builder.cc
+        src/monitor.cc)
 target_link_libraries(main
         zstd::libzstd_static
         xxHash::xxhash
@@ -84,15 +84,15 @@ target_link_libraries(kysync
         main)
 
 add_executable(gendata
-        src/tests/commands/GenDataCommand.cc
+        src/tests/commands/gen_data_command.cc
         src/tests/gendata_main.cc)
 target_link_libraries(gendata
         main)
 
 add_executable(tests
-        src/tests/utilities/TempPath.cc
+        src/tests/utilities/temp_path.cc
         src/tests/tests.cc
-        src/tests/ExpectationCheckMetricsVisitor.cc)
+        src/tests/expectation_check_metrics_visitor.cc)
 target_link_libraries(tests
         main
         GTest::gtest
@@ -100,8 +100,8 @@ target_link_libraries(tests
 
 add_executable(perf_tests
         src/tests/perf_tests.cc
-        src/tests/utilities/TempPath.cc
-        src/tests/commands/GenDataCommand.cc)
+        src/tests/utilities/temp_path.cc
+        src/tests/commands/gen_data_command.cc)
 target_link_libraries(perf_tests
         main
         GTest::gtest
