@@ -50,8 +50,6 @@ public:
     context_.pop();
   }
 
-  using S = std::stringstream;
-
   void Update() {
     auto& phase = *metrics_["//progress_phase_"];
     auto& total_bytes = *metrics_["//progress_total_bytes_"];
