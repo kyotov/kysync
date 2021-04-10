@@ -71,6 +71,7 @@ public:
        << " | " << std::setw(3) << percent << "%"                  //
        << " | " << std::setw(5) << total_ms / 1e3 << "s total";
     std::cout << ss.str() << "\t\r";
+    std::cout.flush();
 
     if (metrics_["//progress_next_phase_"]->load() !=
         metrics_["//progress_phase_"]->load())
