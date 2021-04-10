@@ -19,9 +19,9 @@ class PrepareCommand::Impl final {
 
   const PrepareCommand& kParent;
 
-  fs::path input_filename_;
-  fs::path output_ksync_filename_;
-  fs::path output_compressed_filename_;
+  const fs::path kInputFilename;
+  const fs::path kOutputKsyncFilename;
+  const fs::path kOutputCompressedFilename;
   const size_t kBlockSize;
 
   std::vector<uint32_t> weak_checksums_;

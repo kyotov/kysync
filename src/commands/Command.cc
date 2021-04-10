@@ -21,6 +21,22 @@ Command::~Command() = default;
 void Command::Accept(MetricVisitor &visitor) { return impl_->Accept(visitor); }
 
 void Command::StartNextPhase(MetricValueType size) const {
+  /*
+   * Requests moving to the next phase of a command.
+   * This can be done unilaterally by the command, *or* if progress monitoring
+   * is enabled, it can be controlled from outside.
+   *
+   * Progress monitoring is enabled, when the Command's Run method is executed
+   * by a Monitor. In such context the command merely requests to move to the
+   * next phase by incrementing the progress_next_phase_ metric. The monitor
+   * then knows to collect statistics of the current phase and allow the command
+   * to progress to the next phase (by incrementing progress_phase_). These
+   * statistics collected by the monitor can be used for better UX on the
+   * command line as well as for studying performance aspects of the
+   * implementation.
+   *
+   * In the absence of a Monitor, the command increments progress_phase_ itself.
+   */
   impl_->progress_next_phase_++;
   if (impl_->progress_monitor_enabled_ != 0) {
     while (impl_->progress_next_phase_ != impl_->progress_phase_.load()) {

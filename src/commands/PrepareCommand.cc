@@ -21,20 +21,10 @@ PrepareCommand::Impl::Impl(
     fs::path output_compressed_filename,
     size_t block_size)
     : kParent(parent),
-      input_filename_(std::move(input_filename)),
-      output_ksync_filename_(std::move(output_ksync_filename)),
-      output_compressed_filename_(std::move(output_compressed_filename)),
+      kInputFilename(std::move(input_filename)),
+      kOutputKsyncFilename(std::move(output_ksync_filename)),
+      kOutputCompressedFilename(std::move(output_compressed_filename)),
       kBlockSize(block_size) {}
-//  CHECK(input_) << "error reading from " << input_filename;
-//
-//  auto output_ksync =
-//      std::ofstream(output_ksync_, std::ios::binary);
-//  CHECK(output_ksync) << "unable to write to " << output_ksync_filename;
-//
-//  auto output_compressed =
-//      std::ofstream(output_compressed_, std::ios::binary);
-//  CHECK(output_compressed) << "unable to write to "
-//                           << output_compressed_filename;
 
 int PrepareCommand::Impl::Run() {
   auto unique_buffer = std::make_unique<char[]>(kBlockSize);
@@ -45,18 +35,17 @@ int PrepareCommand::Impl::Run() {
       std::make_unique<char[]>(compression_buffer_size);
   auto compression_buffer = unique_compression_buffer.get();
 
-  auto input = std::ifstream(input_filename_, std::ios::binary);
-  CHECK(input) << "error reading from " << input_filename_;
+  auto input = std::ifstream(kInputFilename, std::ios::binary);
+  CHECK(input) << "error reading from " << kInputFilename;
 
-  auto output = std::ofstream(output_compressed_filename_, std::ios::binary);
-  CHECK(output) << "unable to write to " << output_compressed_filename_;
+  auto output = std::ofstream(kOutputCompressedFilename, std::ios::binary);
+  CHECK(output) << "unable to write to " << kOutputCompressedFilename;
 
-  const size_t kDataSize = fs::file_size(input_filename_);
+  const size_t kDataSize = fs::file_size(kInputFilename);
   kParent.StartNextPhase(kDataSize);
 
   StrongChecksumBuilder hash;
 
-  input.seekg(0);
   while (auto count = input.read(buffer, kBlockSize).gcount()) {
     memset(buffer + count, 0, kBlockSize - count);
 
@@ -81,8 +70,8 @@ int PrepareCommand::Impl::Run() {
 
   // produce the ksync metadata output
 
-  auto output_ksync = std::ofstream(output_ksync_filename_, std::ios::binary);
-  CHECK(output_ksync) << "unable to write to " << output_ksync_filename_;
+  auto output_ksync = std::ofstream(kOutputKsyncFilename, std::ios::binary);
+  CHECK(output_ksync) << "unable to write to " << kOutputKsyncFilename;
 
   kParent.StartNextPhase(1);
 

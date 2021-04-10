@@ -20,13 +20,13 @@ DEFINE_string(  // NOLINT
     output_compressed_filename,
     "",
     "output compressed file");
-DEFINE_string(output_filename, "", "output file");  // NOLINT
-DEFINE_string(data_uri, "", "data uri");            // NOLINT
-DEFINE_string(metadata_uri, "", "metadata uri");    // NOLINT
-DEFINE_string(seed_data_uri, "", "seed data uri");  // NOLINT
-DEFINE_uint32(block_size, 1024, "block size");      // NOLINT
-DEFINE_uint32(threads, 32, "number of threads");    // NOLINT
-DEFINE_bool(compression, true, "use compression");  // NOLINT
+DEFINE_string(output_filename, "", "output file");      // NOLINT
+DEFINE_string(data_uri, "", "data uri");                // NOLINT
+DEFINE_string(metadata_uri, "", "metadata uri");        // NOLINT
+DEFINE_string(seed_data_uri, "", "seed data uri");      // NOLINT
+DEFINE_uint32(block_size, 1024, "block size");          // NOLINT
+DEFINE_uint32(threads, 32, "number of threads");        // NOLINT
+DEFINE_bool(use_compression, true, "use compression");  // NOLINT
 
 }  // namespace kysync
 
@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
           !FLAGS_seed_data_uri.empty() ? FLAGS_seed_data_uri
                                        : "file://" + FLAGS_input_filename,
           FLAGS_output_filename,
-          !FLAGS_compression,
+          !FLAGS_use_compression,
           FLAGS_threads);
 
       return Monitor(command).Run();

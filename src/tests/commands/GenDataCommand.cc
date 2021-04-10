@@ -55,13 +55,13 @@ GenDataCommand::GenDataCommand(
 
 GenDataCommand::~GenDataCommand() noexcept = default;
 
-using R = std::default_random_engine;
-using U = R::result_type;
+using RandomEngine = std::default_random_engine;
+using RandomValueType = RandomEngine::result_type;
 
-std::vector<U> GenVec(size_t size, R &random) {
-  auto result = std::vector<U>();
-  for (size_t i = 0; i < size; i += sizeof(U)) {
-    result.push_back(random());
+std::vector<RandomValueType> GenVec(size_t size, RandomEngine &random_engine) {
+  auto result = std::vector<RandomValueType>();
+  for (size_t i = 0; i < size; i += sizeof(RandomValueType)) {
+    result.push_back(random_engine());
   }
   return result;
 }
@@ -75,7 +75,7 @@ void GenDataCommand::Impl::GenChunk(int id, size_t beg, size_t end) {
   std::fstream seed_data_stream(kSeedData, mode);
   seed_data_stream.seekp(beg);
 
-  auto random = R(id);
+  auto random = RandomEngine(id);
 
   for (size_t i = beg; i < end; i += kFragmentSize) {
     auto diff_offset = random() % (kFragmentSize - kDiffSize + 1);
@@ -89,7 +89,7 @@ void GenDataCommand::Impl::GenChunk(int id, size_t beg, size_t end) {
     std::copy(
         v_diff.begin(),
         v_diff.end(),
-        v_data.begin() + diff_offset / sizeof(U));
+        v_data.begin() + diff_offset / sizeof(RandomValueType));
     s = StreamWrite(seed_data_stream, v_data, std::min(kSeedDataSize, end) - i);
     kParent.AdvanceProgress(s);
   }

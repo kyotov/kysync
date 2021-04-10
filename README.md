@@ -10,7 +10,7 @@ there is a rough list of remaining items to do [here](todo.md)
 
 The below experiments use 128 threads on:
 
-* Processor Intel(R) Core(TM) i9-7940X CPU @ 3.10GHz, 3096 Mhz, 14 Core(s), 28 Logical Processor(s)
+* Processor Intel(RandomEngine) Core(TM) i9-7940X CPU @ 3.10GHz, 3096 Mhz, 14 Core(s), 28 Logical Processor(s)
 * BaseBoard Product TUF X299 MARK 2
 * Samsung SSD 970 EVO 2TB
 
