@@ -119,6 +119,7 @@ add_test(
 
 set_tests_properties(
         tests
+        performance_tests
         PROPERTIES
         ENVIRONMENT TEST_DATA_DIR=${CMAKE_SOURCE_DIR}/test_data
 )
