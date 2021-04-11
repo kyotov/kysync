@@ -57,33 +57,52 @@ find_package(httplib REQUIRED NO_MODULE PATHS ${CMAKE_PREFIX_PATH}/CMake/httplib
 find_package(zstd REQUIRED NO_MODULE)
 
 add_library(main STATIC
-        src/readers/Reader.cc
-        src/readers/MemoryReader.cc
-        src/readers/FileReader.cc
-        src/readers/HttpReader.cc
-        src/commands/Command.cc
-        src/commands/PrepareCommand.cc
-        src/commands/SyncCommand.cc
-        src/checksums/wcs.cc
-        src/checksums/StrongChecksum.cc
-        src/checksums/StrongChecksumBuilder.cc
-        src/Monitor.cc)
+        src/utilities/parallelize.cc
+        src/utilities/streams.cc
+        src/utilities/timer.cc
+        src/readers/reader.cc
+        src/readers/memory_reader.cc
+        src/readers/file_reader.cc
+        src/readers/http_reader.cc
+        src/commands/command.cc
+        src/commands/prepare_command.cc
+        src/commands/sync_command.cc
+        src/checksums/weak_checksum.cc
+        src/checksums/strong_checksum.cc
+        src/checksums/strong_checksum_builder.cc
+        src/monitor.cc)
 target_link_libraries(main
         zstd::libzstd_static
         xxHash::xxhash
         httplib::httplib
-        glog::glog)
+        glog::glog
+        gflags)
 
 add_executable(kysync
         src/main.cc)
 target_link_libraries(kysync
-        main
-        gflags)
+        main)
+
+add_executable(gendata
+        src/tests/commands/gen_data_command.cc
+        src/tests/gendata_main.cc)
+target_link_libraries(gendata
+        main)
 
 add_executable(tests
-        src/tests.cc
-        src/metrics/ExpectationCheckMetricsVisitor.cc)
+        src/tests/utilities/temp_path.cc
+        src/tests/tests.cc
+        src/tests/expectation_check_metrics_visitor.cc)
 target_link_libraries(tests
+        main
+        GTest::gtest
+        GTest::gtest_main)
+
+add_executable(perf_tests
+        src/tests/perf_tests.cc
+        src/tests/utilities/temp_path.cc
+        src/tests/commands/gen_data_command.cc)
+target_link_libraries(perf_tests
         main
         GTest::gtest
         GTest::gtest_main)
@@ -91,6 +110,11 @@ target_link_libraries(tests
 add_test(
         NAME tests
         COMMAND tests
+)
+
+add_test(
+        NAME performance_tests
+        COMMAND perf_tests
 )
 
 set_tests_properties(
