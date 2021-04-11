@@ -2,9 +2,7 @@
 
 namespace kysync {
 
-Timestamp Now() {
-  return std::chrono::high_resolution_clock::now();
-}
+Timestamp Now() { return std::chrono::high_resolution_clock::now(); }
 
 size_t DeltaMs(Timestamp beg, Timestamp end) {
   return static_cast<size_t>(

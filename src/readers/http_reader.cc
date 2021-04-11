@@ -6,18 +6,18 @@
 namespace kysync {
 
 class HttpReader::Impl {
-  const std::string host_;
-  const std::string path_;
+  const std::string kHost;
+  const std::string kPath;
   httplib::Client cli_;
 
 public:
   explicit Impl(std::string host, std::string path)
-      : host_(std::move(host)),
-        path_(std::move(path)),
-        cli_(host_.c_str()) {}
+      : kHost(std::move(host)),
+        kPath(std::move(path)),
+        cli_(kHost.c_str()) {}
 
   [[nodiscard]] size_t GetSize() {
-    auto res = cli_.Head(path_.c_str());
+    auto res = cli_.Head(kPath.c_str());
 
     CHECK(res->has_header("Content-Length"));
     auto size = res->get_header_value("Content-Length");
@@ -30,7 +30,7 @@ public:
     auto end_offset = offset + size - 1;
 
     auto range = httplib::make_range_header({{beg_offset, end_offset}});
-    auto res = cli_.Get(path_.c_str(), {range});
+    auto res = cli_.Get(kPath.c_str(), {range});
 
     CHECK_EQ(res.error(), httplib::Success);
     CHECK_EQ(res->status, 206) << beg_offset << "-" << end_offset;

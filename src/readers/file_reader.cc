@@ -7,15 +7,15 @@ namespace kysync {
 namespace fs = std::filesystem;
 
 class FileReader::Impl {
-  const fs::path path_;
+  const fs::path kPath;
   std::ifstream data_;
 
 public:
-  explicit Impl(fs::path path) : path_(std::move(path)) {
-    data_.open(path_, std::ios::binary);
+  explicit Impl(fs::path path) : kPath(std::move(path)) {
+    data_.open(kPath, std::ios::binary);
   }
 
-  [[nodiscard]] size_t GetSize() const { return fs::file_size(path_); }
+  [[nodiscard]] size_t GetSize() const { return fs::file_size(kPath); }
 
   auto Read(void *buffer, size_t offset, size_t size) {
     // the seekg was failing if the eof bit was set... :(

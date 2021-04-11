@@ -32,7 +32,7 @@ class PrepareCommand::Impl final {
   Metric compressed_bytes_;
 
   Impl(
-      const PrepareCommand &parent,
+      const PrepareCommand& parent,
       fs::path input_filename,
       fs::path output_ksync_filename,
       fs::path output_compressed_filename,

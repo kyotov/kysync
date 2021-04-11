@@ -10,7 +10,7 @@ namespace kysync {
 class MemoryReader final : public Reader {
   PIMPL;
   NO_COPY_OR_MOVE(MemoryReader);
-  
+
 public:
   MemoryReader(const void *buffer, size_t size);
 

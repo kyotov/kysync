@@ -28,12 +28,12 @@ PrepareCommand::Impl::Impl(
 
 int PrepareCommand::Impl::Run() {
   auto unique_buffer = std::make_unique<char[]>(kBlockSize);
-  auto buffer = unique_buffer.get();
+  auto *buffer = unique_buffer.get();
 
   auto compression_buffer_size = ZSTD_compressBound(kBlockSize);
   auto unique_compression_buffer =
       std::make_unique<char[]>(compression_buffer_size);
-  auto compression_buffer = unique_compression_buffer.get();
+  auto *compression_buffer = unique_compression_buffer.get();
 
   auto input = std::ifstream(kInputFilename, std::ios::binary);
   CHECK(input) << "error reading from " << kInputFilename;

@@ -21,7 +21,6 @@ struct GenDataCommand::Impl {
   const size_t kDataSize;
   const size_t kSeedDataSize;
   const size_t kFragmentSize;
-  const uint32_t kSimilarity;
   const size_t kDiffSize;
 
   void GenChunk(int id, size_t beg, size_t end);
@@ -41,7 +40,6 @@ GenDataCommand::GenDataCommand(
           .kDataSize = data_size,
           .kSeedDataSize = seed_data_size != -1ULL ? seed_data_size : data_size,
           .kFragmentSize = fragment_size,
-          .kSimilarity = similarity,
           .kDiffSize = fragment_size * (100 - similarity) / 100}) {
   CHECK(fs::is_directory(impl_->kPath));
   CHECK_LE(similarity, 100);

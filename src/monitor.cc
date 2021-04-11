@@ -22,7 +22,7 @@ public:
     Metric ms;
   };
 
-  std::list<Phase> phases;
+  std::list<Phase> phases_;
 
   std::vector<std::string> metric_keys_;
   std::unordered_map<std::string, Metric*> metrics_;
@@ -30,8 +30,6 @@ public:
   std::stack<std::string> context_;
 
   Command& command_;
-
-  std::string last_update_;
 
   Timestamp ts_total_begin_;
   Timestamp ts_phase_begin_;
@@ -79,21 +77,21 @@ public:
       if (phase > 0) {
         LOG(INFO) << ss.str();
 
-        phases.emplace_back();
-        phases.back().bytes = processed_bytes.load();
-        phases.back().ms = DeltaMs(ts_phase_begin_, now);
+        phases_.emplace_back();
+        phases_.back().bytes = processed_bytes.load();
+        phases_.back().ms = DeltaMs(ts_phase_begin_, now);
 
         auto s = std::stringstream();
         s << "//phases/" << phase << "/bytes";
         auto k_bytes = s.str();
         metric_keys_.push_back(k_bytes);
-        metrics_[k_bytes] = &phases.back().bytes;
+        metrics_[k_bytes] = &phases_.back().bytes;
 
         s = std::stringstream();
         s << "//phases/" << phase << "/ms";
         auto k_ms = s.str();
         metric_keys_.push_back(k_ms);
-        metrics_[k_ms] = &phases.back().ms;
+        metrics_[k_ms] = &phases_.back().ms;
       }
       phase++;
       ts_phase_begin_ = now;
