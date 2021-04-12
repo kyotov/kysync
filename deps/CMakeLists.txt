@@ -14,10 +14,6 @@ function(install NAME GIT_REPO GIT_TAG)
             GIT_TAG ${GIT_TAG}
             PREFIX ${CMAKE_BINARY_DIR}
 
-            #            BUILD_COMMAND ${CMAKE_COMMAND} -E echo "Starting $<CONFIG> build"
-            #            COMMAND       ${CMAKE_COMMAND} --build <BINARY_DIR> --config $<CONFIG> -j
-            #            COMMAND       ${CMAKE_COMMAND} -E echo "$<CONFIG> build complete"
-
             ${ARGN}
             CMAKE_ARGS
             ##
