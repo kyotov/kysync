@@ -15,6 +15,8 @@ endif ()
 #       e.g. on Windows:
 #       set_target_properties(kysync PROPERTIES COMPILE_FLAGS /GL)
 #       set_target_properties(kysync PROPERTIES LINK_FLAGS /LTCG)
+# TODO: figure out libraries
+#       https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160
 
 #
 # see https://cliutils.gitlab.io/modern-cmake/chapters/basics/variables.html
@@ -41,7 +43,7 @@ if ((NOT EXISTS ${DEPS_DIR}) OR (${FORCE_REFRESH_DEPS}))
             #       * rerun fixed it...
             #       * but if you remove build/CMakeCache.txt then it is not fixed...
             #       dumped the environment before the call and noticed difference in CC/CXX. made it the same. passed.
-            COMMAND ${CMAKE_COMMAND} -E env --unset=CC --unset=CXX ${CMAKE_COMMAND} --build ${DEPS_DIR} --config ${CMAKE_BUILD_TYPE} -j
+            COMMAND ${CMAKE_COMMAND} -E env --unset=CC --unset=CXX ${CMAKE_COMMAND} --build ${DEPS_DIR} --config ${CMAKE_BUILD_TYPE}
     )
 else ()
     message("${DEPS_DIR} found, skipping deps install...")

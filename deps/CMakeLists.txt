@@ -5,22 +5,6 @@ project(deps)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(BUILD_SHARED_LIBS FALSE)
 
-#set(variables
-#        CMAKE_C_FLAGS_DEBUG
-#        CMAKE_C_FLAGS_MINSIZEREL
-#        CMAKE_C_FLAGS_RELEASE
-#        CMAKE_C_FLAGS_RELWITHDEBINFO
-#        CMAKE_CXX_FLAGS_DEBUG
-#        CMAKE_CXX_FLAGS_MINSIZEREL
-#        CMAKE_CXX_FLAGS_RELEASE
-#        CMAKE_CXX_FLAGS_RELWITHDEBINFO
-#        )
-#message(STATUS "Initial build flags:")
-#foreach(variable ${variables})
-#    message(STATUS "  '${variable}': ${${variable}}")
-#endforeach()
-#message(STATUS "")
-
 include(ExternalProject)
 
 function(install NAME GIT_REPO GIT_TAG)
@@ -87,11 +71,12 @@ IF (WIN32)
             GIT_REPOSITORY https://github.com/openssl/openssl.git
             GIT_TAG OpenSSL_1_1_1-stable
             PREFIX ${CMAKE_BINARY_DIR}
-            DEPENDS perl
+            DEPENDS perl zlib
 
             CONFIGURE_COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> <INSTALL_DIR>/src/perl/perl/bin/perl Configure VC-WIN64A-masm zlib no-shared no-zlib-dynamic threads --prefix=<INSTALL_DIR>/install --openssldir=<INSTALL_DIR>/install /MT
             COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> <INSTALL_DIR>/src/perl/perl/bin/perl -pi.orig -e s/ZLIB1/zlib.lib/g; makefile
 
+            # TODO: figure out if we can't put some include directory...
             COMMAND ${CMAKE_COMMAND} -E copy <INSTALL_DIR>/install/include/zlib.h <SOURCE_DIR>/zlib.h
             COMMAND ${CMAKE_COMMAND} -E copy <INSTALL_DIR>/install/include/zconf.h <SOURCE_DIR>/zconf.h
             # COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/zlib.lib <INSTALL_DIR>/install/lib/zlib.lib
@@ -101,19 +86,6 @@ IF (WIN32)
 
             INSTALL_COMMAND ${CMAKE_COMMAND} -E chdir <SOURCE_DIR> nmake install_dev
     )
-
-    #    ExternalProject_Add(
-    #            openssl
-    #            URL https://github.com/CristiFati/Prebuilt-Binaries/raw/master/OpenSSL/v1.1.1/OpenSSL-1.1.1i-Win-pc064.zip
-    #            PREFIX ${CMAKE_BINARY_DIR}
-    #            CONFIGURE_COMMAND ""
-    #            BUILD_COMMAND ""
-    #            INSTALL_COMMAND ${CMAKE_COMMAND} -E echo installing from `<SOURCE_DIR>/OpenSSL/1.1.1i` to `<INSTALL_DIR>/install`
-    #            COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/include <INSTALL_DIR>/install/include
-    #            COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/OpenSSL/1.1.1i/lib/libssl_static.lib <INSTALL_DIR>/install/lib/ssl.lib
-    #            COMMAND ${CMAKE_COMMAND} -E copy <SOURCE_DIR>/OpenSSL/1.1.1i/lib/libcrypto_static.lib <INSTALL_DIR>/install/lib/crypto.lib
-    #            COMMAND ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR>/OpenSSL/1.1.1i/bin <INSTALL_DIR>/install/bin
-    #    )
 ELSE ()
     ExternalProject_Add(
             openssl
