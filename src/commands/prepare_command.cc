@@ -1,6 +1,8 @@
 #include "prepare_command.h"
 
 #include <glog/logging.h>
+#include <google/protobuf/util/delimited_message_util.h>
+#include <src/commands/pb/header.pb.h>
 #include <zstd.h>
 
 #include <cinttypes>
@@ -75,23 +77,13 @@ int PrepareCommand::Impl::Run() {
 
   kParent.StartNextPhase(1);
 
-  char header[1024];
-
-  sprintf(
-      header,
-      "version: 1\n"
-      "size: %" PRIu64
-      "\n"
-      "block: %" PRIu64
-      "\n"
-      "hash: %s\n"
-      "eof: 1\n",
-      kDataSize,
-      kBlockSize,
-      hash.Digest().ToString().c_str());
-
-  output_ksync.write(header, strlen(header));
-  kParent.AdvanceProgress(strlen(header));
+  auto header = Header();
+  header.set_version(2);
+  header.set_size(kDataSize);
+  header.set_block_size(kBlockSize);
+  header.set_hash(hash.Digest().ToString());
+  google::protobuf::util::SerializeDelimitedToOstream(header, &output_ksync);
+  kParent.AdvanceProgress(header.ByteSizeLong());
 
   kParent.AdvanceProgress(StreamWrite(output_ksync, weak_checksums_));
   kParent.AdvanceProgress(StreamWrite(output_ksync, strong_checksums_));

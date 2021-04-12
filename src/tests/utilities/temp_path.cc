@@ -18,6 +18,7 @@ TempPath::TempPath(bool keep, const std::filesystem::path &path)
   CHECK(!fs::exists(impl_->kPath))
       << "temporary path " << impl_->kPath << "already exists";
   fs::create_directories(impl_->kPath);
+  LOG(INFO) << "using temporary path " << impl_->kPath;
 }
 
 TempPath::~TempPath() {

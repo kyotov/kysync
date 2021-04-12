@@ -3,6 +3,9 @@ project(ksync)
 
 set(CMAKE_CXX_STANDARD 20)
 
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+set(BUILD_SHARED_LIBS FALSE)
+
 if (CMAKE_BUILD_TYPE STREQUAL "")
     message("INFO: CMAKE_BUILD_TYPE not specified, assuming Debug")
     set(CMAKE_BUILD_TYPE Debug)
@@ -55,8 +58,27 @@ find_package(gflags REQUIRED NO_MODULE)
 find_package(glog REQUIRED NO_MODULE)
 find_package(httplib REQUIRED NO_MODULE PATHS ${CMAKE_PREFIX_PATH}/CMake/httplib)
 find_package(zstd REQUIRED NO_MODULE)
+find_package(protobuf REQUIRED NO_MODULE)
+
+if (WIN32)
+    add_link_options("/ignore:4099")
+endif ()
+
+set(PROTO_DIR ${CMAKE_BINARY_DIR}/proto)
+execute_process(
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${PROTO_DIR}
+)
+include_directories(${PROTO_DIR})
+
+protobuf_generate(
+        PROTOS src/commands/pb/header.proto
+        OUT_VAR HEADER_PROTO
+        LANGUAGE cpp
+        PROTOC_OUT_DIR ${PROTO_DIR}
+)
 
 add_library(main STATIC
+        ${HEADER_PROTO}
         src/utilities/parallelize.cc
         src/utilities/streams.cc
         src/utilities/timer.cc
@@ -72,9 +94,13 @@ add_library(main STATIC
         src/checksums/strong_checksum_builder.cc
         src/monitor.cc)
 target_link_libraries(main
+        ${Protobuf_LIBRARIES}
+        protobuf::libprotobuf-lite
+        protobuf::libprotobuf
         zstd::libzstd_static
         xxHash::xxhash
         httplib::httplib
+#        "${CMAKE_PREFIX_PATH}/lib/zlib.lib"
         glog::glog
         gflags)
 
