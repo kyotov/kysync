@@ -1,6 +1,8 @@
 #include "temp_path.h"
 
+#include <chrono>
 #include <cstdlib>
+#include <string>
 
 #include "glog/logging.h"
 
@@ -13,8 +15,16 @@ struct TempPath::Impl {
   const fs::path kPath;
 };
 
-TempPath::TempPath(bool keep, const std::filesystem::path &path)
-    : impl_(new Impl{.kKeep = keep, .kPath = path / tmpnam(nullptr)}) {
+static fs::path GetUniquePath(const fs::path &root) {
+  using namespace std::chrono;
+  auto now = high_resolution_clock::now();
+  auto ts = duration_cast<nanoseconds>(now.time_since_epoch()).count();
+
+  return root / std::to_string(ts);
+}
+
+TempPath::TempPath(bool keep, const fs::path &path)
+    : impl_(new Impl{.kKeep = keep, .kPath = GetUniquePath(path)}) {
   CHECK(!fs::exists(impl_->kPath))
       << "temporary path " << impl_->kPath << "already exists";
   fs::create_directories(impl_->kPath);
