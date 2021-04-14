@@ -1,9 +1,5 @@
 #include "temp_path.h"
 
-#include <chrono>
-#include <cstdlib>
-#include <string>
-
 #include "glog/logging.h"
 
 namespace kysync {
@@ -20,7 +16,7 @@ static fs::path GetUniquePath(const fs::path &root) {
   auto now = high_resolution_clock::now();
   auto ts = duration_cast<nanoseconds>(now.time_since_epoch()).count();
 
-  return root / std::to_string(ts);
+  return root / ("kysync_test_" + std::to_string(ts));
 }
 
 TempPath::TempPath(bool keep, const fs::path &path)
