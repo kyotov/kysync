@@ -14,7 +14,8 @@ class TempPath {
 public:
   explicit TempPath(
       bool keep = false,
-      std::filesystem::path root = std::filesystem::temp_directory_path());
+      const std::filesystem::path &path =
+          std::filesystem::temp_directory_path());
 
   ~TempPath();
 
