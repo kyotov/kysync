@@ -6,32 +6,32 @@ namespace kysync {
 
 namespace fs = std::filesystem;
 
-struct TempPath::Impl {
-  const bool kKeep;
-  const fs::path kPath;
-};
+TempPath::TempPath() : TempPath(false, std::filesystem::temp_directory_path()) {
+  // No-op
+}
 
-static fs::path GetUniquePath(const fs::path &root) {
+std::atomic<uint32_t> TempPath::counter_ = 0;
+
+TempPath::TempPath(bool keep, const fs::path &path) {
+  keep_ = keep;
   using namespace std::chrono;
   auto now = high_resolution_clock::now();
   auto ts = duration_cast<nanoseconds>(now.time_since_epoch()).count();
 
-  return root / ("kysync_test_" + std::to_string(ts));
-}
+  full_path_ =
+      path / ("kysync_test_" + std::to_string(ts) + "_" + std::to_string(counter_.fetch_add(1)));
 
-TempPath::TempPath(bool keep, const fs::path &path)
-    : impl_(new Impl{.kKeep = keep, .kPath = GetUniquePath(path)}) {
-  CHECK(!fs::exists(impl_->kPath))
-      << "temporary path " << impl_->kPath << "already exists";
-  fs::create_directories(impl_->kPath);
+  CHECK(!fs::exists(full_path_))
+      << "temporary path " << full_path_ << "already exists";
+  fs::create_directories(full_path_);
 }
 
 TempPath::~TempPath() {
-  if (!impl_->kKeep) {
-    fs::remove_all(impl_->kPath);
+  if (!keep_) {
+    fs::remove_all(full_path_);
   }
 }
 
-std::filesystem::path TempPath::GetPath() const { return impl_->kPath; }
+std::filesystem::path TempPath::GetPath() const { return full_path_; }
 
 }  // namespace kysync
