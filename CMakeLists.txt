@@ -3,68 +3,16 @@ project(ksync)
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-set(BUILD_SHARED_LIBS FALSE)
+include(kydeps/KyDeps.cmake)
+KyDeps(#CACHED
+        DEPENDS gflags glog GTest xxHash httplib protobuf zstd
+        EXPECTED_SHA256 f4a3efc5d13a420d75aa64d319ae9ef14fe26420872bd86664666e05a323cf0d)
 
-if (CMAKE_BUILD_TYPE STREQUAL "")
-    message("INFO: CMAKE_BUILD_TYPE not specified, assuming Debug")
-    set(CMAKE_BUILD_TYPE Debug)
-endif ()
-
-# TODO: figure out how to make sure we have enabled IPO/WPO/LTO
-#       e.g. on Windows:
-#       set_target_properties(kysync PROPERTIES COMPILE_FLAGS /GL)
-#       set_target_properties(kysync PROPERTIES LINK_FLAGS /LTCG)
 # TODO: figure out libraries
 #       https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160
 
-#
-# see https://cliutils.gitlab.io/modern-cmake/chapters/basics/variables.html
-#
-option(FORCE_REFRESH_DEPS "force refresh reps" ON)
-
-set(DEPS_DIR ${CMAKE_BINARY_DIR}/deps)
-message("INFO: dependencies will be installed in ${DEPS_DIR}")
-
-if ((NOT EXISTS ${DEPS_DIR}) OR (${FORCE_REFRESH_DEPS}))
-    message("${DEPS_DIR} not found, installing deps...")
-
-    execute_process(
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${DEPS_DIR}
-    )
-    execute_process(
-            COMMAND ${CMAKE_COMMAND} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -B ${DEPS_DIR} -S ${CMAKE_SOURCE_DIR}/deps -G "${CMAKE_GENERATOR}"
-    )
-    execute_process(
-            ##
-            #FIXME: this started failing on mac first (wihtout removing CC and CXX from the environment)
-            #       it then started failing on linux too (at least on github ci)
-            #       symptoms:
-            #       * rerun fixed it...
-            #       * but if you remove build/CMakeCache.txt then it is not fixed...
-            #       dumped the environment before the call and noticed difference in CC/CXX. made it the same. passed.
-            COMMAND ${CMAKE_COMMAND} -E env --unset=CC --unset=CXX ${CMAKE_COMMAND} --build ${DEPS_DIR} --config ${CMAKE_BUILD_TYPE}
-    )
-else ()
-    message("${DEPS_DIR} found, skipping deps install...")
-endif ()
-
-set(CMAKE_PREFIX_PATH ${DEPS_DIR}/install)
-
 include(CTest)
 enable_testing()
-
-find_package(GTest REQUIRED NO_MODULE)
-find_package(xxHash REQUIRED NO_MODULE)
-find_package(gflags REQUIRED NO_MODULE)
-find_package(glog REQUIRED NO_MODULE)
-find_package(httplib REQUIRED NO_MODULE PATHS ${CMAKE_PREFIX_PATH}/CMake/httplib)
-find_package(zstd REQUIRED NO_MODULE)
-find_package(protobuf REQUIRED NO_MODULE)
-
-if (WIN32)
-    add_link_options("/ignore:4099")
-endif ()
 
 set(PROTO_DIR ${CMAKE_BINARY_DIR}/proto)
 execute_process(
@@ -78,6 +26,8 @@ protobuf_generate(
         LANGUAGE cpp
         PROTOC_OUT_DIR ${PROTO_DIR}
 )
+
+find_package(ZLIB REQUIRED)
 
 add_library(main STATIC
         ${HEADER_PROTO}
@@ -101,8 +51,8 @@ target_link_libraries(main
         protobuf::libprotobuf
         zstd::libzstd_static
         xxHash::xxhash
+#        ZLIB::ZLIB
         httplib::httplib
-#        "${CMAKE_PREFIX_PATH}/lib/zlib.lib"
         glog::glog
         gflags)
 
@@ -137,17 +87,14 @@ target_link_libraries(perf_tests
 
 add_test(
         NAME tests
-        COMMAND tests
-)
+        COMMAND tests)
 
 add_test(
         NAME performance_tests
-        COMMAND perf_tests
-)
+        COMMAND perf_tests)
 
 set_tests_properties(
         tests
         performance_tests
         PROPERTIES
-        ENVIRONMENT TEST_DATA_DIR=${CMAKE_SOURCE_DIR}/test_data
-)
+        ENVIRONMENT TEST_DATA_DIR=${CMAKE_SOURCE_DIR}/test_data)
