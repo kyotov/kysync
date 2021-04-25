@@ -11,21 +11,23 @@ KyDeps(#CACHED
 # TODO: figure out libraries
 #       https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160
 
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    add_link_options(-static)
+endif ()
+
 include(CTest)
 enable_testing()
 
 set(PROTO_DIR ${CMAKE_BINARY_DIR}/proto)
 execute_process(
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${PROTO_DIR}
-)
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${PROTO_DIR})
 include_directories(${PROTO_DIR})
 
 protobuf_generate(
         PROTOS src/commands/pb/header.proto
         OUT_VAR HEADER_PROTO
         LANGUAGE cpp
-        PROTOC_OUT_DIR ${PROTO_DIR}
-)
+        PROTOC_OUT_DIR ${PROTO_DIR})
 
 find_package(ZLIB REQUIRED)
 
@@ -51,7 +53,6 @@ target_link_libraries(main
         protobuf::libprotobuf
         zstd::libzstd_static
         xxHash::xxhash
-#        ZLIB::ZLIB
         httplib::httplib
         glog::glog
         gflags)
