@@ -7,7 +7,7 @@ set(kydeps_sha256_Windows 62c50995411e4562fd45b8278959b26fdbc75adf543bbb73589381
 set(kydeps_sha256_Linux d63f15f2be9baa4b65e4336bb2bf81f7481ad4c3438843b695c37e8ce1dd9b92)
 
 include(kydeps/KyDeps.cmake)
-KyDeps(CACHED
+KyDeps(#CACHED
         DEPENDS gflags glog GTest xxHash httplib protobuf zstd
         EXPECTED_SHA256 ${kydeps_sha256_${CMAKE_SYSTEM_NAME}})
 
