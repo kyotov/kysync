@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(kydeps_sha256_Windows 62c50995411e4562fd45b8278959b26fdbc75adf543bbb73589381138785c96e)
 set(kydeps_sha256_Linux d63f15f2be9baa4b65e4336bb2bf81f7481ad4c3438843b695c37e8ce1dd9b92)
+set(kydeps_sha256_Darwin f77e8e928d73e3571cf71c0877abe8a9051eb7897a47ad759b024b3e5a20da4b)
 
 include(kydeps/KyDeps.cmake)
 KyDeps(#CACHED
