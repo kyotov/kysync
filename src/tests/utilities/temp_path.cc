@@ -8,7 +8,7 @@ namespace fs = std::filesystem;
 
 std::atomic<uint32_t> TempPath::counter_ = 0;
 
-std::string GetCurrentTimestampAsString() {
+std::string GetCurrentNanosAsString() {
   using namespace std::chrono;
   auto now = high_resolution_clock::now();
   return std::to_string(
@@ -21,7 +21,7 @@ TempPath::TempPath() : TempPath(false, std::filesystem::temp_directory_path()) {
 
 TempPath::TempPath(bool keep, const fs::path &path) {
   keep_ = keep;
-  full_path_ = path / ("kysync_test_" + GetCurrentTimestampAsString() + "_" +
+  full_path_ = path / ("kysync_test_" + GetCurrentNanosAsString() + "_" +
                        std::to_string(counter_.fetch_add(1)));
 
   CHECK(!fs::exists(full_path_)) 
