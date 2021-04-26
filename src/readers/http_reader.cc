@@ -32,7 +32,7 @@ public:
     auto range = httplib::make_range_header({{beg_offset, end_offset}});
     auto res = cli_.Get(kPath.c_str(), {range});
 
-    CHECK_EQ(res.error(), httplib::Success);
+    CHECK(res.error() == httplib::Error::Success);
     CHECK_EQ(res->status, 206) << beg_offset << "-" << end_offset;
 
     auto count = res->body.size();

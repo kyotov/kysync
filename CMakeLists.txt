@@ -5,8 +5,8 @@ set(CMAKE_CXX_STANDARD 20)
 
 include(kydeps/KyDeps.cmake)
 KyDeps(DEPENDS gflags glog GTest xxHash httplib protobuf zstd
-        DOWNLOAD
-#        UPLOAD
+#        DOWNLOAD
+        UPLOAD
         )
 
 # TODO: figure out libraries

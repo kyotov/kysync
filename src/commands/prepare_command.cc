@@ -98,6 +98,10 @@ PrepareCommand::PrepareCommand(
     const fs::path &output_ksync_filename,
     const fs::path &output_compressed_filename,
     size_t block_size)
+    // FIXME: std::make_unique<Impl>(...) does not work here, supposedly because
+    //        Impl::Impl is private. I don't understand why it is not the same
+    //        as calling the contructor. If we can call the constructor we
+    //        should be able to call make_unique in the same context. Research.
     : impl_(new Impl(
           *this,
           input_filename,
