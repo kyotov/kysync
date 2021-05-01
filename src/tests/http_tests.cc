@@ -3,7 +3,7 @@
 
 #include <fstream>
 
-#include "http/server.h"
+#include "http/http_server.h"
 #include "utilities/temp_path.h"
 
 namespace kysync {
@@ -17,7 +17,7 @@ void WriteFile(const fs::path& path, const std::string& data) {
 
 void CheckRangeGet(
     httplib::Client& client,
-    const std::string &data,
+    const std::string& data,
     int beg,
     int end) {
   auto expected_result = data.substr(beg, end - beg + 1);
@@ -36,17 +36,18 @@ TEST(HttpServer, Test1) {  // NOLINT
   std::string data = "0123456789";
   WriteFile(path.GetPath() / "test.data", data);
 
-  {
-    auto response = client.Get("/test.data");
-    EXPECT_TRUE(response.error() == httplib::Error::Success);
-    EXPECT_EQ(response->body, data);
-  }
+  auto response = client.Get("/test.data");
+  EXPECT_TRUE(response.error() == httplib::Error::Success);
+  EXPECT_EQ(response->body, data);
 
   CheckRangeGet(client, data, 0, 0);
   CheckRangeGet(client, data, 0, 1024);
   CheckRangeGet(client, data, 2, 1024);
   CheckRangeGet(client, data, 2, 4);
   CheckRangeGet(client, data, 0, data.size());
+
+  // TODO: add tests for multiple ranges at the same time
+  // TODO: add tests for ranges that end on -1
 }
 
 }  // namespace kysync

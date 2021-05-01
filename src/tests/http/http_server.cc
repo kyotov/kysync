@@ -1,4 +1,4 @@
-#include "server.h"
+#include "http_server.h"
 
 #include <httplib.h>
 
@@ -17,8 +17,9 @@ struct HttpServer::Impl {
   Server server;
   std::future<void> future;
 
-  Impl(fs::path root) : kRoot(std::move(root)) {
+  explicit Impl(fs::path root) : kRoot(std::move(root)) {
     server.set_mount_point("/", kRoot.string().c_str());
+    // TODO: try std::thread instead of std::async
     future = std::async([&]() { server.listen("localhost", 8000); });
   }
 

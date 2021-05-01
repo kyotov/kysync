@@ -1,5 +1,5 @@
 add_library(http
-        server.cc)
+        http_server.cc)
 target_link_libraries(http
         glog::glog
         httplib::httplib)

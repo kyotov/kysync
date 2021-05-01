@@ -1,5 +1,5 @@
-#ifndef KSYNC_SERVER_H
-#define KSYNC_SERVER_H
+#ifndef KSYNC_HTTP_SERVER_H
+#define KSYNC_HTTP_SERVER_H
 
 #include <filesystem>
 
@@ -19,4 +19,4 @@ public:
 
 }  // namespace kysync
 
-#endif  // KSYNC_SERVER_H
+#endif  // KSYNC_HTTP_SERVER_H

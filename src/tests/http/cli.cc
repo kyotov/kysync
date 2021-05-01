@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <iostream>
 
-#include "server.h"
+#include "http_server.h"
 
 int main() {
   auto h = kysync::HttpServer(std::filesystem::current_path());
