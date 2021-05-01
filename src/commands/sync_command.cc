@@ -1,5 +1,8 @@
 #include "sync_command.h"
 
+#include <google/protobuf/io/coded_stream.h>
+#include <google/protobuf/util/delimited_message_util.h>
+#include <src/commands/pb/header.pb.h>
 #include <zstd.h>
 
 #include <fstream>
@@ -33,42 +36,20 @@ SyncCommand::Impl::Impl(
 
 void SyncCommand::Impl::ParseHeader(const Reader &metadata_reader) {
   constexpr size_t kMaxHeaderSize = 1024;
-  char buffer[kMaxHeaderSize];
+  uint8_t buffer[kMaxHeaderSize];
 
   metadata_reader.Read(buffer, 0, kMaxHeaderSize);
+  auto cs = google::protobuf::io::CodedInputStream(buffer, kMaxHeaderSize);
+  auto header = Header();
+  google::protobuf::util::ParseDelimitedFromCodedStream(&header, &cs, nullptr);
 
-  std::stringstream header;
-  header.write(buffer, kMaxHeaderSize);
-  header.seekg(0);
-
-  std::map<std::string, std::string> metadata;
-
-  std::string key;
-  std::string value;
-
-  while (true) {
-    header >> key >> value;
-    if (key == "version:") {
-      CHECK(value == "1") << "unsupported version " << value;
-    } else if (key == "size:") {
-      size_ = strtoull(value.c_str(), nullptr, 10);
-    } else if (key == "block:") {
-      block_ = strtoull(value.c_str(), nullptr, 10);
-      block_count_ = (size_ + block_ - 1) / block_;
-    } else if (key == "hash:") {
-      hash_ = value;
-    } else if (key == "eof:") {
-      CHECK(value == "1") << "bad eof marker (1)";
-      break;
-    } else {
-      CHECK(false) << "invalid header key `" << key << "`";
-    }
-  }
-
-  header.read(buffer, 1);
-  CHECK(*buffer == '\n') << "bad eof marker (\\n)";
-
-  header_size_ = header.tellg();
+  CHECK(header.version() == 2) << "unsupported version" << header.version();
+  size_ = header.size();
+  block_ = header.block_size();
+  block_count_ = (size_ + block_ - 1) / block_;
+  hash_ = header.hash();
+  LOG(INFO) << header.DebugString();
+  header_size_ = cs.CurrentPosition();
 }
 
 template <typename T>
