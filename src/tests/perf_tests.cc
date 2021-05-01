@@ -9,16 +9,13 @@
 #include "../monitor.h"
 #include "../utilities/timer.h"
 #include "commands/gen_data_command.h"
+#include "http/http_server.h"
 #include "utilities/temp_path.h"
 
 // with inspiration from
 // https://www.sandordargo.com/blog/2019/04/24/parameterized-testing-with-gtest
 
 namespace kysync {
-
-std::string GetFileUri(const fs::path &path) {
-  return "file://" + path.string();
-}
 
 template <typename T>
 T GetEnv(const std::string &name, T default_value) {
@@ -71,8 +68,37 @@ private:
 
 #define PERFLOG(X) #X << "=" << X << std::endl
 
-void Execute(const Context context) {
-  const auto tmp = TempPath(false, context.path);
+void MetricSnapshot(
+    std::ofstream &log,
+    Command &command,
+    MetricContainer *metric_container) {
+  auto monitor = Monitor(command);
+
+  if (metric_container != nullptr) {
+    monitor.RegisterMetricContainer(
+        typeid(*metric_container).name(),
+        *metric_container);
+  }
+
+  EXPECT_EQ(monitor.Run(), 0);
+
+  const auto *command_name = typeid(command).name();
+  monitor.MetricSnapshot([&](std::string key, auto value) {
+    // TODO: clean-up again... removed to see HttpServer data
+    //    if (key.starts_with("//phases")) {
+    log << command_name << ":" << key << "=" << value << std::endl;
+    //    }
+  });
+};
+
+using GetUriCallback = std::function<std::string(const fs::path &)>;
+
+// FIXME: passing the metric_container is kind of ugly... find a better way
+void Execute(
+    const Context &context,
+    const TempPath &tmp,
+    MetricContainer *metric_container,
+    GetUriCallback get_uri_callback) {
   const fs::path kRootPath = tmp.GetPath();
   const fs::path kDataPath = kRootPath / "data.bin";
   const fs::path kSeedDataPath =
@@ -100,47 +126,49 @@ void Execute(const Context context) {
       context.seed_data_size,
       context.fragment_size,
       context.similarity);
-  auto m_gen_data = Monitor(gen_data);
-  EXPECT_EQ(m_gen_data.Run(), 0);
-  m_gen_data.MetricSnapshot([&log](std::string key, auto value) {
-    if (key.starts_with("//phases")) {
-      log << "gen_data:" << key << "=" << value << std::endl;
-    }
-  });
+  MetricSnapshot(log, gen_data, nullptr);
 
   auto prepare = PrepareCommand(  //
       kDataPath,
       kKysyncPath,
       kPzstPath,
       context.block_size);
-  auto m_prepare = Monitor(prepare);
-  EXPECT_EQ(m_prepare.Run(), 0);
-  m_prepare.MetricSnapshot([&log](auto key, auto value) {
-    if (key.starts_with("//phases")) {
-      log << "prepare:" << key << "=" << value << std::endl;
-    }
-  });
+  MetricSnapshot(log, prepare, nullptr);
 
   auto sync = SyncCommand(  //
-      GetFileUri(kDataPath),
-      GetFileUri(kKysyncPath),
-      GetFileUri(kSeedDataPath),
+      get_uri_callback(kDataPath),
+      get_uri_callback(kKysyncPath),
+      "file://" + kSeedDataPath.string(), // seed is always local
       kOutPath,
       !context.compression,
       context.num_blocks_in_batch,
       context.threads);
-  auto m_sync = Monitor(sync);
-  EXPECT_EQ(m_sync.Run(), 0);
-  m_sync.MetricSnapshot([&log](auto key, auto value) {
-    if (key.starts_with("//phases")) {
-      log << "sync:" << key << "=" << value << std::endl;
-    }
-  });
-};
+  MetricSnapshot(log, sync, metric_container);
+}
+
+void Execute(const Context &context, bool use_http) {
+  const auto tmp = TempPath(false, context.path);
+
+  if (use_http) {
+    auto server = HttpServer(tmp.GetPath(), 8000);
+    Execute(context, tmp, &server, [](auto path) {
+      return "http://localhost:8000/" + path.filename().string();
+    });
+  } else {
+    Execute(context, tmp, nullptr, [](auto path) {
+      return "file://" + path.string();
+    });
+  }
+}
 
 TEST(Performance, Simple) {  // NOLINT
   auto ctx = Context::Default();
-  Execute(ctx);
+  Execute(ctx, false);
+}
+
+TEST(Performance, Http) {  // NOLINT
+  auto ctx = Context::Default();
+  Execute(ctx, true);
 }
 
 TEST(Performance, Detect) {  // NOLINT
@@ -154,7 +182,7 @@ TEST(Performance, Detect) {  // NOLINT
 
   for (;;) {
     auto beg = Now();
-    Execute(ctx);
+    Execute(ctx, false);
     auto end = Now();
     if (DeltaMs(beg, end) > target_ms) {
       break;

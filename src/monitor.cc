@@ -127,6 +127,12 @@ int Monitor::Run() {
   return result;
 }
 
+void Monitor::RegisterMetricContainer(
+    const std::string& name,
+    MetricContainer& metric_container) {
+  impl_->Visit(name, metric_container);
+}
+
 void Monitor::MetricSnapshot(const Monitor::MetricCallback& callback) const {
   for (const auto& key : impl_->metric_keys_) {
     callback(key, impl_->metrics_[key]->load());
