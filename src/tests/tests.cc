@@ -631,4 +631,13 @@ TEST(SyncCommand, SyncNonCompressedFile) {  // NOLINT
       std::move(expected_metrics));
 }
 
+// Basic test to ensure different temp paths are returned.
+// This does not do testing for race conditions.
+TEST(SyncCommand, GetTempPath) {  // NOLINT
+  TempPath sample_paths[2];
+  LOG(INFO) << "Got sample paths: " << sample_paths[0].GetPath() << " and "
+            << sample_paths[1].GetPath();
+  EXPECT_FALSE(sample_paths[0].GetPath() == sample_paths[1].GetPath());
+}
+
 }  // namespace kysync
