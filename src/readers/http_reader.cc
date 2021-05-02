@@ -14,7 +14,9 @@ public:
   explicit Impl(std::string host, std::string path)
       : kHost(std::move(host)),
         kPath(std::move(path)),
-        cli_(kHost.c_str()) {}
+        cli_(kHost.c_str()) {
+    cli_.set_keep_alive(true);
+  }
 
   [[nodiscard]] size_t GetSize() {
     auto res = cli_.Head(kPath.c_str());
