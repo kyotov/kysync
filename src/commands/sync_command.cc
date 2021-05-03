@@ -224,11 +224,14 @@ std::fstream SyncCommand::Impl::GetOutputStream(size_t start_offset) {
   return std::move(output);
 }
 
-bool SyncCommand::Impl::FoundMatchingSeedOffset(size_t block_index, size_t *matching_seed_offset) {
+bool SyncCommand::Impl::FoundMatchingSeedOffset(
+    size_t block_index,
+    size_t *matching_seed_offset) {
   auto wcs = weak_checksums_[block_index];
   auto scs = strong_checksums_[block_index];
   auto analysis = analysis_[wcs];
-  if (analysis.seed_offset != -1ULL && scs == strong_checksums_[analysis.index]) {
+  if (analysis.seed_offset != -1ULL && scs == strong_checksums_[analysis.index])
+  {
     *matching_seed_offset = analysis.seed_offset;
     return true;
   } else {
@@ -236,7 +239,11 @@ bool SyncCommand::Impl::FoundMatchingSeedOffset(size_t block_index, size_t *matc
   }
 }
 
-size_t SyncCommand::Impl::RetrieveFromSource(size_t block_index, const Reader *data_reader, void *decompression_buffer, void *buffer) {
+size_t SyncCommand::Impl::RetrieveFromSource(
+    size_t block_index,
+    const Reader *data_reader,
+    void *decompression_buffer,
+    void *buffer) {
   size_t count;
   if (kCompressionDiabled) {
     count = data_reader->Read(buffer, block_index * block_, block_);
@@ -260,7 +267,7 @@ size_t SyncCommand::Impl::RetrieveFromSource(size_t block_index, const Reader *d
         << offset_to_read_from;
     CHECK(expected_size_after_decompression <= block_)
         << "Expected decompressed GetSize is greater than block GetSize. "
-            "Starting offset "
+           "Starting offset "
         << offset_to_read_from;
     auto decompressed_size =
         ZSTD_decompress(buffer, block_, decompression_buffer, count);
@@ -273,7 +280,10 @@ size_t SyncCommand::Impl::RetrieveFromSource(size_t block_index, const Reader *d
   return count;
 }
 
-void SyncCommand::Impl::Validate(size_t block_index, const void* buffer, size_t count) {
+void SyncCommand::Impl::Validate(
+    size_t block_index,
+    const void *buffer,
+    size_t count) {
   if (kVerify) {
     auto wcs = weak_checksums_[block_index];
     auto scs = strong_checksums_[block_index];
@@ -299,14 +309,14 @@ void SyncCommand::Impl::ReconstructSourceChunk(
   LOG_ASSERT(start_offset % block_ == 0);
 
   auto smart_buffer = std::make_unique<char[]>(block_);
-  auto *buffer = smart_buffer.get();  
+  auto *buffer = smart_buffer.get();
   auto smart_decompression_buffer =
       std::make_unique<char[]>(max_compressed_size_);
   auto *decompression_buffer = smart_decompression_buffer.get();
 
   auto seed_reader = Reader::Create(kSeedUri);
   auto data_reader = Reader::Create(kDataUri);
-  
+
   std::fstream output = GetOutputStream(start_offset);
   for (auto offset = start_offset; offset < end_offset; offset += block_) {
     auto block_index = offset / block_;
@@ -316,7 +326,11 @@ void SyncCommand::Impl::ReconstructSourceChunk(
       count = seed_reader->Read(buffer, seed_offset, block_);
       reused_bytes_ += count;
     } else {
-      count = RetrieveFromSource(block_index, data_reader.get(), decompression_buffer, buffer);
+      count = RetrieveFromSource(
+          block_index,
+          data_reader.get(),
+          decompression_buffer,
+          buffer);
     }
     output.write(buffer, count);
     Validate(block_index, buffer, count);
