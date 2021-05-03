@@ -2,7 +2,9 @@
 #include <gtest/gtest.h>
 #include <httplib.h>
 
+#include <array>
 #include <fstream>
+#include <sstream>
 
 #include "http_server/http_server.h"
 #include "utilities/temp_path.h"
@@ -30,6 +32,107 @@ void CheckRangeGet(Client& client, const std::string& data, int beg, int end) {
   EXPECT_EQ(response->body, expected_result);
 }
 
+static void CheckPrefixAndAdvance(
+    std::istream& input,
+    const std::string& prefix,
+    std::string& buffer) {
+  buffer.resize(prefix.size(), ' ');
+  input.read(buffer.data(), prefix.size());
+  CHECK_EQ(input.gcount(), prefix.size());
+  CHECK(std::equal(prefix.begin(), prefix.end(), buffer.begin()));
+}
+
+static void ReadLine(std::istream& input, std::string& buffer, int max) {
+  for (auto state = 0; state >= 0 && buffer.size() < max;) {
+    char c;
+    CHECK_EQ(input.get(c).gcount(), 1);
+    buffer += c;
+    switch (state) {
+      case 0:  // not in \r\n
+        if (c == '\r') {
+          state = 1;
+        }
+        break;
+      case 1:  // just after \r
+        if (c == '\n') {
+          state = -1;
+        } else {
+          state = 0;
+        }
+    }
+  }
+}
+
+using ChunkCallback =
+    std::function<void(size_t /*beg*/, size_t /*end*/, std::istream& /*data*/)>;
+
+static void ParseMultipartByterangesResponse(
+    httplib::Response response,
+    ChunkCallback chunk_callback) {
+  auto content_type = response.get_header_value("Content-Type");
+  CHECK(content_type.starts_with("multipart/byteranges"));
+
+  std::string boundary;
+  CHECK(httplib::detail::parse_multipart_boundary(content_type, boundary));
+
+  auto dash = std::string("--");
+  auto crlf = std::string("\r\n");
+  auto buffer = std::string();
+
+  auto body = std::stringstream(response.body);
+
+  size_t beg = 0;
+  size_t end = 0;
+
+  for (auto state = 0; state >= 0;) {
+    switch (state) {
+      case 0: {  // boundary
+        CheckPrefixAndAdvance(body, dash, buffer);
+        CheckPrefixAndAdvance(body, boundary, buffer);
+
+        buffer.clear();
+        ReadLine(body, buffer, 2);
+
+        if (buffer == crlf) {
+          state = 1;
+        } else {
+          CHECK_EQ(buffer, dash);
+          state = -1;
+        }
+
+        break;
+      }
+
+      case 1: {  // headers
+        buffer.clear();
+        ReadLine(body, buffer, 1024);
+
+        if (buffer == crlf) {  // end of headers
+          state = 2;
+          break;  // continue with data chunk
+        }
+
+        auto re = std::regex(R"(^Content-Range: bytes (\d+)-(\d+)/(\d+)\r\n$)");
+        auto m = std::smatch();
+
+        if (std::regex_match(buffer, m, re)) {
+          beg = stoul(buffer.substr(m.position(1), m.length(1)), nullptr, 10);
+          end = stoul(buffer.substr(m.position(2), m.length(2)), nullptr, 10);
+        }
+
+        break;  // continue with headers
+      }
+
+      case 2: {  // data chunk
+        chunk_callback(beg, end, body);
+        CheckPrefixAndAdvance(body, crlf, buffer);
+        state = 0;
+        break;  // back to boundary
+      }
+    }
+  }
+}
+
 template <typename Client>
 void CheckGet(const fs::path& path, Client& client) {
   std::string data = "0123456789";
@@ -49,13 +152,20 @@ void CheckGet(const fs::path& path, Client& client) {
   CheckRangeGet(client, data, 0, -1);
   CheckRangeGet(client, data, 5, -1);
 
-  //  {
-  //    auto range = httplib::make_range_header({{1, 3}, {5, 7}, {9, -1}});
-  //    auto response = client.Get("/test.data", {range});
-  //
-  //    EXPECT_TRUE(response.error() == httplib::Error::Success);
-  //    EXPECT_EQ(response->body, "123");
-  //  }
+  {
+    auto range = httplib::make_range_header({{1, 3}, {5, 7}, {9, -1}});
+    auto result = client.Get("/test.data", {range});
+    EXPECT_TRUE(result.error() == httplib::Error::Success);
+    ParseMultipartByterangesResponse(
+        result.value(),
+        [&](size_t beg, size_t end, std::istream& s) {
+          auto len = end - beg + 1;
+          std::vector<char> buffer(len);
+          s.read(buffer.data(), len);
+          auto chunk = data.substr(beg, len);
+          EXPECT_TRUE(std::equal(chunk.begin(), chunk.end(), buffer.begin()));
+        });
+  }
 }
 
 TEST_F(HttpTests, HttpsServer) {  // NOLINT
