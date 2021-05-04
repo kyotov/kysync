@@ -308,32 +308,29 @@ void SyncCommand::Impl::ReconstructSourceChunk(
     size_t end_offset) {
   LOG_ASSERT(start_offset % block_ == 0);
 
-  auto smart_buffer = std::make_unique<char[]>(block_);
-  auto *buffer = smart_buffer.get();
-  auto smart_decompression_buffer =
+  auto read_buffer = std::make_unique<char[]>(block_);
+  auto decompression_buffer =
       std::make_unique<char[]>(max_compressed_size_);
-  auto *decompression_buffer = smart_decompression_buffer.get();
 
   auto seed_reader = Reader::Create(kSeedUri);
   auto data_reader = Reader::Create(kDataUri);
-
   std::fstream output = GetOutputStream(start_offset);
   for (auto offset = start_offset; offset < end_offset; offset += block_) {
     auto block_index = offset / block_;
     size_t seed_offset = -1ULL;
     size_t count;
     if (FoundMatchingSeedOffset(block_index, &seed_offset)) {
-      count = seed_reader->Read(buffer, seed_offset, block_);
+      count = seed_reader->Read(read_buffer.get(), seed_offset, block_);
       reused_bytes_ += count;
     } else {
       count = RetrieveFromSource(
           block_index,
           data_reader.get(),
-          decompression_buffer,
-          buffer);
+          decompression_buffer.get(),
+          read_buffer.get());
     }
-    output.write(buffer, count);
-    Validate(block_index, buffer, count);
+    output.write(read_buffer.get(), count);
+    Validate(block_index, read_buffer.get(), count);
     kParent.AdvanceProgress(count);
   }
 }
