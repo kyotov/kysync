@@ -13,12 +13,13 @@ class HttpServer final : public MetricContainer {
   NO_COPY_OR_MOVE(HttpServer);
 
 public:
-  HttpServer(const std::filesystem::path& root, int port);
+  HttpServer(std::filesystem::path root, int port, bool log_headers);
 
   HttpServer(
       const std::filesystem::path& cert_path,
-      const std::filesystem::path& root,
-      int port);
+      std::filesystem::path root,
+      int port,
+      bool log_headers);
 
   ~HttpServer() noexcept;
 

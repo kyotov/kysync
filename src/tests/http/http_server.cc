@@ -5,8 +5,8 @@
 
 #include <filesystem>
 #include <future>
-#include <utility>
 #include <sstream>
+#include <utility>
 
 #include "../../metrics/metric.h"
 #include "../../metrics/metric_visitor.h"
@@ -20,22 +20,25 @@ using namespace httplib;
 struct HttpServer::Impl : public MetricContainer {
   const fs::path kRoot;
   const int kPort;
+  const bool kLogHeaders;
   std::unique_ptr<Server> server;
   std::thread thread;
 
   Metric requests{0};
   Metric total_bytes{0};
 
-  Impl(fs::path root, int port)
+  Impl(fs::path root, int port, bool log_headers)
       : kRoot(std::move(root)),
         kPort(port),
+        kLogHeaders(log_headers),
         server(std::make_unique<Server>()) {
     Init();
   }
 
-  Impl(const fs::path& cert_path, fs::path root, int port)
+  Impl(const fs::path& cert_path, fs::path root, int port, bool log_headers)
       : kRoot(std::move(root)),
         kPort(port),
+        kLogHeaders(log_headers),
         server(std::make_unique<SSLServer>(
             (cert_path / "cert.pem").string().c_str(),
             (cert_path / "key.pem").string().c_str())) {
@@ -53,22 +56,20 @@ struct HttpServer::Impl : public MetricContainer {
     server->set_logger([&](const auto& req, auto& res) {
       requests++;
       total_bytes += res.template get_header_value<uint64_t>("Content-Length");
-      // FIXME: debugging of http server statistics
-      //      if (req.method == "GET") {
-      //        std::stringstream s;
-      //        s << total_bytes << std::endl;
-      //        s << req.method << std::endl;
-      //        s << res.status << std::endl;
-      //        s << "---" << std::endl;
-      //        for (const auto& x : req.headers) {
-      //          s << x.first << " " << x.second << std::endl;
-      //        }
-      //        s << "---" << std::endl;
-      //        for (const auto& x : res.headers) {
-      //          s << x.first << " " << x.second << std::endl;
-      //        }
-      //        LOG(INFO) << s.str();
-      //      }
+
+      if (kLogHeaders) {
+        std::stringstream s;
+        s << std::endl << "--- Request Headers ---" << std::endl;
+        for (const auto& x : req.headers) {
+          s << x.first << " " << x.second << std::endl;
+        }
+        s << std::endl << "--- Response Headers ---" << std::endl;
+        for (const auto& x : res.headers) {
+          s << x.first << " " << x.second << std::endl;
+        }
+        s << std::endl;
+        LOG(INFO) << s.str();
+      }
     });
 
     thread = std::thread([&]() {
@@ -82,14 +83,19 @@ struct HttpServer::Impl : public MetricContainer {
   };
 };
 
-HttpServer::HttpServer(const fs::path& root, int port)
-    : impl_(std::make_unique<Impl>(root, port)) {}
+HttpServer::HttpServer(fs::path root, int port, bool log_headers)
+    : impl_(std::make_unique<Impl>(std::move(root), port, log_headers)) {}
 
 HttpServer::HttpServer(
-    const std::filesystem::path& cert_path,
-    const std::filesystem::path& root,
-    int port)
-    : impl_(std::make_unique<Impl>(cert_path, root, port)) {}
+    const fs::path& cert_path,
+    fs::path root,
+    int port,
+    bool log_headers)
+    : impl_(std::make_unique<Impl>(
+          cert_path,
+          std::move(root),
+          port,
+          log_headers)) {}
 
 HttpServer::~HttpServer() noexcept = default;
 

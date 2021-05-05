@@ -6,7 +6,7 @@
 #include "http_server.h"
 
 int main() {
-  auto h = kysync::HttpServer(".", std::filesystem::current_path(), 8000);
+  auto h = kysync::HttpServer(".", std::filesystem::current_path(), 8000, true);
 
   LOG(INFO) << "started http server... press ENTER to stop it.";
   std::cin.ignore();

@@ -58,7 +58,7 @@ TEST(HttpsServer, Test1) {  // NOLINT
   auto path = TempPath();
   auto port = 8000;
   auto cert_path = fs::path(std::getenv("TEST_DATA_DIR"));
-  auto server = HttpServer(cert_path, path.GetPath(), port);
+  auto server = HttpServer(cert_path, path.GetPath(), port, true);
   auto client = httplib::SSLClient("localhost", port);
   client.enable_server_certificate_verification(false);
 
@@ -68,7 +68,7 @@ TEST(HttpsServer, Test1) {  // NOLINT
 TEST(HttpServer, Test1) {  // NOLINT
   auto path = TempPath();
   auto port = 8000;
-  auto server = HttpServer(path.GetPath(), port);
+  auto server = HttpServer(path.GetPath(), port, true);
   auto client = httplib::Client("localhost", port);
 
   CheckGet(path.GetPath(), client);
