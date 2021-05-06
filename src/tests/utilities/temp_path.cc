@@ -18,10 +18,8 @@ public:
   const fs::path kPath;
 
 private:
-  static std::atomic<uint32_t> counter_;
+  inline static std::atomic<uint32_t> counter_ = 0;
 };
-
-std::atomic<uint32_t> TempPath::Impl::counter_ = 0;
 
 fs::path TempPath::Impl::GetUniquePath(const fs::path &root) {
   using namespace std::chrono;
