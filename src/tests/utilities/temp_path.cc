@@ -6,8 +6,6 @@ namespace kysync {
 
 namespace fs = std::filesystem;
 
-std::atomic<uint32_t> TempPath::counter_ = 0;
-
 std::string GetCurrentNanosAsString() {
   using namespace std::chrono;
   auto now = high_resolution_clock::now();

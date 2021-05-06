@@ -20,7 +20,7 @@ public:
 private:
   bool keep_;
   std::filesystem::path full_path_;
-  static std::atomic<uint32_t> counter_;
+  inline static std::atomic<uint32_t> counter_ = 0;
 };
 
 }  // namespace kysync
