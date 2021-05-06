@@ -1,14 +1,18 @@
+#include <glog/logging.h>
 #include <gtest/gtest.h>
 #include <httplib.h>
 
 #include <fstream>
 
-#include "http/http_server.h"
+#include "http_server/http_server.h"
 #include "utilities/temp_path.h"
+#include "utilities/fixture.h"
 
 namespace kysync {
 
 namespace fs = std::filesystem;
+
+class HttpTests : public Fixture {};
 
 void WriteFile(const fs::path& path, const std::string& data) {
   std::ofstream f(path);
@@ -45,16 +49,16 @@ void CheckGet(const fs::path& path, Client& client) {
   CheckRangeGet(client, data, 0, -1);
   CheckRangeGet(client, data, 5, -1);
 
-//  {
-//    auto range = httplib::make_range_header({{1, 3}, {5, 7}, {9, -1}});
-//    auto response = client.Get("/test.data", {range});
-//
-//    EXPECT_TRUE(response.error() == httplib::Error::Success);
-//    EXPECT_EQ(response->body, "123");
-//  }
+  //  {
+  //    auto range = httplib::make_range_header({{1, 3}, {5, 7}, {9, -1}});
+  //    auto response = client.Get("/test.data", {range});
+  //
+  //    EXPECT_TRUE(response.error() == httplib::Error::Success);
+  //    EXPECT_EQ(response->body, "123");
+  //  }
 }
 
-TEST(HttpsServer, Test1) {  // NOLINT
+TEST_F(HttpTests, HttpsServer) {  // NOLINT
   auto path = TempPath();
   auto port = 8000;
   auto cert_path = fs::path(std::getenv("TEST_DATA_DIR"));
@@ -65,7 +69,7 @@ TEST(HttpsServer, Test1) {  // NOLINT
   CheckGet(path.GetPath(), client);
 }
 
-TEST(HttpServer, Test1) {  // NOLINT
+TEST_F(HttpTests, HttpServer) {  // NOLINT
   auto path = TempPath();
   auto port = 8000;
   auto server = HttpServer(path.GetPath(), port, true);

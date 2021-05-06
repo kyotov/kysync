@@ -1,12 +1,13 @@
 include(CTest)
 enable_testing()
 
-add_subdirectory(http)
+add_subdirectory(http_server)
 
 add_library(test_main
-        utilities/temp_path.cc
         commands/gen_data_command.cc
         commands/system_command.cc
+        utilities/temp_path.cc
+        utilities/fixture.cc
         expectation_check_metrics_visitor.cc)
 target_link_libraries(test_main
         main
@@ -24,7 +25,7 @@ add_executable(perf_tests
         perf_tests.cc)
 target_link_libraries(perf_tests
         test_main
-        http)
+        http_server)
 
 add_test(NAME performance_tests COMMAND perf_tests)
 
@@ -32,7 +33,7 @@ add_executable(http_tests
         http_tests.cc)
 target_link_libraries(http_tests
         test_main
-        http)
+        http_server)
 
 add_test(NAME http_tests COMMAND http_tests)
 
@@ -42,9 +43,12 @@ add_executable(gendata
 target_link_libraries(gendata
         main)
 
+add_custom_target(create_log_dir ALL
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/log)
+
 set(TEST_ENVIRONMENT
         TEST_ROOT_DIR=${CMAKE_BINARY_DIR}/tmp
-        TEST_LOG_DIR=${CMAKE_BINARY_DIR}
+        TEST_LOG_DIR=${CMAKE_BINARY_DIR}/log
         TEST_DATA_DIR=${CMAKE_SOURCE_DIR}/test_data
         ZSYNC_BIN_DIR=${CMAKE_BINARY_DIR}/zsync/bin)
 

@@ -28,8 +28,6 @@ protobuf_generate(
         LANGUAGE cpp
         PROTOC_OUT_DIR ${PROTO_DIR})
 
-#find_package(ZLIB REQUIRED)
-
 add_library(main STATIC
         ${HEADER_PROTO}
         src/utilities/parallelize.cc

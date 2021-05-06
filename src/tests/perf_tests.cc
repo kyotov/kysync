@@ -10,7 +10,8 @@
 #include "../utilities/timer.h"
 #include "commands/gen_data_command.h"
 #include "commands/system_command.h"
-#include "http/http_server.h"
+#include "http_server/http_server.h"
+#include "utilities/fixture.h"
 #include "utilities/temp_path.h"
 
 // with inspiration from
@@ -18,61 +19,8 @@
 
 namespace kysync {
 
-class Performance : public ::testing::Test {
+class Performance : public Fixture {
 protected:
-  // You can remove any or all of the following functions if their bodies would
-  // be empty.
-
-  static bool logging_initialized_;
-
-  Performance() {
-    if (!logging_initialized_) {
-      google::InitGoogleLogging("kysync_perf_tests");
-      logging_initialized_ = true;
-    }
-
-    FLAGS_log_dir = std::getenv("TEST_LOG_DIR");
-    FLAGS_logtostderr = false;
-    FLAGS_alsologtostderr = false;
-
-    LOG(INFO) << "perf_tests";
-  }
-
-  ~Performance() override {
-    // You can do clean-up work that doesn't throw exceptions here.
-  }
-
-  // If the constructor and destructor are not enough for setting up
-  // and cleaning up each test, you can define the following methods:
-
-  void SetUp() override {
-    // Code here will be called immediately after the constructor (right
-    // before each test).
-  }
-
-  void TearDown() override {
-    // Code here will be called immediately after each test (right
-    // before the destructor).
-  }
-
-  // Class members declared here can be used by all tests in the test suite
-  // for Foo.
-};
-
-bool Performance::logging_initialized_ = false;
-
-template <typename T>
-T GetEnv(const std::string &name, T default_value) {
-  auto env = std::getenv(name.c_str());
-  errno = 0;
-  auto value = env == nullptr ? default_value
-                              : static_cast<T>(strtoumax(env, nullptr, 10));
-  value = errno ? default_value : value;
-  LOG(INFO) << name << "=" << value;
-  return value;
-}
-
-struct Context {
   fs::path path;
   size_t data_size;
   size_t seed_data_size;
@@ -84,20 +32,8 @@ struct Context {
   bool compression;
   bool identity_reconstruction;
 
-  Context(const Context &) = default;
-
-  static Context Default() {
-    static const Context value{};
-    return value;
-  }
-
-private:
-  Context() {
-    auto root_path = std::getenv("TEST_ROOT_DIR");
-    path = root_path != nullptr ? root_path
-                                : std::filesystem::temp_directory_path();
-    LOG(INFO) << "TEST_ROOT_DIR=" << path;
-
+  Performance() {
+    auto root_path = GetEnv("TEST_ROOT_DIR", ".");
     data_size = GetEnv("TEST_DATA_SIZE", 1'000'000ULL);
     seed_data_size = GetEnv("TEST_SEED_DATA_SIZE", -1ULL);
     fragment_size = GetEnv("TEST_FRAGMENT_SIZE", 123'456);
@@ -108,6 +44,17 @@ private:
     compression = GetEnv("TEST_COMPRESSION", false);
     identity_reconstruction = GetEnv("TEST_IDENTITY_RECONSTRUCTION", false);
   }
+
+  using GetUriCallback = std::function<std::string(const fs::path &)>;
+
+  void Execute(
+      const TempPath &tmp,
+      MetricContainer *metric_container,
+      const GetUriCallback &get_uri_callback);
+
+  void Execute(bool use_http);
+
+  void ExecuteZsync();
 };
 
 #define PERFLOG(X) #X << "=" << X << std::endl
@@ -138,45 +85,45 @@ void MetricSnapshot(
 using GetUriCallback = std::function<std::string(const fs::path &)>;
 
 // FIXME: passing the metric_container is kind of ugly... find a better way
-void Execute(
-    const Context &context,
+void Performance::Execute(
     const TempPath &tmp,
     MetricContainer *metric_container,
     const GetUriCallback &get_uri_callback) {
   const fs::path kRootPath = tmp.GetPath();
   const fs::path kDataPath = kRootPath / "data.bin";
   const fs::path kSeedDataPath =
-      context.identity_reconstruction ? kDataPath : kRootPath / "seed_data.bin";
+      identity_reconstruction ? kDataPath : kRootPath / "seed_data.bin";
   const fs::path kKysyncPath = kRootPath / "data.bin.kysync";
   const fs::path kPzstPath = kRootPath / "data.bin.pzst";
   const fs::path kOutPath = kRootPath / "data.bin.out";
+  const fs::path kLogPath = GetEnv("TEST_LOG_DIR", ".");
 
-  std::ofstream log("perf.log", std::ios::app);
+  std::ofstream log(kLogPath / "perf.log", std::ios::app);
 
-  log << std::endl                        //
-      << PERFLOG(context.path)            //
-      << PERFLOG(context.data_size)       //
-      << PERFLOG(context.seed_data_size)  //
-      << PERFLOG(context.fragment_size)   //
-      << PERFLOG(context.block_size)      //
-      << PERFLOG(context.similarity)      //
-      << PERFLOG(context.threads)         //
-      << PERFLOG(context.compression)     //
-      << PERFLOG(context.identity_reconstruction);
+  log << std::endl                //
+      << PERFLOG(path)            //
+      << PERFLOG(data_size)       //
+      << PERFLOG(seed_data_size)  //
+      << PERFLOG(fragment_size)   //
+      << PERFLOG(block_size)      //
+      << PERFLOG(similarity)      //
+      << PERFLOG(threads)         //
+      << PERFLOG(compression)     //
+      << PERFLOG(identity_reconstruction);
 
   auto gen_data = GenDataCommand(  //
       tmp.GetPath(),
-      context.data_size,
-      context.seed_data_size,
-      context.fragment_size,
-      context.similarity);
+      data_size,
+      seed_data_size,
+      fragment_size,
+      similarity);
   MetricSnapshot(log, gen_data, nullptr);
 
   auto prepare = PrepareCommand(  //
       kDataPath,
       kKysyncPath,
       kPzstPath,
-      context.block_size);
+      block_size);
   MetricSnapshot(log, prepare, nullptr);
 
   auto sync = SyncCommand(  //
@@ -184,63 +131,64 @@ void Execute(
       get_uri_callback(kKysyncPath),
       "file://" + kSeedDataPath.string(),  // seed is always local
       kOutPath,
-      !context.compression,
-      context.num_blocks_in_batch,
-      context.threads);
+      !compression,
+      num_blocks_in_batch,
+      threads);
   MetricSnapshot(log, sync, metric_container);
 }
 
-void Execute(const Context &context, bool use_http) {
-  const auto tmp = TempPath(false, context.path);
+void Performance::Execute(bool use_http) {
+  const auto tmp = TempPath(false, path);
 
   if (use_http) {
     auto server = HttpServer(tmp.GetPath(), 8000, true);
-    Execute(context, tmp, &server, [](auto path) {
+    Execute(tmp, &server, [](auto path) {
       return "http://localhost:8000/" + path.filename().string();
     });
   } else {
-    Execute(context, tmp, nullptr, [](auto path) {
-      return "file://" + path.string();
-    });
+    Execute(tmp, nullptr, [](auto path) { return "file://" + path.string(); });
   }
 }
 
-void ExecuteZsync(const Context &context) {
-  const auto tmp = TempPath(true, context.path);
+void Performance::ExecuteZsync() {
+  const auto tmp = TempPath(true, path);
   auto server = HttpServer(tmp.GetPath(), 8000, true);
 
   const fs::path kRootPath = tmp.GetPath();
   const fs::path kDataPath = kRootPath / "data.bin";
   const fs::path kSeedDataPath =
-      context.identity_reconstruction ? kDataPath : kRootPath / "seed_data.bin";
+      identity_reconstruction ? kDataPath : kRootPath / "seed_data.bin";
   const fs::path kZsyncPath = kRootPath / "data.bin.kysync";
   const fs::path kPzstPath = kRootPath / "data.bin.pzst";
   const fs::path kOutPath = kRootPath / "data.bin.out";
 
   std::ofstream log("perf.log", std::ios::app);
 
-  log << std::endl                        //
-      << PERFLOG(context.path)            //
-      << PERFLOG(context.data_size)       //
-      << PERFLOG(context.seed_data_size)  //
-      << PERFLOG(context.fragment_size)   //
-      << PERFLOG(context.block_size)      //
-      << PERFLOG(context.similarity)      //
-      << PERFLOG(context.threads)         //
-      << PERFLOG(context.compression)     //
-      << PERFLOG(context.identity_reconstruction);
+  log << std::endl                //
+      << PERFLOG(path)            //
+      << PERFLOG(data_size)       //
+      << PERFLOG(seed_data_size)  //
+      << PERFLOG(fragment_size)   //
+      << PERFLOG(block_size)      //
+      << PERFLOG(similarity)      //
+      << PERFLOG(threads)         //
+      << PERFLOG(compression)     //
+      << PERFLOG(identity_reconstruction);
+
+  const fs::path zsync_path = GetEnv("ZSYNC_BIN_DIR", ".");
+
+  if (fs::exists(zsync_path / "zsync")) {
+    LOG(WARNING) << "zsync binary not found, skipping zsync test (are you on Windows!?)";
+    return;
+  }
 
   auto gen_data = GenDataCommand(  //
       tmp.GetPath(),
-      context.data_size,
-      context.seed_data_size,
-      context.fragment_size,
-      context.similarity);
+      data_size,
+      seed_data_size,
+      fragment_size,
+      similarity);
   MetricSnapshot(log, gen_data, &server);
-
-  const auto *zsync_path = CHECK_NOTNULL(std::getenv("ZSYNC_BIN_DIR"));
-
-  fs::current_path(zsync_path);
 
   {
     std::stringstream command;
@@ -265,18 +213,15 @@ void ExecuteZsync(const Context &context) {
 }
 
 TEST_F(Performance, Simple) {  // NOLINT
-  auto ctx = Context::Default();
-  Execute(ctx, false);
+  Execute(false);
 }
 
 TEST_F(Performance, Http) {  // NOLINT
-  auto ctx = Context::Default();
-  Execute(ctx, true);
+  Execute(true);
 }
 
 TEST_F(Performance, Zsync) {  // NOLINT
-  auto ctx = Context::Default();
-  ExecuteZsync(ctx);
+  ExecuteZsync();
 }
 
 TEST_F(Performance, Detect) {  // NOLINT
@@ -284,25 +229,24 @@ TEST_F(Performance, Detect) {  // NOLINT
   //       in real life, for performance testing we would want ~30s here.
   size_t target_ms = GetEnv("TEST_TARGET_MS", 1'000);
 
-  auto ctx = Context::Default();
-  ctx.data_size = 1'000'000;
-  ctx.identity_reconstruction = true;
+  data_size = 1'000'000;
+  identity_reconstruction = true;
 
   for (;;) {
     auto beg = Now();
-    Execute(ctx, false);
+    Execute(false);
     auto end = Now();
     if (DeltaMs(beg, end) > target_ms) {
       break;
     }
     size_t min_factor = 2;
     size_t max_factor = 16;
-    ctx.data_size *= std::max(
+    data_size *= std::max(
         min_factor,
         std::min(max_factor, target_ms / DeltaMs(beg, end)));
   }
 
-  LOG(INFO) << "detected test size = " << ctx.data_size;
+  LOG(INFO) << "detected test size = " << data_size;
 }
 
 }  // namespace kysync

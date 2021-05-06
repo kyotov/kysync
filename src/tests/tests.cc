@@ -18,18 +18,21 @@
 #include "../readers/memory_reader.h"
 #include "expectation_check_metrics_visitor.h"
 #include "utilities/temp_path.h"
+#include "utilities/fixture.h"
 
 namespace kysync {
 
 namespace fs = std::filesystem;
 
-TEST(WeakChecksum, Simple) {  // NOLINT
+class Tests : public Fixture {};
+
+TEST_F(Tests, SimpleWeakChecksum) {  // NOLINT
   const auto *data = "0123456789";
   auto wcs = WeakChecksum(data, strlen(data));
   EXPECT_EQ(wcs, 183829005);
 }
 
-TEST(WeakChecksum, Rolling) {  // NOLINT
+TEST_F(Tests, RollingWeakChecksum) {  // NOLINT
   char data[] = "012345678901234567890123456789";
   ASSERT_EQ(strlen(data), 30);
 
@@ -57,13 +60,13 @@ TEST(WeakChecksum, Rolling) {  // NOLINT
   EXPECT_EQ(cs, 183829005);
 }
 
-TEST(StringChecksum, Simple) {  // NOLINT
+TEST_F(Tests, SimpleStringChecksum) {  // NOLINT
   const auto *data = "0123456789";
   auto scs = StrongChecksum::Compute(data, strlen(data));
   EXPECT_EQ(scs.ToString(), "e353667619ec664b49655fc9692165fb");
 }
 
-TEST(StringChecksum, Stream) {  // NOLINT
+TEST_F(Tests, StreamingStringChecksum) {  // NOLINT
   constexpr int kCount = 10'000;
   std::stringstream s;
 
@@ -126,7 +129,7 @@ std::string CreateMemoryReaderUri(const std::string &data) {
   return CreateMemoryReaderUri(data.data(), data.size());
 }
 
-TEST(Readers, MemoryReaderSimple) {  // NOLINT
+TEST_F(Tests, MemoryReaderSimple) {  // NOLINT
   const auto *data = "0123456789";
 
   auto reader = MemoryReader(data, strlen(data));
@@ -136,7 +139,7 @@ TEST(Readers, MemoryReaderSimple) {  // NOLINT
   TestReader(*Reader::Create(uri), strlen(data));
 }
 
-TEST(Readers, FileReaderSimple) {  // NOLINT
+TEST_F(Tests, FileReaderSimple) {  // NOLINT
   const auto *data = "0123456789";
 
   TempPath tmp;
@@ -151,7 +154,7 @@ TEST(Readers, FileReaderSimple) {  // NOLINT
   TestReader(*Reader::Create("file://" + path.string()), strlen(data));
 }
 
-TEST(Readers, BadUri) {  // NOLINT
+TEST_F(Tests, ReadersWithBadUri) {  // NOLINT
   // invalid protocol
   EXPECT_THROW(  // NOLINT{cppcoreguidelines-avoid-goto}
       Reader::Create("foo://1234"),
@@ -269,7 +272,7 @@ size_t GetExpectedCompressedSize(
   return compressed_size;
 }
 
-TEST(PrepareCommand, Simple) {  // NOLINT
+TEST_F(Tests, SimplePrepareCommand) {  // NOLINT
   auto data = std::string("0123456789");
   auto block = 4;
   auto block_count = (data.size() + block - 1) / block;
@@ -299,7 +302,7 @@ TEST(PrepareCommand, Simple) {  // NOLINT
   EXPECT_EQ(StrongChecksum::Compute("89\0\0", block), scs[2]);
 }
 
-TEST(PrepareCommand, Simple2) {  // NOLINT
+TEST_F(Tests, SimplePrepareCommand2) {  // NOLINT
   auto data = std::string("123412341234");
   auto block = 4;
   auto block_count = (data.size() + block - 1) / block;
@@ -326,7 +329,7 @@ TEST(PrepareCommand, Simple2) {  // NOLINT
   EXPECT_EQ(StrongChecksum::Compute("1234", block), scs[2]);
 }
 
-TEST(SyncCommand, MetadataRoundtrip) {  // NOLINT
+TEST_F(Tests, MetadataRoundtrip) {  // NOLINT
   auto block = 4;
   std::string data = "0123456789";
 
@@ -569,7 +572,7 @@ std::string GetTestDataPath() {
 // 3. Use the generated ksync and pzst files to sync to a new output file.
 // Ensure that the new output file matches the original file. A seed file is
 // required and for this, the original file is used.
-TEST(SyncCommand, EndToEndFiles) {  // NOLINT
+TEST_F(Tests, EndToEndFiles) {  // NOLINT
   std::string test_data_path = GetTestDataPath();
   LOG(INFO) << "Using test data path: " << test_data_path;
 
@@ -587,7 +590,7 @@ TEST(SyncCommand, EndToEndFiles) {  // NOLINT
 //     new version (v2 file that has modifications on the original).
 // 2. Run sync.
 // Ensure that newly sync'd file matches the original non-compressed v2 file.
-TEST(SyncCommand, SyncFileFromSeed) {  // NOLINT
+TEST_F(Tests, SyncFileFromSeed) {  // NOLINT
   std::string test_data_path = GetTestDataPath();
   LOG(INFO) << "Using test data path: " << test_data_path;
 
@@ -612,7 +615,7 @@ TEST(SyncCommand, SyncFileFromSeed) {  // NOLINT
 }
 
 // Test syncing from a non-compressed file
-TEST(SyncCommand, SyncNonCompressedFile) {  // NOLINT
+TEST_F(Tests, SyncNonCompressedFile) {  // NOLINT
   std::string test_data_path = GetTestDataPath();
   LOG(INFO) << "Using test data path: " << test_data_path;
 

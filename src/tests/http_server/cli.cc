@@ -8,7 +8,7 @@
 int main() {
   auto h = kysync::HttpServer(".", std::filesystem::current_path(), 8000, true);
 
-  LOG(INFO) << "started http server... press ENTER to stop it.";
+  LOG(INFO) << "started http_server server... press ENTER to stop it.";
   std::cin.ignore();
-  LOG(INFO) << "stopping http server...";
+  LOG(INFO) << "stopping http_server server...";
 }
