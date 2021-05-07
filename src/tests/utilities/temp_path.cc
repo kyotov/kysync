@@ -15,19 +15,17 @@ public:
   static fs::path GetUniquePath(const fs::path &root);
 
   const bool kKeep;
-  const fs::path kPath;
-
-private:
-  inline static std::atomic<uint32_t> counter_ = 0;
+  const fs::path kPath;  
 };
 
 fs::path TempPath::Impl::GetUniquePath(const fs::path &root) {
+  static std::atomic<uint32_t> counter = 0;
   using namespace std::chrono;
   auto now = high_resolution_clock::now();
   auto ts = duration_cast<nanoseconds>(now.time_since_epoch()).count();
 
   return root / ("kysync_test_" + std::to_string(ts) + "_" +
-                 std::to_string(counter_++));
+                 std::to_string(counter++));
 }
 
 TempPath::TempPath(bool keep, const fs::path &path)
