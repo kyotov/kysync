@@ -22,7 +22,7 @@ class SyncCommand::Impl final {
   const std::filesystem::path kOutputPath;
   const bool kCompressionDiabled;
   const int kThreads;
-  const int kNumBlocksPerRetrieval{64};
+  const int kNumBlocksPerRetrieval{8};
 
   Metric weak_checksum_matches_;
   Metric weak_checksum_false_positive_;

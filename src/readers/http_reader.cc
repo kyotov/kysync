@@ -32,7 +32,7 @@ public:
     auto res = cli_.Get(kPath.c_str(), {range_header});
 
     CHECK_EQ(res.error(), httplib::Success);
-    CHECK_EQ(res->status, 206);
+    CHECK(res->status == 206 || res->status == 200);
 
     auto count = res->body.size();
     memcpy(buffer, res->body.data(), count);

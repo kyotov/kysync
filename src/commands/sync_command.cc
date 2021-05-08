@@ -329,6 +329,8 @@ size_t SyncCommand::Impl::PerformBatchRetrieval(
     char *decompression_buffer,
     std::vector<BatchedRetrivalInfo> &batched_retrievals_info,
     std::fstream &output) {
+  LOG(INFO) << "Performing batched retrieval for "
+            << batched_retrievals_info.size() << " blocks";
   if (batched_retrievals_info.size() <= 0) {
     return 0;
   }
@@ -363,6 +365,7 @@ void SyncCommand::Impl::AddForBatchedRetrieval(
          .size_to_read = compressed_sizes_[block_index],
          .offset_to_write_to = offset_to_write_to});
   }
+  LOG(INFO) << "Deferring retrieval of block with index " << block_index;
 }
 
 void SyncCommand::Impl::RetrieveFromSource(
@@ -374,30 +377,20 @@ void SyncCommand::Impl::RetrieveFromSource(
     std::fstream &output) {
   auto begin_offset = block_index * block_;
   size_t current_write_offset = output.tellp();
-  if (kCompressionDiabled) {
-    AddForBatchedRetrieval(
-        block_index,
-        begin_offset,
-        current_write_offset,
-        batched_retrievals_info);
-    if (batched_retrievals_info.size() >= kNumBlocksPerRetrieval) {
-      PerformBatchRetrieval(
-          data_reader,
-          read_buffer,
-          decompression_buffer,
-          batched_retrievals_info,
-          output);
-    } else {
-      output.seekp(current_write_offset + block_);
-    }
-  } else {
-    auto count = RetreiveFromCompressedSource(
-        block_index,
+  AddForBatchedRetrieval(
+      block_index,
+      begin_offset,
+      current_write_offset,
+      batched_retrievals_info);
+  if (batched_retrievals_info.size() >= kNumBlocksPerRetrieval) {
+    PerformBatchRetrieval(
         data_reader,
-        decompression_buffer);
-    count = Decompress(block_index, count, decompression_buffer, read_buffer);
-    decompressed_bytes_ += count;
-    ValidateAndWrite(block_index, read_buffer, count, output);
+        read_buffer,
+        decompression_buffer,
+        batched_retrievals_info,
+        output);
+  } else {
+    output.seekp(current_write_offset + block_);
   }
 }
 
@@ -423,6 +416,8 @@ void SyncCommand::Impl::ValidateAndWrite(
   }
   output.write(buffer, count);
   kParent.AdvanceProgress(count);
+  LOG(INFO) << "Wrote " << count << " bytes to output file before pos "
+            << output.tellp();
 }
 
 void SyncCommand::Impl::ReconstructSourceChunk(
