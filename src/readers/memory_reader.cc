@@ -29,4 +29,17 @@ size_t MemoryReader::Read(void* buffer, size_t offset, size_t size) const {
   return Reader::Read(buffer, offset, count);
 }
 
+size_t MemoryReader::Read(
+    void* buffer,
+    std::vector<BatchedRetrivalInfo>& batched_retrievals_info) const {
+  size_t size_read = 0;
+  for (auto& retrieval_info : batched_retrievals_info) {
+    size_read += Read(
+        static_cast<char*>(buffer) + size_read,
+        retrieval_info.source_begin_offset,
+        retrieval_info.size_to_read);
+  }
+  return Reader::Read(nullptr, 0, size_read);
+}
+
 }  // namespace kysync

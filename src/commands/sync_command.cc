@@ -4,6 +4,7 @@
 
 #include <fstream>
 #include <future>
+#include <ios>
 #include <map>
 
 #include "../checksums/strong_checksum_builder.h"
@@ -283,22 +284,39 @@ size_t SyncCommand::Impl::Decompress(
   return decompressed_size;
 }
 
+void SyncCommand::Impl::AddForBatchedRetrieval(
+    size_t begin_offset,
+    size_t size_to_read,
+    size_t offset_to_write_to) {
+  batched_retrievals_info_.push_back(
+      {.source_begin_offset = begin_offset,
+       .size_to_read = size_to_read,
+       .offset_to_write_to = offset_to_write_to});
+}
+
 size_t SyncCommand::Impl::RetrieveFromSource(
     size_t block_index,
     const Reader *data_reader,
-    void *decompression_buffer,
-    void *buffer) {
+    char *decompression_buffer,
+    char *read_buffer,
+    std::fstream &output) {
+  auto begin_offset = block_index * block_;
+  AddForBatchedRetrieval(begin_offset, block_, output.tellp());
   size_t count;
-  if (kCompressionDiabled) {
-    count = data_reader->Read(buffer, block_index * block_, block_);
-    downloaded_bytes_ += count;
-  } else {
-    count = RetreiveFromCompressedSource(
-        block_index,
-        data_reader,
-        decompression_buffer);
-    count = Decompress(block_index, count, decompression_buffer, buffer);
-    decompressed_bytes_ += count;
+  if (batched_retrievals_info_.size() >= kNumBlocksPerRetrieval) {
+    if (kCompressionDiabled) {
+      count = data_reader->Read(read_buffer, begin_offset, block_);
+      downloaded_bytes_ += count;
+    } else {
+      count = RetreiveFromCompressedSource(
+          block_index,
+          data_reader,
+          decompression_buffer);
+      count = Decompress(block_index, count, decompression_buffer, read_buffer);
+      decompressed_bytes_ += count;
+    }
+    output.write(read_buffer, count);
+    batched_retrievals_info_.clear();
   }
   return count;
 }
@@ -329,11 +347,10 @@ void SyncCommand::Impl::ReconstructSourceChunk(
     size_t start_offset,
     size_t end_offset) {
   LOG_ASSERT(start_offset % block_ == 0);
-  auto read_buffer = std::make_unique<char[]>(block_);
+  auto read_buffer = std::make_unique<char[]>(block_ * kNumBlocksPerRetrieval);
   auto decompression_buffer = std::make_unique<char[]>(max_compressed_size_);
   auto seed_reader = Reader::Create(kSeedUri);
   auto data_reader = Reader::Create(kDataUri);
-
   std::fstream output = GetOutputStream(start_offset);
   for (auto offset = start_offset; offset < end_offset; offset += block_) {
     auto block_index = offset / block_;
@@ -348,8 +365,8 @@ void SyncCommand::Impl::ReconstructSourceChunk(
           block_index,
           data_reader.get(),
           decompression_buffer.get(),
-          read_buffer.get());
-      output.write(read_buffer.get(), count);
+          read_buffer.get(),
+          output);
     }
     Validate(block_index, read_buffer.get(), count);
     kParent.AdvanceProgress(count);

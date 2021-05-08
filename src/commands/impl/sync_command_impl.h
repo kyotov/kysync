@@ -2,6 +2,7 @@
 #define KSYNC_SYNC_COMMAND_IMPL_H
 
 #include <bitset>
+#include <ios>
 #include <unordered_map>
 
 #include "../../checksums/strong_checksum.h"
@@ -21,6 +22,7 @@ class SyncCommand::Impl final {
   const std::filesystem::path kOutputPath;
   const bool kCompressionDiabled;
   const int kThreads;
+  const int kNumBlocksPerRetrieval{1};
 
   Metric weak_checksum_matches_;
   Metric weak_checksum_false_positive_;
@@ -51,6 +53,7 @@ class SyncCommand::Impl final {
 
   std::bitset<k4Gb> set_;
   std::unordered_map<uint32_t, WcsMapData> analysis_;
+  std::vector<BatchedRetrivalInfo> batched_retrievals_info_;
 
   Impl(
       const SyncCommand &parent,
@@ -80,8 +83,9 @@ class SyncCommand::Impl final {
   size_t RetrieveFromSource(
       size_t block_index,
       const Reader *data_reader,
-      void *decompression_buffer,
-      void *buffer);
+      char *decompression_buffer,
+      char *read_buffer,
+      std::fstream &output);
   size_t RetreiveFromCompressedSource(
       size_t block_index,
       const Reader *data_reader,
@@ -91,6 +95,10 @@ class SyncCommand::Impl final {
       size_t compressed_size,
       const void *decompression_buffer,
       void *output_buffer);
+  void AddForBatchedRetrieval(
+      size_t begin_offset,
+      size_t size_to_read,
+      size_t offset_to_write_to);
   void Validate(size_t i, const void *buffer, size_t count);
   void ReconstructSource();
 
