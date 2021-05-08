@@ -239,6 +239,50 @@ bool SyncCommand::Impl::FoundMatchingSeedOffset(
   }
 }
 
+size_t SyncCommand::Impl::RetreiveFromCompressedSource(
+    size_t block_index,
+    const Reader *data_reader,
+    void *decompression_buffer) {
+  auto size_to_read = compressed_sizes_[block_index];
+  auto offset_to_read_from = compressed_file_offsets_[block_index];
+  LOG_ASSERT(size_to_read <= max_compressed_size_);
+  auto count = data_reader->Read(
+      decompression_buffer,
+      offset_to_read_from,
+      size_to_read);
+  downloaded_bytes_ += count;
+  return count;
+}
+
+size_t SyncCommand::Impl::Decompress(
+    size_t block_index,
+    size_t compressed_size,
+    const void *decompression_buffer,
+    void *output_buffer) {
+  auto offset_to_read_from = compressed_file_offsets_[block_index];
+  auto const expected_size_after_decompression =
+      ZSTD_getFrameContentSize(decompression_buffer, compressed_size);
+  CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_ERROR)
+      << "Offset starting " << offset_to_read_from
+      << " not compressed by zstd!";
+  CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_UNKNOWN)
+      << "Original GetSize unknown when decompressing from offset "
+      << offset_to_read_from;
+  CHECK(expected_size_after_decompression <= block_)
+      << "Expected decompressed GetSize is greater than block GetSize. "
+         "Starting offset "
+      << offset_to_read_from;
+  auto decompressed_size = ZSTD_decompress(
+      output_buffer,
+      block_,
+      decompression_buffer,
+      compressed_size);
+  CHECK(!ZSTD_isError(decompressed_size))
+      << ZSTD_getErrorName(decompressed_size);
+  LOG_ASSERT(decompressed_size <= block_);
+  return decompressed_size;
+}
+
 size_t SyncCommand::Impl::RetrieveFromSource(
     size_t block_index,
     const Reader *data_reader,
@@ -249,32 +293,11 @@ size_t SyncCommand::Impl::RetrieveFromSource(
     count = data_reader->Read(buffer, block_index * block_, block_);
     downloaded_bytes_ += count;
   } else {
-    auto size_to_read = compressed_sizes_[block_index];
-    auto offset_to_read_from = compressed_file_offsets_[block_index];
-    LOG_ASSERT(size_to_read <= max_compressed_size_);
-    count = data_reader->Read(
-        decompression_buffer,
-        offset_to_read_from,
-        size_to_read);
-    downloaded_bytes_ += count;
-    auto const expected_size_after_decompression =
-        ZSTD_getFrameContentSize(decompression_buffer, count);
-    CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_ERROR)
-        << "Offset starting " << offset_to_read_from
-        << " not compressed by zstd!";
-    CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_UNKNOWN)
-        << "Original GetSize unknown when decompressing from offset "
-        << offset_to_read_from;
-    CHECK(expected_size_after_decompression <= block_)
-        << "Expected decompressed GetSize is greater than block GetSize. "
-           "Starting offset "
-        << offset_to_read_from;
-    auto decompressed_size =
-        ZSTD_decompress(buffer, block_, decompression_buffer, count);
-    CHECK(!ZSTD_isError(decompressed_size))
-        << ZSTD_getErrorName(decompressed_size);
-    LOG_ASSERT(decompressed_size <= block_);
-    count = decompressed_size;
+    count = RetreiveFromCompressedSource(
+        block_index,
+        data_reader,
+        decompression_buffer);
+    count = Decompress(block_index, count, decompression_buffer, buffer);
     decompressed_bytes_ += count;
   }
   return count;
@@ -294,7 +317,6 @@ void SyncCommand::Impl::Validate(
       LOG_ASSERT(scs == StrongChecksum::Compute(buffer, count));
     }
   }
-
   if (block_index < block_count_ - 1 || size_ % block_ == 0) {
     CHECK_EQ(count, block_);
   } else {
@@ -307,13 +329,11 @@ void SyncCommand::Impl::ReconstructSourceChunk(
     size_t start_offset,
     size_t end_offset) {
   LOG_ASSERT(start_offset % block_ == 0);
-
   auto read_buffer = std::make_unique<char[]>(block_);
-  auto decompression_buffer =
-      std::make_unique<char[]>(max_compressed_size_);
-
+  auto decompression_buffer = std::make_unique<char[]>(max_compressed_size_);
   auto seed_reader = Reader::Create(kSeedUri);
   auto data_reader = Reader::Create(kDataUri);
+
   std::fstream output = GetOutputStream(start_offset);
   for (auto offset = start_offset; offset < end_offset; offset += block_) {
     auto block_index = offset / block_;
@@ -322,14 +342,15 @@ void SyncCommand::Impl::ReconstructSourceChunk(
     if (FoundMatchingSeedOffset(block_index, &seed_offset)) {
       count = seed_reader->Read(read_buffer.get(), seed_offset, block_);
       reused_bytes_ += count;
+      output.write(read_buffer.get(), count);
     } else {
       count = RetrieveFromSource(
           block_index,
           data_reader.get(),
           decompression_buffer.get(),
           read_buffer.get());
+      output.write(read_buffer.get(), count);
     }
-    output.write(read_buffer.get(), count);
     Validate(block_index, read_buffer.get(), count);
     kParent.AdvanceProgress(count);
   }

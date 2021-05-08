@@ -74,9 +74,24 @@ class SyncCommand::Impl final {
   void AnalyzeSeed();
   void ReconstructSourceChunk(int id, size_t start_offset, size_t end_offset);
   std::fstream GetOutputStream(size_t start_offset);
-  bool FoundMatchingSeedOffset(size_t block_index, size_t *matching_seed_offset);
-  size_t RetrieveFromSource(size_t block_index, const Reader *data_reader, void *decompression_buffer, void *buffer);
-  void Validate(size_t i, const void* buffer, size_t count);
+  bool FoundMatchingSeedOffset(
+      size_t block_index,
+      size_t *matching_seed_offset);
+  size_t RetrieveFromSource(
+      size_t block_index,
+      const Reader *data_reader,
+      void *decompression_buffer,
+      void *buffer);
+  size_t RetreiveFromCompressedSource(
+      size_t block_index,
+      const Reader *data_reader,
+      void *decompression_buffer);
+  size_t Decompress(
+      size_t block_index,
+      size_t compressed_size,
+      const void *decompression_buffer,
+      void *output_buffer);
+  void Validate(size_t i, const void *buffer, size_t count);
   void ReconstructSource();
 
   int Run();
