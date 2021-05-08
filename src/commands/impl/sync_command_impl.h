@@ -22,7 +22,7 @@ class SyncCommand::Impl final {
   const std::filesystem::path kOutputPath;
   const bool kCompressionDiabled;
   const int kThreads;
-  const int kNumBlocksPerRetrieval{4};
+  const int kNumBlocksPerRetrieval{64};
 
   Metric weak_checksum_matches_;
   Metric weak_checksum_false_positive_;
@@ -96,17 +96,20 @@ class SyncCommand::Impl final {
       const void *decompression_buffer,
       void *output_buffer);
   void AddForBatchedRetrieval(
+      size_t block_index,
       size_t begin_offset,
-      size_t size_to_read,
-      size_t offset_to_write_to);
+      size_t offset_to_write_to,
+      std::vector<BatchedRetrivalInfo> &batched_retrievals_info);
   void WriteRetrievedBatch(
-      const char *buffer,
+      char *buffer,
+      const char *decompression_buffer,
       size_t size_to_write,
       std::vector<BatchedRetrivalInfo> &batched_retrievals_info,
       std::fstream &output);
   size_t PerformBatchRetrieval(
       const Reader *data_reader,
       char *read_buffer,
+      char *decompression_buffer,
       std::vector<BatchedRetrivalInfo> &batched_retrievals_info,
       std::fstream &output);
   void ValidateAndWrite(
