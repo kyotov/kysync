@@ -22,7 +22,7 @@ class SyncCommand::Impl final {
   const std::filesystem::path kOutputPath;
   const bool kCompressionDiabled;
   const int kThreads;
-  const int kNumBlocksPerRetrieval{1};
+  const int kNumBlocksPerRetrieval{4};
 
   Metric weak_checksum_matches_;
   Metric weak_checksum_false_positive_;
@@ -53,7 +53,6 @@ class SyncCommand::Impl final {
 
   std::bitset<k4Gb> set_;
   std::unordered_map<uint32_t, WcsMapData> analysis_;
-  std::vector<BatchedRetrivalInfo> batched_retrievals_info_;
 
   Impl(
       const SyncCommand &parent,
@@ -80,11 +79,12 @@ class SyncCommand::Impl final {
   bool FoundMatchingSeedOffset(
       size_t block_index,
       size_t *matching_seed_offset);
-  size_t RetrieveFromSource(
+  void RetrieveFromSource(
       size_t block_index,
       const Reader *data_reader,
       char *decompression_buffer,
       char *read_buffer,
+      std::vector<BatchedRetrivalInfo> &batched_retrievals_info,
       std::fstream &output);
   size_t RetreiveFromCompressedSource(
       size_t block_index,
@@ -99,7 +99,22 @@ class SyncCommand::Impl final {
       size_t begin_offset,
       size_t size_to_read,
       size_t offset_to_write_to);
-  void Validate(size_t i, const void *buffer, size_t count);
+  void WriteRetrievedBatch(
+      const char *buffer,
+      size_t size_to_write,
+      std::vector<BatchedRetrivalInfo> &batched_retrievals_info,
+      std::fstream &output);
+  size_t PerformBatchRetrieval(
+      const Reader *data_reader,
+      char *read_buffer,
+      std::vector<BatchedRetrivalInfo> &batched_retrievals_info,
+      std::fstream &output);
+  void ValidateAndWrite(
+      size_t block_index,
+      const char *buffer,
+      size_t count,
+      std::fstream &output);
+
   void ReconstructSource();
 
   int Run();
