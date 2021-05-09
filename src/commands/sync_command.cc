@@ -244,21 +244,6 @@ bool SyncCommand::Impl::FoundMatchingSeedOffset(
   }
 }
 
-size_t SyncCommand::Impl::RetreiveFromCompressedSource(
-    size_t block_index,
-    const Reader *data_reader,
-    void *decompression_buffer) {
-  auto size_to_read = compressed_sizes_[block_index];
-  auto offset_to_read_from = compressed_file_offsets_[block_index];
-  LOG_ASSERT(size_to_read <= max_compressed_size_);
-  auto count = data_reader->Read(
-      decompression_buffer,
-      offset_to_read_from,
-      size_to_read);
-  downloaded_bytes_ += count;
-  return count;
-}
-
 size_t SyncCommand::Impl::Decompress(
     size_t block_index,
     size_t compressed_size,

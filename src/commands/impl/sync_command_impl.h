@@ -87,10 +87,6 @@ class SyncCommand::Impl final {
       char *read_buffer,
       std::vector<BatchedRetrivalInfo> &batched_retrievals_info,
       std::fstream &output);
-  size_t RetreiveFromCompressedSource(
-      size_t block_index,
-      const Reader *data_reader,
-      void *decompression_buffer);
   size_t Decompress(
       size_t block_index,
       size_t compressed_size,
