@@ -402,8 +402,6 @@ void SyncCommand::Impl::ValidateAndWrite(
   }
   output.write(buffer, count);
   kParent.AdvanceProgress(count);
-  LOG(INFO) << "Wrote " << count << " bytes to output file before pos "
-            << output.tellp();
 }
 
 void SyncCommand::Impl::ReconstructSourceChunk(
