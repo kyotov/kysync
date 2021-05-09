@@ -164,7 +164,6 @@ public:
             s.read(static_cast<char *>(buffer) + count, count_in_chunk);
             count += count_in_chunk;
           });
-      LOG(INFO) << "Parsing multirange response";
     } else {
       count = res->body.size();
       memcpy(buffer, res->body.data(), count);
