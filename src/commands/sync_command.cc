@@ -23,6 +23,7 @@ SyncCommand::Impl::Impl(
     const std::string &seed_uri,
     const std::filesystem::path &output_path,
     bool compression_disabled,
+    int num_blocks_in_batch,
     int threads)
     : kParent(parent),
       kDataUri(data_uri),
@@ -30,6 +31,7 @@ SyncCommand::Impl::Impl(
       kSeedUri(seed_uri),
       kOutputPath(output_path),
       kCompressionDiabled(compression_disabled),
+      kNumBlocksPerRetrieval(num_blocks_in_batch),
       kThreads(threads) {}
 
 void SyncCommand::Impl::ParseHeader(const Reader &metadata_reader) {
@@ -523,6 +525,7 @@ SyncCommand::SyncCommand(
     const std::string &seed_uri,
     const std::filesystem::path &output_path,
     bool compression_disabled,
+    int num_blocks_in_batch,
     int threads)
     : impl_(new Impl(
           *this,
@@ -534,6 +537,7 @@ SyncCommand::SyncCommand(
           seed_uri,
           output_path,
           compression_disabled,
+          num_blocks_in_batch,
           threads)) {}
 
 SyncCommand::~SyncCommand() = default;

@@ -346,6 +346,7 @@ TEST(SyncCommand, MetadataRoundtrip) {  // NOLINT
       "file://" + data_path.string(),
       output_path,
       true,
+      4,
       1);
 
   KySyncTest::ReadMetadata(sc);
@@ -385,6 +386,7 @@ void EndToEndTest(
       "file://" + data_path.string(),
       output_path,
       compression_disabled,
+      4,
       1)
       .Run();
 
@@ -483,6 +485,7 @@ void SyncFile(
       file_uri_prefix + seed_data_file_name.string(),
       output_file_name,
       compression_disabled,
+      4,
       32);
   auto return_code = sync_command.Run();
   CHECK(return_code == 0) << "Sync command failed for " +

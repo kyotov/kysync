@@ -21,8 +21,8 @@ class SyncCommand::Impl final {
   const std::string kSeedUri;
   const std::filesystem::path kOutputPath;
   const bool kCompressionDiabled;
+  const int kNumBlocksPerRetrieval;
   const int kThreads;
-  const int kNumBlocksPerRetrieval{4};
 
   Metric weak_checksum_matches_;
   Metric weak_checksum_false_positive_;
@@ -61,6 +61,7 @@ class SyncCommand::Impl final {
       const std::string &seed_uri,
       const std::filesystem::path &output_path,
       bool compression_disabled,
+      int num_blocks_in_batch,
       int threads);
 
   template <typename T>
