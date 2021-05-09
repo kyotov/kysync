@@ -27,6 +27,126 @@ public:
     return strtoull(size.c_str(), nullptr, 10);
   }
 
+  void ReadHttpLine(std::istream &input, std::string &buffer, int max) {
+    enum states { NOT_IN_TERMINATING_STATE, TERMINATING, TERMINATED };
+    for (auto state = NOT_IN_TERMINATING_STATE;
+         state != TERMINATED && buffer.size() < max;)
+    {
+      char c;
+      CHECK_EQ(input.get(c).gcount(), 1);
+      buffer += c;
+      switch (state) {
+        case NOT_IN_TERMINATING_STATE:  // not in \r\n
+          if (c == '\r') {
+            state = TERMINATING;
+          }
+          break;
+        case TERMINATING:   // just after \r
+          if (c == '\n') {  // seen \r\n
+            state = TERMINATED;
+          } else if (c == '\r') {  // handle \r\r\n
+            state = TERMINATING;
+          } else {
+            state = NOT_IN_TERMINATING_STATE;
+          }
+          break;
+        default:
+          LOG_ASSERT("Unexpected internal state: ") << state;
+      }
+    }
+  }
+
+  void CheckPrefixAndAdvance(
+      std::istream &input,
+      const std::string &prefix,
+      std::string &buffer) {
+    buffer.resize(prefix.size(), ' ');
+    input.read(buffer.data(), prefix.size());
+    CHECK_EQ(input.gcount(), prefix.size());
+    CHECK(std::equal(prefix.begin(), prefix.end(), buffer.begin()));
+  }
+
+  using ChunkCallback = std::function<
+      void(size_t /*beg*/, size_t /*end*/, std::istream & /*data*/)>;
+
+  void ParseMultipartByterangesResponse(
+      httplib::Response &response,
+      ChunkCallback chunk_callback) {
+    auto content_type = response.get_header_value("Content-Type");
+    LOG_ASSERT(IsMultirangeResponse(response));
+    std::string boundary;
+    CHECK(httplib::detail::parse_multipart_boundary(content_type, boundary));
+
+    auto dash = std::string("--");
+    auto crlf = std::string("\r\n");
+    auto buffer = std::string();
+    auto body = std::stringstream(response.body);
+
+    size_t beg = 0;
+    size_t end = 0;
+    enum states { INITIAL, BOUNDARY, HEADER, DATA_CHUNK, TERMINATED };
+    for (auto state = INITIAL; state != TERMINATED;) {
+      switch (state) {
+        case INITIAL: {
+          // There can be an optional CRLF before the boundary
+          auto position = body.tellg();
+          ReadHttpLine(body, buffer, 2);
+          if (buffer == crlf) {
+            // No-op
+          } else {
+            body.seekg(position);
+          }
+          state = BOUNDARY;
+          break;
+        }
+        case BOUNDARY: {
+          CheckPrefixAndAdvance(body, dash, buffer);
+          CheckPrefixAndAdvance(body, boundary, buffer);
+          buffer.clear();
+          ReadHttpLine(body, buffer, 2);
+          if (buffer == crlf) {
+            state = HEADER;
+          } else {
+            CHECK_EQ(buffer, dash);
+            state = TERMINATED;
+          }
+          break;
+        }
+        case HEADER: {
+          buffer.clear();
+          ReadHttpLine(body, buffer, 1024);
+          if (buffer == crlf) {  // end of headers
+            state = DATA_CHUNK;
+            break;  // continue with data chunk
+          }
+          auto re = std::regex(
+              R"(^Content-Range: bytes (\d+)-(\d+)/(\d+)\r\n$)",
+              std::regex_constants::icase);
+          auto m = std::smatch();
+          if (std::regex_match(buffer, m, re)) {
+            beg = stoul(buffer.substr(m.position(1), m.length(1)), nullptr, 10);
+            end = stoul(buffer.substr(m.position(2), m.length(2)), nullptr, 10);
+          }
+          break;  // continue with headers
+        }
+        case DATA_CHUNK: {
+          chunk_callback(beg, end, body);
+          CheckPrefixAndAdvance(body, crlf, buffer);
+          state = BOUNDARY;
+          break;
+        }
+        default:
+          LOG_ASSERT("Unexpected state when parsing multipart response: ")
+              << state;
+      }
+    }
+  }
+
+  bool IsMultirangeResponse(httplib::Response &response) {
+    return response.get_header_value("Content-Type")
+        .starts_with("multipart/byteranges");
+  }
+
   size_t Read(void *buffer, httplib::Ranges ranges) {
     auto range_header = httplib::make_range_header(ranges);
     auto res = cli_.Get(kPath.c_str(), {range_header});
@@ -34,8 +154,21 @@ public:
     CHECK_EQ(res.error(), httplib::Success);
     CHECK(res->status == 206 || res->status == 200);
 
-    auto count = res->body.size();
-    memcpy(buffer, res->body.data(), count);
+    size_t count = 0;
+    if (IsMultirangeResponse(res.value())) {
+      // Note this expects data to be provided in order of range request made
+      ParseMultipartByterangesResponse(
+          res.value(),
+          [&buffer, &count](size_t beg, size_t end, std::istream &s) {
+            auto count_in_chunk = end - beg + 1;
+            s.read(static_cast<char *>(buffer) + count, count_in_chunk);
+            count += count_in_chunk;
+          });
+      LOG(INFO) << "Parsing multirange response";
+    } else {
+      count = res->body.size();
+      memcpy(buffer, res->body.data(), count);
+    }
     return count;
   }
 
