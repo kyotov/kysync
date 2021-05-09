@@ -331,8 +331,6 @@ size_t SyncCommand::Impl::PerformBatchRetrieval(
     char *decompression_buffer,
     std::vector<BatchedRetrivalInfo> &batched_retrievals_info,
     std::fstream &output) {
-  LOG(INFO) << "Performing batched retrieval for "
-            << batched_retrievals_info.size() << " blocks";
   if (batched_retrievals_info.size() <= 0) {
     return 0;
   }
@@ -367,7 +365,6 @@ void SyncCommand::Impl::AddForBatchedRetrieval(
          .size_to_read = compressed_sizes_[block_index],
          .offset_to_write_to = offset_to_write_to});
   }
-  LOG(INFO) << "Deferring retrieval of block with index " << block_index;
 }
 
 void SyncCommand::Impl::RetrieveFromSource(
