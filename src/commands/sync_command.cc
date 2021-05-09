@@ -229,10 +229,12 @@ std::fstream SyncCommand::Impl::GetOutputStream(size_t start_offset) {
 
 bool SyncCommand::Impl::FoundMatchingSeedOffset(
     size_t block_index,
-    size_t *matching_seed_offset) {
+    size_t *matching_seed_offset) const {
   auto wcs = weak_checksums_[block_index];
   auto scs = strong_checksums_[block_index];
-  auto analysis = analysis_[wcs];
+  auto analysis_info = analysis_.find(wcs);
+  CHECK(analysis_info != analysis_.end());
+  auto analysis = analysis_info->second;
   if (analysis.seed_offset != -1ULL && scs == strong_checksums_[analysis.index])
   {
     *matching_seed_offset = analysis.seed_offset;
@@ -261,7 +263,7 @@ size_t SyncCommand::Impl::Decompress(
     size_t block_index,
     size_t compressed_size,
     const void *decompression_buffer,
-    void *output_buffer) {
+    void *output_buffer) const {
   auto offset_to_read_from = compressed_file_offsets_[block_index];
   auto const expected_size_after_decompression =
       ZSTD_getFrameContentSize(decompression_buffer, compressed_size);
@@ -351,7 +353,7 @@ void SyncCommand::Impl::AddForBatchedRetrieval(
     size_t block_index,
     size_t begin_offset,
     size_t offset_to_write_to,
-    std::vector<BatchedRetrivalInfo> &batched_retrievals_info) {
+    std::vector<BatchedRetrivalInfo> &batched_retrievals_info) const {
   if (kCompressionDiabled) {
     batched_retrievals_info.push_back(
         {.block_index = block_index,
