@@ -245,23 +245,17 @@ bool SyncCommand::Impl::FoundMatchingSeedOffset(
 }
 
 size_t SyncCommand::Impl::Decompress(
-    size_t block_index,
     size_t compressed_size,
     const void *decompression_buffer,
     void *output_buffer) const {
-  auto offset_to_read_from = compressed_file_offsets_[block_index];
   auto const expected_size_after_decompression =
       ZSTD_getFrameContentSize(decompression_buffer, compressed_size);
   CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_ERROR)
-      << "Offset starting " << offset_to_read_from
-      << " not compressed by zstd!";
+      << " Not compressed by zstd!";
   CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_UNKNOWN)
-      << "Original size unknown when decompressing from offset "
-      << offset_to_read_from;
+      << "Original size unknown when decompressing from offset.";
   CHECK(expected_size_after_decompression <= block_)
-      << "Expected decompressed size is greater than block size. "
-         "Starting offset "
-      << offset_to_read_from;
+      << "Expected decompressed size is greater than block size.";
   auto decompressed_size = ZSTD_decompress(
       output_buffer,
       block_,
@@ -293,7 +287,6 @@ void SyncCommand::Impl::WriteRetrievedBatch(
           << "Size to read expected to be exact for all blocks including the "
              "last one";
       batch_member_write_size = Decompress(
-          retrieval_info.block_index,
           batch_member_read_size,
           decompression_buffer + size_consumed,
           buffer + size_written);
