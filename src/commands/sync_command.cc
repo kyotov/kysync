@@ -253,7 +253,7 @@ size_t SyncCommand::Impl::Decompress(
   CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_ERROR)
       << " Not compressed by zstd!";
   CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_UNKNOWN)
-      << "Original size unknown when decompressing from offset.";
+      << "Original size unknown when decompressing.";
   CHECK(expected_size_after_decompression <= block_)
       << "Expected decompressed size is greater than block size.";
   auto decompressed_size = ZSTD_decompress(
