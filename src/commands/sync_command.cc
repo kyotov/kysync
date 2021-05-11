@@ -281,26 +281,26 @@ void SyncCommand::Impl::WriteRetrievedBatch(
     std::fstream &output) {
   size_t size_consumed = 0;
   size_t size_written = 0;
-  for (auto &retrieval_batch : batched_retrievals_info) {
+  for (auto &retrieval_info : batched_retrievals_info) {
     auto batch_member_read_size =
-        std::min(size_to_write - size_consumed, retrieval_batch.size_to_read);
-    output.seekp(retrieval_batch.offset_to_write_to);
+        std::min(size_to_write - size_consumed, retrieval_info.size_to_read);
+    output.seekp(retrieval_info.offset_to_write_to);
     auto batch_member_write_size = 0;
     if (kCompressionDiabled) {
       batch_member_write_size = batch_member_read_size;
     } else {
-      LOG_ASSERT(retrieval_batch.size_to_read == batch_member_read_size)
+      LOG_ASSERT(retrieval_info.size_to_read == batch_member_read_size)
           << "Size to read expected to be exact for all blocks including the "
              "last one";
       batch_member_write_size = Decompress(
-          retrieval_batch.block_index,
+          retrieval_info.block_index,
           batch_member_read_size,
           decompression_buffer + size_consumed,
           buffer + size_written);
       decompressed_bytes_ += batch_member_write_size;
     }
     ValidateAndWrite(
-        retrieval_batch.block_index,
+        retrieval_info.block_index,
         buffer + size_written,
         batch_member_write_size,
         output);
