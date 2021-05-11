@@ -256,10 +256,10 @@ size_t SyncCommand::Impl::Decompress(
       << "Offset starting " << offset_to_read_from
       << " not compressed by zstd!";
   CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_UNKNOWN)
-      << "Original GetSize unknown when decompressing from offset "
+      << "Original size unknown when decompressing from offset "
       << offset_to_read_from;
   CHECK(expected_size_after_decompression <= block_)
-      << "Expected decompressed GetSize is greater than block GetSize. "
+      << "Expected decompressed size is greater than block size. "
          "Starting offset "
       << offset_to_read_from;
   auto decompressed_size = ZSTD_decompress(
