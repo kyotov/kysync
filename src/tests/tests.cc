@@ -672,18 +672,18 @@ TEST(HttplibRetrieval, MultirangeNoncontiguous) {
 // Note: This function and the following 2 tests are temporary and will be
 // removed after http_tests.cc have been pushed
 void HttpReaderMultirangeTest(
-    std::vector<BatchedRetrivalInfo> &batched_retrievals_info,
+    std::vector<BatchedRetrivalInfo> &batched_retrieval_infos,
     std::string &expected_string) {
   std::string uri(
       "http://mirror.math.princeton.edu/pub/ubuntu-iso/20.04/"
       "ubuntu-20.04.2.0-desktop-amd64.list");
   auto reader = Reader::Create(uri);
   size_t total_size = 0;
-  for (auto &retrieval_info : batched_retrievals_info) {
+  for (auto &retrieval_info : batched_retrieval_infos) {
     total_size += retrieval_info.size_to_read;
   }
   auto buffer = std::make_unique<char[]>(total_size);
-  auto size_read = reader.get()->Read(buffer.get(), batched_retrievals_info);
+  auto size_read = reader.get()->Read(buffer.get(), batched_retrieval_infos);
   EXPECT_EQ(size_read, expected_string.size());
   EXPECT_TRUE(
       std::memcmp(
@@ -693,42 +693,42 @@ void HttpReaderMultirangeTest(
 }
 
 TEST(HttpReaderRetrieval, MultirangeContiguous) {
-  std::vector<BatchedRetrivalInfo> batched_retrievals_info;
+  std::vector<BatchedRetrivalInfo> batched_retrieval_infos;
   size_t block_size = 4;
-  batched_retrievals_info.push_back(
+  batched_retrieval_infos.push_back(
       {.block_index = 0,
        .source_begin_offset = 0,
        .size_to_read = block_size,
        .offset_to_write_to = 0});
-  batched_retrievals_info.push_back(
+  batched_retrieval_infos.push_back(
       {.block_index = 1,
        .source_begin_offset = block_size,
        .size_to_read = block_size,
        .offset_to_write_to = block_size});
   std::string expected_string("/isolinu");
-  HttpReaderMultirangeTest(batched_retrievals_info, expected_string);
+  HttpReaderMultirangeTest(batched_retrieval_infos, expected_string);
 }
 
 TEST(HttpReaderRetrieval, MultirangeNoncontiguous) {
-  std::vector<BatchedRetrivalInfo> batched_retrievals_info;
+  std::vector<BatchedRetrivalInfo> batched_retrieval_infos;
   size_t block_size = 4;
-  batched_retrievals_info.push_back(
+  batched_retrieval_infos.push_back(
       {.block_index = 0,
        .source_begin_offset = 0,
        .size_to_read = block_size,
        .offset_to_write_to = 0});
-  batched_retrievals_info.push_back(
+  batched_retrieval_infos.push_back(
       {.block_index = 1,
        .source_begin_offset = block_size + 1,
        .size_to_read = block_size,
        .offset_to_write_to = block_size});
-  batched_retrievals_info.push_back(
+  batched_retrieval_infos.push_back(
       {.block_index = 1,
        .source_begin_offset = block_size * 2 + 2,
        .size_to_read = block_size,
        .offset_to_write_to = block_size * 2});
   std::string expected_string("/isoinuxadtx");
-  HttpReaderMultirangeTest(batched_retrievals_info, expected_string);
+  HttpReaderMultirangeTest(batched_retrieval_infos, expected_string);
 }
 
 }  // namespace kysync

@@ -179,9 +179,9 @@ public:
 
   size_t Read(
       void *buffer,
-      std::vector<BatchedRetrivalInfo> &batched_retrievals_info) {
+      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) {
     httplib::Ranges ranges;
-    for (auto &retrieval_info : batched_retrievals_info) {
+    for (auto &retrieval_info : batched_retrieval_infos) {
       auto end_offset =
           retrieval_info.source_begin_offset + retrieval_info.size_to_read - 1;
       ranges.push_back({retrieval_info.source_begin_offset, end_offset});
@@ -210,8 +210,8 @@ size_t HttpReader::Read(void *buffer, size_t offset, size_t size) const {
 
 size_t HttpReader::Read(
     void *buffer,
-    std::vector<BatchedRetrivalInfo> &batched_retrievals_info) const {
-  auto count = impl_->Read(buffer, batched_retrievals_info);
+    std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) const {
+  auto count = impl_->Read(buffer, batched_retrieval_infos);
   return Reader::Read(nullptr, 0, count);
 }
 

@@ -85,7 +85,7 @@ class SyncCommand::Impl final {
       const Reader *data_reader,
       char *decompression_buffer,
       char *read_buffer,
-      std::vector<BatchedRetrivalInfo> &batched_retrievals_info,
+      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos,
       std::fstream &output);
   size_t Decompress(
       size_t block_index,
@@ -96,18 +96,18 @@ class SyncCommand::Impl final {
       size_t block_index,
       size_t begin_offset,
       size_t offset_to_write_to,
-      std::vector<BatchedRetrivalInfo> &batched_retrievals_info) const;
+      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) const;
   void WriteRetrievedBatch(
       char *buffer,
       const char *decompression_buffer,
       size_t size_to_write,
-      std::vector<BatchedRetrivalInfo> &batched_retrievals_info,
+      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos,
       std::fstream &output);
   size_t PerformBatchRetrieval(
       const Reader *data_reader,
       char *read_buffer,
       char *decompression_buffer,
-      std::vector<BatchedRetrivalInfo> &batched_retrievals_info,
+      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos,
       std::fstream &output);
   void ValidateAndWrite(
       size_t block_index,

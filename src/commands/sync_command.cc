@@ -277,11 +277,11 @@ void SyncCommand::Impl::WriteRetrievedBatch(
     char *buffer,
     const char *decompression_buffer,
     size_t size_to_write,
-    std::vector<BatchedRetrivalInfo> &batched_retrievals_info,
+    std::vector<BatchedRetrivalInfo> &batched_retrieval_infos,
     std::fstream &output) {
   size_t size_consumed = 0;
   size_t size_written = 0;
-  for (auto &retrieval_info : batched_retrievals_info) {
+  for (auto &retrieval_info : batched_retrieval_infos) {
     auto batch_member_read_size =
         std::min(size_to_write - size_consumed, retrieval_info.size_to_read);
     output.seekp(retrieval_info.offset_to_write_to);
@@ -316,20 +316,20 @@ size_t SyncCommand::Impl::PerformBatchRetrieval(
     const Reader *data_reader,
     char *buffer,
     char *decompression_buffer,
-    std::vector<BatchedRetrivalInfo> &batched_retrievals_info,
+    std::vector<BatchedRetrivalInfo> &batched_retrieval_infos,
     std::fstream &output) {
-  if (batched_retrievals_info.size() <= 0) {
+  if (batched_retrieval_infos.size() <= 0) {
     return 0;
   }
   char *read_buffer = kCompressionDiabled ? buffer : decompression_buffer;
-  auto count = data_reader->Read(read_buffer, batched_retrievals_info);
+  auto count = data_reader->Read(read_buffer, batched_retrieval_infos);
   WriteRetrievedBatch(
       buffer,
       decompression_buffer,
       count,
-      batched_retrievals_info,
+      batched_retrieval_infos,
       output);
-  batched_retrievals_info.clear();
+  batched_retrieval_infos.clear();
   downloaded_bytes_ += count;
   return count;
 }
@@ -338,15 +338,15 @@ void SyncCommand::Impl::AddForBatchedRetrieval(
     size_t block_index,
     size_t begin_offset,
     size_t offset_to_write_to,
-    std::vector<BatchedRetrivalInfo> &batched_retrievals_info) const {
+    std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) const {
   if (kCompressionDiabled) {
-    batched_retrievals_info.push_back(
+    batched_retrieval_infos.push_back(
         {.block_index = block_index,
          .source_begin_offset = begin_offset,
          .size_to_read = block_,
          .offset_to_write_to = offset_to_write_to});
   } else {
-    batched_retrievals_info.push_back(
+    batched_retrieval_infos.push_back(
         {.block_index = block_index,
          .source_begin_offset = compressed_file_offsets_[block_index],
          .size_to_read = compressed_sizes_[block_index],
@@ -359,7 +359,7 @@ void SyncCommand::Impl::RetrieveFromSource(
     const Reader *data_reader,
     char *decompression_buffer,
     char *read_buffer,
-    std::vector<BatchedRetrivalInfo> &batched_retrievals_info,
+    std::vector<BatchedRetrivalInfo> &batched_retrieval_infos,
     std::fstream &output) {
   auto begin_offset = block_index * block_;
   size_t current_write_offset = output.tellp();
@@ -367,13 +367,13 @@ void SyncCommand::Impl::RetrieveFromSource(
       block_index,
       begin_offset,
       current_write_offset,
-      batched_retrievals_info);
-  if (batched_retrievals_info.size() >= kNumBlocksPerRetrieval) {
+      batched_retrieval_infos);
+  if (batched_retrieval_infos.size() >= kNumBlocksPerRetrieval) {
     PerformBatchRetrieval(
         data_reader,
         read_buffer,
         decompression_buffer,
-        batched_retrievals_info,
+        batched_retrieval_infos,
         output);
   } else {
     output.seekp(current_write_offset + block_);
@@ -415,7 +415,7 @@ void SyncCommand::Impl::ReconstructSourceChunk(
   auto seed_reader = Reader::Create(kSeedUri);
   auto data_reader = Reader::Create(kDataUri);
   std::fstream output = GetOutputStream(start_offset);
-  std::vector<BatchedRetrivalInfo> batched_retrievals_info;
+  std::vector<BatchedRetrivalInfo> batched_retrieval_infos;
   size_t count;
   for (auto offset = start_offset; offset < end_offset; offset += block_) {
     auto block_index = offset / block_;
@@ -430,7 +430,7 @@ void SyncCommand::Impl::ReconstructSourceChunk(
           data_reader.get(),
           decompression_buffer.get(),
           read_buffer.get(),
-          batched_retrievals_info,
+          batched_retrieval_infos,
           output);
     }
   }
@@ -439,7 +439,7 @@ void SyncCommand::Impl::ReconstructSourceChunk(
       data_reader.get(),
       read_buffer.get(),
       decompression_buffer.get(),
-      batched_retrievals_info,
+      batched_retrieval_infos,
       output);
 }
 
