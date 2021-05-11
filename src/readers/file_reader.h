@@ -19,9 +19,6 @@ public:
   [[nodiscard]] size_t GetSize() const override;
 
   size_t Read(void *buffer, size_t offset, size_t size) const override;
-  size_t Read(
-    void *buffer,
-    std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) const override;
 };
 
 }  // namespace kysync

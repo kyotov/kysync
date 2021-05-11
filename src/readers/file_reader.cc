@@ -27,19 +27,6 @@ public:
     data_.read(static_cast<char *>(buffer), size);
     return data_.gcount();
   }
-
-  size_t Read(
-      void *buffer,
-      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) {
-    size_t size_read = 0;
-    for (auto &retrieval_info : batched_retrieval_infos) {
-      size_read += Read(
-          static_cast<char *>(buffer) + size_read,
-          retrieval_info.source_begin_offset,
-          retrieval_info.size_to_read);
-    }
-    return size_read;
-  }
 };
 
 FileReader::FileReader(const std::filesystem::path &path)
@@ -52,13 +39,6 @@ size_t FileReader::GetSize() const { return impl_->GetSize(); }
 size_t FileReader::Read(void *buffer, size_t offset, size_t size) const {
   auto count = impl_->Read(buffer, offset, size);
   return Reader::Read(buffer, offset, count);
-}
-
-size_t FileReader::Read(
-    void *buffer,
-    std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) const {
-  auto count = impl_->Read(buffer, batched_retrieval_infos);
-  return Reader::Read(nullptr, 0, count);
 }
 
 }  // namespace kysync

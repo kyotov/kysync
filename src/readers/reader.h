@@ -24,7 +24,7 @@ public:
   virtual size_t Read(void *buffer, size_t offset, size_t size) const;
   virtual size_t Read(
       void *buffer,
-      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) const = 0;
+      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) const;
 
   void Accept(MetricVisitor &visitor) override;
 
