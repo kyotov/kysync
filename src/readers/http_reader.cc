@@ -84,22 +84,11 @@ public:
 
     size_t beg = 0;
     size_t end = 0;
-    enum states { INITIAL, BOUNDARY, HEADER, DATA_CHUNK, TERMINATED };
-    for (auto state = INITIAL; state != TERMINATED;) {
+    enum states { BOUNDARY, HEADER, DATA_CHUNK, TERMINATED };
+    for (auto state = BOUNDARY; state != TERMINATED;) {
       switch (state) {
-        case INITIAL: {
-          // There can be an optional CRLF before the boundary
-          auto position = body.tellg();
-          ReadHttpLine(body, buffer, 2);
-          if (buffer == crlf) {
-            // No-op
-          } else {
-            body.seekg(position);
-          }
-          state = BOUNDARY;
-          break;
-        }
         case BOUNDARY: {
+          CheckPrefixAndAdvance(body, crlf, buffer);
           CheckPrefixAndAdvance(body, dash, buffer);
           CheckPrefixAndAdvance(body, boundary, buffer);
           buffer.clear();
@@ -131,7 +120,6 @@ public:
         }
         case DATA_CHUNK: {
           chunk_callback(beg, end, body);
-          CheckPrefixAndAdvance(body, crlf, buffer);
           state = BOUNDARY;
           break;
         }
