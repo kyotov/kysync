@@ -28,7 +28,7 @@ public:
   }
 
   void ReadHttpLine(std::istream &input, std::string &buffer, int max) {
-    enum states { NOT_IN_TERMINATING_STATE, TERMINATING, TERMINATED };
+    enum states { NOT_IN_TERMINATING_STATE, POSSIBLY_TERMINATING, TERMINATED };
     for (auto state = NOT_IN_TERMINATING_STATE;
          state != TERMINATED && buffer.size() < max;)
     {
@@ -38,20 +38,20 @@ public:
       switch (state) {
         case NOT_IN_TERMINATING_STATE:  // not in \r\n
           if (c == '\r') {
-            state = TERMINATING;
+            state = POSSIBLY_TERMINATING;
           }
           break;
-        case TERMINATING:   // just after \r
-          if (c == '\n') {  // seen \r\n
+        case POSSIBLY_TERMINATING:  // just after \r
+          if (c == '\n') {          // seen \r\n
             state = TERMINATED;
           } else if (c == '\r') {  // handle \r\r\n
-            state = TERMINATING;
+            state = POSSIBLY_TERMINATING;
           } else {
             state = NOT_IN_TERMINATING_STATE;
           }
           break;
         default:
-          LOG_ASSERT("Unexpected internal state: ") << state;
+          LOG_ASSERT(false) << " Unexpected internal state: " << state;
       }
     }
   }
@@ -136,7 +136,8 @@ public:
           break;
         }
         default:
-          LOG_ASSERT("Unexpected state when parsing multipart response: ")
+          LOG_ASSERT(false)
+              << " Unexpected state when parsing multipart response:  "
               << state;
       }
     }
