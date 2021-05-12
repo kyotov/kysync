@@ -140,7 +140,7 @@ public:
     auto range_header = httplib::make_range_header(ranges);
     auto res = cli_.Get(kPath.c_str(), {range_header});
 
-    CHECK_EQ(res.error() == httplib::Error::Success);
+    CHECK(res.error() == httplib::Error::Success);
     CHECK(res->status == 206 || res->status == 200);
 
     size_t count = 0;

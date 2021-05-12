@@ -645,7 +645,7 @@ void HttpClientMultirangeTest(
   httplib::Client http_client("http://mirror.math.princeton.edu");
   std::string path("/pub/ubuntu-iso/20.04/ubuntu-20.04.2.0-desktop-amd64.list");
   auto res = http_client.Get(path.c_str(), {range_header});
-  CHECK_EQ(res.error(), httplib::Success);
+  CHECK(res.error() == httplib::Error::Success);
   CHECK_EQ(res->status, 206);
   LOG(INFO) << "Got body: " << res->body;
   EXPECT_EQ(res->body.size(), expected_body_size);
