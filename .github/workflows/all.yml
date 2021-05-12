@@ -1,6 +1,11 @@
-name: CMake
+name: All
 
 on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
   workflow_dispatch:
 
 env:
@@ -16,6 +21,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build

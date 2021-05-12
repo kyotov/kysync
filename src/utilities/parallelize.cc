@@ -34,6 +34,9 @@ int Parallelize(
     fs.push_back(std::async(f, id, beg, std::min(end, data_size)));
   }
 
+  // FIXME: research if this is needed at all... maybe the threads are jthreads
+  //        and therefore we don't need this loop. once upon a time i think i
+  //        tripped on it and needed it... consider removing it.
   std::chrono::milliseconds chill(100);
   auto done = false;
   while (!done) {

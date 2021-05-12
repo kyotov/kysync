@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+message Header {
+  uint32 version = 1;
+  uint64 size = 2;
+  uint64 block_size = 3;
+  string hash = 4;
+}

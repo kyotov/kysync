@@ -2,11 +2,20 @@
 <project version="4">
   <component name="PublishConfigData" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
-      <paths name="oldbam (a3e848ee-8b54-45a0-bbd6-eb2248aac74e)">
+      <paths name="oldbam (8b5f35dd-0833-49f2-81f8-80f53bdecb00)">
         <serverdata>
           <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/tmp/tmp.Z1sUfLei8p" local="$PROJECT_DIR$" />
           </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/Debug" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release-ubuntu" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-ubuntu" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/RelWithDebInfo" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/Release" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug" />
+          </excludedPaths>
         </serverdata>
       </paths>
     </serverData>

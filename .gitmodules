@@ -1,0 +1,3 @@
+[submodule "kydeps"]
+	path = kydeps
+	url = https://github.com/kyotov/kydeps.git
