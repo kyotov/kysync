@@ -24,7 +24,7 @@ public:
     CHECK(res->has_header("Content-Length"));
     auto size = res->get_header_value("Content-Length");
 
-    return strtoull(size.c_str(), nullptr, 10);
+    return std::stoull(size, nullptr, 10);
   }
 
   void ReadHttpLine(std::istream &input, std::string &buffer, int max) {
