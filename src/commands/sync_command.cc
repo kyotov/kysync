@@ -283,7 +283,7 @@ void SyncCommand::Impl::WriteRetrievedBatch(
   }
   LOG_ASSERT(size_consumed == size_to_write)
       << "Unexpected scneario where size_to_write from source was "
-      << size_to_write << " but could wrote " << size_consumed << " instead.";
+      << size_to_write << " but could write " << size_consumed << " instead.";
 }
 
 size_t SyncCommand::Impl::PerformBatchRetrieval(
