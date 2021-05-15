@@ -312,6 +312,7 @@ void SyncCommand::Impl::AddForBatchedRetrieval(
     size_t block_index,
     size_t begin_offset,
     size_t offset_to_write_to,
+    std::fstream &output,
     std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) const {
   if (kCompressionDiabled) {
     batched_retrieval_infos.push_back(
@@ -326,32 +327,7 @@ void SyncCommand::Impl::AddForBatchedRetrieval(
          .size_to_read = compressed_sizes_[block_index],
          .offset_to_write_to = offset_to_write_to});
   }
-}
-
-void SyncCommand::Impl::RetrieveFromSource(
-    size_t block_index,
-    const Reader *data_reader,
-    char *decompression_buffer,
-    char *read_buffer,
-    std::vector<BatchedRetrivalInfo> &batched_retrieval_infos,
-    std::fstream &output) {
-  auto begin_offset = block_index * block_;
-  size_t current_write_offset = output.tellp();
-  AddForBatchedRetrieval(
-      block_index,
-      begin_offset,
-      current_write_offset,
-      batched_retrieval_infos);
-  if (batched_retrieval_infos.size() >= kNumBlocksPerRetrieval) {
-    PerformBatchRetrieval(
-        data_reader,
-        read_buffer,
-        decompression_buffer,
-        batched_retrieval_infos,
-        output);
-  } else {
-    output.seekp(current_write_offset + block_);
-  }
+  output.seekp(static_cast<size_t>(output.tellp()) + block_);  
 }
 
 void SyncCommand::Impl::ValidateAndWrite(
@@ -399,13 +375,21 @@ void SyncCommand::Impl::ReconstructSourceChunk(
       reused_bytes_ += count;
       ValidateAndWrite(block_index, read_buffer.get(), count, output);
     } else {
-      RetrieveFromSource(
+      size_t current_write_offset = output.tellp();
+      AddForBatchedRetrieval(
           block_index,
-          data_reader.get(),
-          decompression_buffer.get(),
-          read_buffer.get(),
-          batched_retrieval_infos,
-          output);
+          offset,
+          current_write_offset,
+          output,
+          batched_retrieval_infos);
+      if (batched_retrieval_infos.size() >= kNumBlocksPerRetrieval) {
+        PerformBatchRetrieval(
+            data_reader.get(),
+            read_buffer.get(),
+            decompression_buffer.get(),
+            batched_retrieval_infos,
+            output);
+      }
     }
   }
   // Retrieve trailing batch if any

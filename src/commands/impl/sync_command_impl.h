@@ -80,13 +80,6 @@ class SyncCommand::Impl final {
   bool FoundMatchingSeedOffset(
       size_t block_index,
       size_t *matching_seed_offset) const;
-  void RetrieveFromSource(
-      size_t block_index,
-      const Reader *data_reader,
-      char *decompression_buffer,
-      char *read_buffer,
-      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos,
-      std::fstream &output);
   size_t Decompress(
       size_t compressed_size,
       const void *decompression_buffer,
@@ -95,6 +88,7 @@ class SyncCommand::Impl final {
       size_t block_index,
       size_t begin_offset,
       size_t offset_to_write_to,
+      std::fstream &output,
       std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) const;
   void WriteRetrievedBatch(
       char *buffer,
