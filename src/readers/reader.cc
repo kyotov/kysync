@@ -33,6 +33,19 @@ size_t Reader::Read(void * /*buffer*/, size_t /*offset*/, size_t size) const {
   return size;
 }
 
+size_t Reader::Read(
+    void *buffer,
+    std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) const {
+  size_t size_read = 0;
+  for (auto &retrieval_info : batched_retrieval_infos) {
+    size_read += Read(
+        static_cast<char *>(buffer) + size_read,
+        retrieval_info.source_begin_offset,
+        retrieval_info.size_to_read);
+  }
+  return size_read;
+}
+
 void Reader::Accept(MetricVisitor &visitor) { impl_->Accept(visitor); }
 
 std::unique_ptr<Reader> Reader::Create(const std::string &uri) {

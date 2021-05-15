@@ -1,10 +1,5 @@
 # Project exclude paths
-/cmake-build-debug/
-/cmake-build-release/
-/cmake-build-relwithdebinfo/
-/deps/Debug
-/deps/Release
-/deps/RelWithDebInfo
-build/
+/cmake-build-*/
 .vscode/
 Testing/
+build/

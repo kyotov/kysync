@@ -2,6 +2,7 @@
 #define KSYNC_SYNC_COMMAND_IMPL_H
 
 #include <bitset>
+#include <ios>
 #include <unordered_map>
 
 #include "../../checksums/strong_checksum.h"
@@ -20,6 +21,7 @@ class SyncCommand::Impl final {
   const std::string kSeedUri;
   const std::filesystem::path kOutputPath;
   const bool kCompressionDiabled;
+  const int kNumBlocksPerRetrieval;
   const int kThreads;
 
   Metric weak_checksum_matches_;
@@ -59,6 +61,7 @@ class SyncCommand::Impl final {
       const std::string &seed_uri,
       const std::filesystem::path &output_path,
       bool compression_disabled,
+      int num_blocks_in_batch,
       int threads);
 
   template <typename T>
@@ -73,6 +76,38 @@ class SyncCommand::Impl final {
   void AnalyzeSeedChunk(int id, size_t start_offset, size_t end_offset);
   void AnalyzeSeed();
   void ReconstructSourceChunk(int id, size_t start_offset, size_t end_offset);
+  std::fstream GetOutputStream(size_t start_offset);
+  bool FoundMatchingSeedOffset(
+      size_t block_index,
+      size_t *matching_seed_offset) const;
+  size_t Decompress(
+      size_t compressed_size,
+      const void *decompression_buffer,
+      void *output_buffer) const;
+  void AddForBatchedRetrieval(
+      size_t block_index,
+      size_t begin_offset,
+      size_t offset_to_write_to,
+      std::fstream &output,
+      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) const;
+  void WriteRetrievedBatch(
+      char *buffer,
+      const char *decompression_buffer,
+      size_t size_to_write,
+      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos,
+      std::fstream &output);
+  size_t PerformBatchRetrieval(
+      const Reader *data_reader,
+      char *read_buffer,
+      char *decompression_buffer,
+      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos,
+      std::fstream &output);
+  void ValidateAndWrite(
+      size_t block_index,
+      const char *buffer,
+      size_t count,
+      std::fstream &output);
+
   void ReconstructSource();
 
   int Run();

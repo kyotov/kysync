@@ -35,6 +35,7 @@ TempPath::TempPath(bool keep, const fs::path &path)
   CHECK(!fs::exists(impl_->kPath))
       << "temporary path " << impl_->kPath << "already exists";
   fs::create_directories(impl_->kPath);
+  LOG(INFO) << "using temporary path " << impl_->kPath;
 }
 
 TempPath::~TempPath() {

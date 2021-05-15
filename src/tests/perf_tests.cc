@@ -38,6 +38,7 @@ struct Context {
   size_t fragment_size;
   size_t block_size;
   int similarity;
+  int num_blocks_in_batch;
   int threads;
   bool compression;
   bool identity_reconstruction;
@@ -61,6 +62,7 @@ private:
     fragment_size = GetEnv("TEST_FRAGMENT_SIZE", 123'456);
     block_size = GetEnv("TEST_BLOCK_SIZE", 16'384);
     similarity = GetEnv("TEST_SIMILARITY", 90);
+    num_blocks_in_batch = GetEnv("TEST_NUM_BLOCKS_IN_BATCH", 4);
     threads = GetEnv("TEST_THREADS", 32);
     compression = GetEnv("TEST_COMPRESSION", false);
     identity_reconstruction = GetEnv("TEST_IDENTITY_RECONSTRUCTION", false);
@@ -125,6 +127,7 @@ void Execute(const Context context) {
       GetFileUri(kSeedDataPath),
       kOutPath,
       !context.compression,
+      context.num_blocks_in_batch,
       context.threads);
   auto m_sync = Monitor(sync);
   EXPECT_EQ(m_sync.Run(), 0);

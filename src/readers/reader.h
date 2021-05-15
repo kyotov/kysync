@@ -2,10 +2,12 @@
 #define KSYNC_READER_H
 
 #include <memory>
+#include <vector>
 
 #include "../metrics/metric_container.h"
 #include "../metrics/metric_visitor.h"
 #include "../utilities/utilities.h"
+#include "batched_retrieval_info.h"
 
 namespace kysync {
 
@@ -20,6 +22,9 @@ public:
   [[nodiscard]] virtual size_t GetSize() const = 0;
 
   virtual size_t Read(void *buffer, size_t offset, size_t size) const;
+  virtual size_t Read(
+      void *buffer,
+      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) const;
 
   void Accept(MetricVisitor &visitor) override;
 
