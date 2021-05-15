@@ -636,6 +636,14 @@ TEST(SyncCommand, SyncNonCompressedFile) {  // NOLINT
       std::move(expected_metrics));
 }
 
+// Basic test to ensure different temp paths are returned.
+// This does not do testing for race conditions.
+TEST(SyncCommand, GetTempPath) {  // NOLINT
+  TempPath sample_paths[2];
+  LOG(INFO) << "Got sample paths: " << sample_paths[0].GetPath() << " and "
+            << sample_paths[1].GetPath();
+  EXPECT_NE(sample_paths[0].GetPath(), sample_paths[1].GetPath());
+
 // Note: This function and the following 2 tests are temporary and will be
 // removed after http_tests.cc have been pushed
 void HttpClientMultirangeTest(
