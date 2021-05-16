@@ -282,14 +282,14 @@ void SyncCommand::Impl::ChunkReconstructor::WriteRetrievedBatch(
       << size_to_write << " but could write " << size_consumed << " instead.";
 }
 
-size_t SyncCommand::Impl::ChunkReconstructor::FlushBatch(bool force) {
+void SyncCommand::Impl::ChunkReconstructor::FlushBatch(bool force) {
   if (!(force ||
         batched_retrieval_infos_.size() >= parent_impl_.kNumBlocksPerRetrieval))
   {
-    return 0;
+    return;
   }
   if (batched_retrieval_infos_.size() <= 0) {
-    return 0;
+    return;
   }
   char *read_buffer = parent_impl_.kCompressionDiabled
                           ? buffer_.get()
@@ -298,7 +298,6 @@ size_t SyncCommand::Impl::ChunkReconstructor::FlushBatch(bool force) {
   WriteRetrievedBatch(count);
   batched_retrieval_infos_.clear();
   parent_impl_.downloaded_bytes_ += count;
-  return count;
 }
 
 void SyncCommand::Impl::ChunkReconstructor::EnqueueBlockRetrieval(
@@ -361,13 +360,13 @@ SyncCommand::Impl::ChunkReconstructor::ChunkReconstructor(
   output_ = GetOutputStream(start_offset);
 }
 
-size_t SyncCommand::Impl::ChunkReconstructor::ReconstructFromSeed(
+void SyncCommand::Impl::ChunkReconstructor::ReconstructFromSeed(
     size_t block_index,
     size_t seed_offset) {
   auto count =
       seed_reader_->Read(buffer_.get(), seed_offset, parent_impl_.block_);
   ValidateAndWrite(block_index, buffer_.get(), count);
-  return count;
+  parent_impl_.reused_bytes_ += count;
 }
 
 void SyncCommand::Impl::ReconstructSourceChunk(
@@ -376,13 +375,11 @@ void SyncCommand::Impl::ReconstructSourceChunk(
     size_t end_offset) {
   ChunkReconstructor chunk_reconstructor(*this, start_offset, end_offset);
   LOG_ASSERT(start_offset % block_ == 0);
-  size_t count;
   for (auto offset = start_offset; offset < end_offset; offset += block_) {
     auto block_index = offset / block_;
     size_t seed_offset = -1ULL;
     if (FoundMatchingSeedOffset(block_index, &seed_offset)) {
-      count = chunk_reconstructor.ReconstructFromSeed(block_index, seed_offset);
-      reused_bytes_ += count;
+      chunk_reconstructor.ReconstructFromSeed(block_index, seed_offset);
     } else {
       chunk_reconstructor.EnqueueBlockRetrieval(block_index, offset);
       chunk_reconstructor.FlushBatch(false);

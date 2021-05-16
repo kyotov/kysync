@@ -107,9 +107,9 @@ class SyncCommand::Impl final {
         SyncCommand::Impl &parent,
         size_t start_offset,
         size_t end_offset);
-    size_t ReconstructFromSeed(size_t block_index, size_t seed_offset);
+    void ReconstructFromSeed(size_t block_index, size_t seed_offset);
     void EnqueueBlockRetrieval(size_t block_index, size_t begin_offset);
-    size_t FlushBatch(bool force);
+    void FlushBatch(bool force);
   };
 };
 
