@@ -283,8 +283,12 @@ void SyncCommand::Impl::ChunkReconstructor::WriteRetrievedBatch(
 }
 
 size_t SyncCommand::Impl::ChunkReconstructor::FlushBatch(bool force) {
-  if (!(force || batched_retrieval_infos_.size() >= parent_impl_.kNumBlocksPerRetrieval))
+  if (!(force ||
+        batched_retrieval_infos_.size() >= parent_impl_.kNumBlocksPerRetrieval))
   {
+    return 0;
+  }
+  if (batched_retrieval_infos_.size() <= 0) {
     return 0;
   }
   char *read_buffer = parent_impl_.kCompressionDiabled
