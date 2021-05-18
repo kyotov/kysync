@@ -4,10 +4,7 @@ project(ksync)
 set(CMAKE_CXX_STANDARD 20)
 
 include(kydeps/KyDeps.cmake)
-KyDeps(DEPENDS gflags glog GTest xxHash httplib protobuf zstd
-        DOWNLOAD
-#        UPLOAD
-        )
+KyDeps(NO_DOWNLOAD NO_UPLOAD DEPENDS gflags glog GTest xxHash httplib protobuf zstd)
 
 # TODO: figure out libraries
 #       https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160
