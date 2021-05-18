@@ -17,7 +17,8 @@ namespace fs = std::filesystem;
 
 using namespace httplib;
 
-struct HttpServer::Impl : public MetricContainer {
+class HttpServer::Impl : public MetricContainer {
+public:
   const fs::path kRoot;
   const int kPort;
   const bool kLogHeaders;
@@ -50,29 +51,31 @@ struct HttpServer::Impl : public MetricContainer {
     thread.join();
   }
 
+  void Logger(const Request& req, const Response& res) {
+    requests++;
+    total_bytes += res.template get_header_value<uint64_t>("Content-Length");
+
+    if (kLogHeaders) {
+      std::stringstream s;
+      s << std::endl << "--- Request Headers ---" << std::endl;
+      for (const auto& x : req.headers) {
+        s << x.first << " " << x.second << std::endl;
+      }
+      s << std::endl << "--- Response Headers ---" << std::endl;
+      for (const auto& x : res.headers) {
+        s << x.first << " " << x.second << std::endl;
+      }
+      s << std::endl;
+      LOG(INFO) << s.str();
+    }
+  }
+
   void Init() {
     server->set_mount_point("/", kRoot.string().c_str());
 
-    server->set_logger([&](const auto& req, auto& res) {
-      requests++;
-      total_bytes += res.template get_header_value<uint64_t>("Content-Length");
+    server->set_logger([this](auto req, auto res) { Logger(req, res); });
 
-      if (kLogHeaders) {
-        std::stringstream s;
-        s << std::endl << "--- Request Headers ---" << std::endl;
-        for (const auto& x : req.headers) {
-          s << x.first << " " << x.second << std::endl;
-        }
-        s << std::endl << "--- Response Headers ---" << std::endl;
-        for (const auto& x : res.headers) {
-          s << x.first << " " << x.second << std::endl;
-        }
-        s << std::endl;
-        LOG(INFO) << s.str();
-      }
-    });
-
-    thread = std::thread([&]() {
+    thread = std::thread([this]() {
       CHECK(server->listen("localhost", kPort)) << "server started!";
     });
   }
