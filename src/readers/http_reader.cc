@@ -84,12 +84,18 @@ public:
 
     size_t beg = 0;
     size_t end = 0;
-    enum states { BOUNDARY, HEADER, DATA_CHUNK, TERMINATED };
+    enum { BOUNDARY, HEADER, DATA_CHUNK, TERMINATED };
     for (auto state = BOUNDARY; state != TERMINATED;) {
       switch (state) {
         case BOUNDARY: {
-          CheckPrefixAndAdvance(body, crlf, buffer);
-          CheckPrefixAndAdvance(body, dash, buffer);
+          buffer.clear();
+          ReadHttpLine(body, buffer, 2);
+          if (buffer == crlf) {
+            continue;
+          }
+          CHECK_EQ(buffer, dash);
+//          CheckPrefixAndAdvance(body, crlf, buffer);
+//          CheckPrefixAndAdvance(body, dash, buffer);
           CheckPrefixAndAdvance(body, boundary, buffer);
           buffer.clear();
           ReadHttpLine(body, buffer, 2);

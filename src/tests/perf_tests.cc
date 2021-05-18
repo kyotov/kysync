@@ -177,7 +177,7 @@ void Performance::ExecuteZsync() {
 
   const fs::path zsync_path = GetEnv("ZSYNC_BIN_DIR", ".");
 
-  if (fs::exists(zsync_path / "zsync")) {
+  if (!fs::exists(zsync_path / "zsync")) {
     LOG(WARNING) << "zsync binary not found, skipping zsync test (are you on Windows!?)";
     return;
   }
