@@ -16,6 +16,9 @@ KyDeps(DOWNLOAD NO_UPLOAD DEPENDS gflags glog GTest xxHash httplib protobuf zstd
 include(CTest)
 enable_testing()
 
+configure_file(path_config.h.in include/kysync/path_config.h)
+include_directories(${CMAKE_BINARY_DIR}/include)
+
 set(PROTO_DIR ${CMAKE_BINARY_DIR}/proto)
 execute_process(
         COMMAND ${CMAKE_COMMAND} -E make_directory ${PROTO_DIR})

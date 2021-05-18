@@ -1,6 +1,7 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 #include <httplib.h>
+#include <kysync/path_config.h>
 #include <zstd.h>
 
 #include <filesystem>
