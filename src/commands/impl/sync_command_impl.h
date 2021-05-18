@@ -76,43 +76,41 @@ class SyncCommand::Impl final {
   void AnalyzeSeedChunk(int id, size_t start_offset, size_t end_offset);
   void AnalyzeSeed();
   void ReconstructSourceChunk(int id, size_t start_offset, size_t end_offset);
-  std::fstream GetOutputStream(size_t start_offset);
-  bool FoundMatchingSeedOffset(
-      size_t block_index,
-      size_t *matching_seed_offset) const;
-  size_t Decompress(
-      size_t compressed_size,
-      const void *decompression_buffer,
-      void *output_buffer) const;
-  void AddForBatchedRetrieval(
-      size_t block_index,
-      size_t begin_offset,
-      size_t offset_to_write_to,
-      std::fstream &output,
-      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) const;
-  void WriteRetrievedBatch(
-      char *buffer,
-      const char *decompression_buffer,
-      size_t size_to_write,
-      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos,
-      std::fstream &output);
-  size_t PerformBatchRetrieval(
-      const Reader *data_reader,
-      char *read_buffer,
-      char *decompression_buffer,
-      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos,
-      std::fstream &output);
-  void ValidateAndWrite(
-      size_t block_index,
-      const char *buffer,
-      size_t count,
-      std::fstream &output);
-
+  bool FoundMatchingSeedOffset(size_t block_index, size_t *matching_seed_offset)
+      const;
   void ReconstructSource();
 
   int Run();
 
   void Accept(MetricVisitor &visitor);
+
+  class ChunkReconstructor {
+    SyncCommand::Impl &parent_impl_;
+
+    std::unique_ptr<char[]> buffer_;
+    std::unique_ptr<char[]> decompression_buffer_;
+    std::unique_ptr<Reader> seed_reader_;
+    std::unique_ptr<Reader> data_reader_;
+    std::fstream output_;
+    std::vector<BatchedRetrivalInfo> batched_retrieval_infos_;
+
+    std::fstream GetOutputStream(size_t start_offset);
+    void WriteRetrievedBatch(size_t size_to_write);
+    void ValidateAndWrite(size_t block_index, const char *buffer, size_t count);
+    size_t Decompress(
+        size_t compressed_size,
+        const void *decompression_buffer,
+        void *output_buffer) const;
+
+  public:
+    ChunkReconstructor(
+        SyncCommand::Impl &parent,
+        size_t start_offset,
+        size_t end_offset);
+    void ReconstructFromSeed(size_t block_index, size_t seed_offset);
+    void EnqueueBlockRetrieval(size_t block_index, size_t begin_offset);
+    void FlushBatch(bool force);
+  };
 };
 
 }  // namespace kysync
