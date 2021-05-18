@@ -20,6 +20,7 @@ public:
       const std::string &seed_uri,
       const std::filesystem::path &output_path,
       bool compression_disabled,
+      int num_blocks_in_batch,
       int threads);
 
   ~SyncCommand() override;

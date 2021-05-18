@@ -7,6 +7,7 @@
 
 #include <fstream>
 #include <future>
+#include <ios>
 #include <map>
 
 #include "../checksums/strong_checksum_builder.h"
@@ -25,6 +26,7 @@ SyncCommand::Impl::Impl(
     const std::string &seed_uri,
     const std::filesystem::path &output_path,
     bool compression_disabled,
+    int num_blocks_in_batch,
     int threads)
     : kParent(parent),
       kDataUri(data_uri),
@@ -32,6 +34,7 @@ SyncCommand::Impl::Impl(
       kSeedUri(seed_uri),
       kOutputPath(output_path),
       kCompressionDiabled(compression_disabled),
+      kNumBlocksPerRetrieval(num_blocks_in_batch),
       kThreads(threads) {}
 
 void SyncCommand::Impl::ParseHeader(const Reader &metadata_reader) {
@@ -185,22 +188,8 @@ void SyncCommand::Impl::AnalyzeSeed() {
       [this](auto id, auto beg, auto end) { AnalyzeSeedChunk(id, beg, end); });
 }
 
-void SyncCommand::Impl::ReconstructSourceChunk(
-    int /*id*/,
-    size_t start_offset,
-    size_t end_offset) {
-  LOG_ASSERT(start_offset % block_ == 0);
-
-  auto smart_buffer = std::make_unique<char[]>(block_);
-  auto *buffer = smart_buffer.get();
-
-  auto smart_decompression_buffer =
-      std::make_unique<char[]>(max_compressed_size_);
-  auto *decompression_buffer = smart_decompression_buffer.get();
-
-  auto seed_reader = Reader::Create(kSeedUri);
-  auto data_reader = Reader::Create(kDataUri);
-
+std::fstream SyncCommand::Impl::ChunkReconstructor::GetOutputStream(
+    size_t start_offset) {
   // NOTE: The fstream object is consciously initialized with both out and in
   // modes although this function only writes to the file.
   // Calling
@@ -213,75 +202,191 @@ void SyncCommand::Impl::ReconstructSourceChunk(
   // https://stackoverflow.com/questions/39256916/does-stdofstream-truncate-or-append-by-default#:~:text=It%20truncates%20by%20default
   // Using ate or app does not resolve this.
   std::fstream output(
-      kOutputPath,
+      parent_impl_.kOutputPath,
       std::ios::binary | std::fstream::out | std::fstream::in);
   output.exceptions(std::fstream::failbit | std::fstream::badbit);
   output.seekp(start_offset);
+  return std::move(output);
+}
 
-  for (auto offset = start_offset; offset < end_offset; offset += block_) {
-    auto i = offset / block_;
-    auto wcs = weak_checksums_[i];
-    auto scs = strong_checksums_[i];
-    auto data = analysis_[wcs];
-
-    size_t count;
-
-    if (data.seed_offset != -1ULL && scs == strong_checksums_[data.index]) {
-      count = seed_reader->Read(buffer, data.seed_offset, block_);
-      reused_bytes_ += count;
-    } else {
-      if (kCompressionDiabled) {
-        count = data_reader->Read(buffer, i * block_, block_);
-        downloaded_bytes_ += count;
-      } else {
-        auto size_to_read = compressed_sizes_[i];
-        auto offset_to_read_from = compressed_file_offsets_[i];
-        LOG_ASSERT(size_to_read <= max_compressed_size_);
-        count = data_reader->Read(
-            decompression_buffer,
-            offset_to_read_from,
-            size_to_read);
-        downloaded_bytes_ += count;
-        auto const expected_size_after_decompression =
-            ZSTD_getFrameContentSize(decompression_buffer, count);
-        CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_ERROR)
-            << "Offset starting " << offset_to_read_from
-            << " not compressed by zstd!";
-        CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_UNKNOWN)
-            << "Original GetSize unknown when decompressing from offset "
-            << offset_to_read_from;
-        CHECK(expected_size_after_decompression <= block_)
-            << "Expected decompressed GetSize is greater than block GetSize. "
-               "Starting offset "
-            << offset_to_read_from;
-        auto decompressed_size =
-            ZSTD_decompress(buffer, block_, decompression_buffer, count);
-        CHECK(!ZSTD_isError(decompressed_size))
-            << ZSTD_getErrorName(decompressed_size);
-        LOG_ASSERT(decompressed_size <= block_);
-        count = decompressed_size;
-        decompressed_bytes_ += count;
-      }
-    }
-
-    output.write(buffer, count);
-
-    if (kVerify) {
-      LOG_ASSERT(wcs == weak_checksums_[data.index]);
-      if (count == block_) {
-        LOG_ASSERT(wcs == WeakChecksum(buffer, count));
-        LOG_ASSERT(scs == StrongChecksum::Compute(buffer, count));
-      }
-    }
-
-    if (i < block_count_ - 1 || size_ % block_ == 0) {
-      CHECK_EQ(count, block_);
-    } else {
-      CHECK_EQ(count, size_ % block_);
-    }
-
-    kParent.AdvanceProgress(count);
+bool SyncCommand::Impl::FoundMatchingSeedOffset(
+    size_t block_index,
+    size_t *matching_seed_offset) const {
+  auto wcs = weak_checksums_[block_index];
+  auto scs = strong_checksums_[block_index];
+  auto analysis_info = analysis_.find(wcs);
+  CHECK(analysis_info != analysis_.end());
+  auto analysis = analysis_info->second;
+  if (analysis.seed_offset != -1ULL && scs == strong_checksums_[analysis.index])
+  {
+    *matching_seed_offset = analysis.seed_offset;
+    return true;
+  } else {
+    return false;
   }
+}
+
+size_t SyncCommand::Impl::ChunkReconstructor::Decompress(
+    size_t compressed_size,
+    const void *decompression_buffer,
+    void *output_buffer) const {
+  auto const expected_size_after_decompression =
+      ZSTD_getFrameContentSize(decompression_buffer, compressed_size);
+  CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_ERROR)
+      << " Not compressed by zstd!";
+  CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_UNKNOWN)
+      << "Original size unknown when decompressing.";
+  CHECK(expected_size_after_decompression <= parent_impl_.block_)
+      << "Expected decompressed size is greater than block size.";
+  auto decompressed_size = ZSTD_decompress(
+      output_buffer,
+      parent_impl_.block_,
+      decompression_buffer,
+      compressed_size);
+  CHECK(!ZSTD_isError(decompressed_size))
+      << ZSTD_getErrorName(decompressed_size);
+  LOG_ASSERT(decompressed_size <= parent_impl_.block_);
+  return decompressed_size;
+}
+
+void SyncCommand::Impl::ChunkReconstructor::WriteRetrievedBatch(
+    size_t size_to_write) {
+  size_t size_consumed = 0;
+  size_t size_written = 0;
+  for (auto &retrieval_info : batched_retrieval_infos_) {
+    auto batch_member_read_size =
+        std::min(size_to_write - size_consumed, retrieval_info.size_to_read);
+    output_.seekp(retrieval_info.offset_to_write_to);
+    auto batch_member_write_size = 0;
+    if (parent_impl_.kCompressionDiabled) {
+      batch_member_write_size = batch_member_read_size;
+    } else {
+      LOG_ASSERT(retrieval_info.size_to_read == batch_member_read_size)
+          << "Size to read expected to be exact for all blocks including the "
+             "last one";
+      batch_member_write_size = Decompress(
+          batch_member_read_size,
+          decompression_buffer_.get() + size_consumed,
+          buffer_.get() + size_written);
+      parent_impl_.decompressed_bytes_ += batch_member_write_size;
+    }
+    ValidateAndWrite(
+        retrieval_info.block_index,
+        buffer_.get() + size_written,
+        batch_member_write_size);
+    size_consumed += batch_member_read_size;
+    size_written += batch_member_write_size;
+  }
+  LOG_ASSERT(size_consumed == size_to_write)
+      << "Unexpected scneario where size_to_write from source was "
+      << size_to_write << " but could write " << size_consumed << " instead.";
+}
+
+void SyncCommand::Impl::ChunkReconstructor::FlushBatch(bool force) {
+  if (!(force ||
+        batched_retrieval_infos_.size() >= parent_impl_.kNumBlocksPerRetrieval))
+  {
+    return;
+  }
+  if (batched_retrieval_infos_.size() <= 0) {
+    return;
+  }
+  char *read_buffer = parent_impl_.kCompressionDiabled
+                          ? buffer_.get()
+                          : decompression_buffer_.get();
+  auto count = data_reader_->Read(read_buffer, batched_retrieval_infos_);
+  WriteRetrievedBatch(count);
+  batched_retrieval_infos_.clear();
+  parent_impl_.downloaded_bytes_ += count;
+}
+
+void SyncCommand::Impl::ChunkReconstructor::EnqueueBlockRetrieval(
+    size_t block_index,
+    size_t begin_offset) {
+  size_t offset_to_write_to = output_.tellp();
+  if (parent_impl_.kCompressionDiabled) {
+    batched_retrieval_infos_.push_back(
+        {.block_index = block_index,
+         .source_begin_offset = begin_offset,
+         .size_to_read = parent_impl_.block_,
+         .offset_to_write_to = offset_to_write_to});
+  } else {
+    batched_retrieval_infos_.push_back(
+        {.block_index = block_index,
+         .source_begin_offset =
+             parent_impl_.compressed_file_offsets_[block_index],
+         .size_to_read = parent_impl_.compressed_sizes_[block_index],
+         .offset_to_write_to = offset_to_write_to});
+  }
+  output_.seekp(static_cast<size_t>(output_.tellp()) + parent_impl_.block_);
+}
+
+void SyncCommand::Impl::ChunkReconstructor::ValidateAndWrite(
+    size_t block_index,
+    const char *buffer,
+    size_t count) {
+  if (kVerify) {
+    auto wcs = parent_impl_.weak_checksums_[block_index];
+    auto scs = parent_impl_.strong_checksums_[block_index];
+    auto analysis = parent_impl_.analysis_[wcs];
+    LOG_ASSERT(wcs == parent_impl_.weak_checksums_[analysis.index]);
+    if (count == parent_impl_.block_) {
+      LOG_ASSERT(wcs == WeakChecksum(buffer, count));
+      LOG_ASSERT(scs == StrongChecksum::Compute(buffer, count));
+    }
+  }
+  if (block_index < parent_impl_.block_count_ - 1 ||
+      parent_impl_.size_ % parent_impl_.block_ == 0)
+  {
+    CHECK_EQ(count, parent_impl_.block_);
+  } else {
+    CHECK_EQ(count, parent_impl_.size_ % parent_impl_.block_);
+  }
+  output_.write(buffer, count);
+  parent_impl_.kParent.AdvanceProgress(count);
+}
+
+SyncCommand::Impl::ChunkReconstructor::ChunkReconstructor(
+    SyncCommand::Impl &parent_instance,
+    size_t start_offset,
+    size_t end_offset)
+    : parent_impl_(parent_instance) {
+  buffer_ = std::make_unique<char[]>(
+      parent_impl_.block_ * parent_impl_.kNumBlocksPerRetrieval);
+  decompression_buffer_ = std::make_unique<char[]>(
+      parent_impl_.max_compressed_size_ * parent_impl_.kNumBlocksPerRetrieval);
+  seed_reader_ = Reader::Create(parent_impl_.kSeedUri);
+  data_reader_ = Reader::Create(parent_impl_.kDataUri);
+  output_ = GetOutputStream(start_offset);
+}
+
+void SyncCommand::Impl::ChunkReconstructor::ReconstructFromSeed(
+    size_t block_index,
+    size_t seed_offset) {
+  auto count =
+      seed_reader_->Read(buffer_.get(), seed_offset, parent_impl_.block_);
+  ValidateAndWrite(block_index, buffer_.get(), count);
+  parent_impl_.reused_bytes_ += count;
+}
+
+void SyncCommand::Impl::ReconstructSourceChunk(
+    int /*id*/,
+    size_t start_offset,
+    size_t end_offset) {
+  ChunkReconstructor chunk_reconstructor(*this, start_offset, end_offset);
+  LOG_ASSERT(start_offset % block_ == 0);
+  for (auto offset = start_offset; offset < end_offset; offset += block_) {
+    auto block_index = offset / block_;
+    size_t seed_offset = -1ULL;
+    if (FoundMatchingSeedOffset(block_index, &seed_offset)) {
+      chunk_reconstructor.ReconstructFromSeed(block_index, seed_offset);
+    } else {
+      chunk_reconstructor.EnqueueBlockRetrieval(block_index, offset);
+      chunk_reconstructor.FlushBatch(false);
+    }
+  }
+  // Retrieve trailing batch if any
+  chunk_reconstructor.FlushBatch(true);
 }
 
 void SyncCommand::Impl::ReconstructSource() {
@@ -348,6 +453,7 @@ SyncCommand::SyncCommand(
     const std::string &seed_uri,
     const std::filesystem::path &output_path,
     bool compression_disabled,
+    int num_blocks_in_batch,
     int threads)
     : impl_(new Impl(
           *this,
@@ -359,6 +465,7 @@ SyncCommand::SyncCommand(
           seed_uri,
           output_path,
           compression_disabled,
+          num_blocks_in_batch,
           threads)) {}
 
 SyncCommand::~SyncCommand() = default;

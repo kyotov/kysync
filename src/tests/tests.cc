@@ -1,5 +1,6 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+#include <httplib.h>
 #include <zstd.h>
 
 #include <filesystem>
@@ -13,6 +14,7 @@
 #include "../commands/sync_command.h"
 #include "../config.h"
 #include "../readers/file_reader.h"
+#include "../readers/http_reader.h"
 #include "../readers/memory_reader.h"
 #include "expectation_check_metrics_visitor.h"
 #include "utilities/temp_path.h"
@@ -344,6 +346,7 @@ TEST(SyncCommand, MetadataRoundtrip) {  // NOLINT
       "file://" + data_path.string(),
       output_path,
       true,
+      4,
       1);
 
   KySyncTest::ReadMetadata(sc);
@@ -383,6 +386,7 @@ void EndToEndTest(
       "file://" + data_path.string(),
       output_path,
       compression_disabled,
+      4,
       1)
       .Run();
 
@@ -481,6 +485,7 @@ void SyncFile(
       file_uri_prefix + seed_data_file_name.string(),
       output_file_name,
       compression_disabled,
+      4,
       32);
   auto return_code = sync_command.Run();
   CHECK(return_code == 0) << "Sync command failed for " +
@@ -629,6 +634,110 @@ TEST(SyncCommand, SyncNonCompressedFile) {  // NOLINT
       tmp.GetPath(),
       sync_file_name,
       std::move(expected_metrics));
+}
+
+// Basic test to ensure different temp paths are returned.
+// This does not do testing for race conditions.
+TEST(SyncCommand, GetTempPath) {  // NOLINT
+  TempPath sample_paths[2];
+  LOG(INFO) << "Got sample paths: " << sample_paths[0].GetPath() << " and "
+            << sample_paths[1].GetPath();
+  EXPECT_NE(sample_paths[0].GetPath(), sample_paths[1].GetPath());
+}
+
+// Note: This function and the following 2 tests are temporary and will be
+// removed after http_tests.cc have been pushed
+void HttpClientMultirangeTest(
+    httplib::Ranges ranges,
+    size_t expected_body_size) {
+  auto range_header = httplib::make_range_header(ranges);
+  httplib::Client http_client("http://mirror.math.princeton.edu");
+  std::string path("/pub/ubuntu-iso/20.04/ubuntu-20.04.2.0-desktop-amd64.list");
+  auto res = http_client.Get(path.c_str(), {range_header});
+  CHECK(res.error() == httplib::Error::Success);
+  CHECK_EQ(res->status, 206);
+  LOG(INFO) << "Got body: " << res->body;
+  EXPECT_EQ(res->body.size(), expected_body_size);
+}
+
+TEST(HttplibRetrieval, MultirangeContiguous) {
+  auto block_size = 4;
+  httplib::Ranges ranges;
+  ranges.push_back({0, block_size - 1});
+  ranges.push_back({block_size, block_size * 2 - 1});
+  std::string expected_string("/isolinu");
+  HttpClientMultirangeTest(ranges, expected_string.size());
+}
+
+TEST(HttplibRetrieval, MultirangeNoncontiguous) {
+  auto block_size = 4;
+  httplib::Ranges ranges;
+  ranges.push_back({0, block_size - 1});
+  ranges.push_back({block_size + 1, block_size * 2});
+  std::string expected_string("/isoinux");
+  HttpClientMultirangeTest(ranges, 222);
+}
+
+// Note: This function and the following 2 tests are temporary and will be
+// removed after http_tests.cc have been pushed
+void HttpReaderMultirangeTest(
+    std::vector<BatchedRetrivalInfo> &batched_retrieval_infos,
+    std::string &expected_string) {
+  std::string uri(
+      "http://mirror.math.princeton.edu/pub/ubuntu-iso/20.04/"
+      "ubuntu-20.04.2.0-desktop-amd64.list");
+  auto reader = Reader::Create(uri);
+  size_t total_size = 0;
+  for (auto &retrieval_info : batched_retrieval_infos) {
+    total_size += retrieval_info.size_to_read;
+  }
+  auto buffer = std::make_unique<char[]>(total_size);
+  auto size_read = reader.get()->Read(buffer.get(), batched_retrieval_infos);
+  EXPECT_EQ(size_read, expected_string.size());
+  EXPECT_TRUE(
+      std::memcmp(
+          buffer.get(),
+          expected_string.c_str(),
+          expected_string.size()) == 0);
+}
+
+TEST(HttpReaderRetrieval, MultirangeContiguous) {
+  std::vector<BatchedRetrivalInfo> batched_retrieval_infos;
+  size_t block_size = 4;
+  batched_retrieval_infos.push_back(
+      {.block_index = 0,
+       .source_begin_offset = 0,
+       .size_to_read = block_size,
+       .offset_to_write_to = 0});
+  batched_retrieval_infos.push_back(
+      {.block_index = 1,
+       .source_begin_offset = block_size,
+       .size_to_read = block_size,
+       .offset_to_write_to = block_size});
+  std::string expected_string("/isolinu");
+  HttpReaderMultirangeTest(batched_retrieval_infos, expected_string);
+}
+
+TEST(HttpReaderRetrieval, MultirangeNoncontiguous) {
+  std::vector<BatchedRetrivalInfo> batched_retrieval_infos;
+  size_t block_size = 4;
+  batched_retrieval_infos.push_back(
+      {.block_index = 0,
+       .source_begin_offset = 0,
+       .size_to_read = block_size,
+       .offset_to_write_to = 0});
+  batched_retrieval_infos.push_back(
+      {.block_index = 1,
+       .source_begin_offset = block_size + 1,
+       .size_to_read = block_size,
+       .offset_to_write_to = block_size});
+  batched_retrieval_infos.push_back(
+      {.block_index = 1,
+       .source_begin_offset = block_size * 2 + 2,
+       .size_to_read = block_size,
+       .offset_to_write_to = block_size * 2});
+  std::string expected_string("/isoinuxadtx");
+  HttpReaderMultirangeTest(batched_retrieval_infos, expected_string);
 }
 
 }  // namespace kysync

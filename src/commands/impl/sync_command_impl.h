@@ -2,6 +2,7 @@
 #define KSYNC_SYNC_COMMAND_IMPL_H
 
 #include <bitset>
+#include <ios>
 #include <unordered_map>
 
 #include "../../checksums/strong_checksum.h"
@@ -20,6 +21,7 @@ class SyncCommand::Impl final {
   const std::string kSeedUri;
   const std::filesystem::path kOutputPath;
   const bool kCompressionDiabled;
+  const int kNumBlocksPerRetrieval;
   const int kThreads;
 
   Metric weak_checksum_matches_;
@@ -59,6 +61,7 @@ class SyncCommand::Impl final {
       const std::string &seed_uri,
       const std::filesystem::path &output_path,
       bool compression_disabled,
+      int num_blocks_in_batch,
       int threads);
 
   template <typename T>
@@ -73,11 +76,41 @@ class SyncCommand::Impl final {
   void AnalyzeSeedChunk(int id, size_t start_offset, size_t end_offset);
   void AnalyzeSeed();
   void ReconstructSourceChunk(int id, size_t start_offset, size_t end_offset);
+  bool FoundMatchingSeedOffset(size_t block_index, size_t *matching_seed_offset)
+      const;
   void ReconstructSource();
 
   int Run();
 
   void Accept(MetricVisitor &visitor);
+
+  class ChunkReconstructor {
+    SyncCommand::Impl &parent_impl_;
+
+    std::unique_ptr<char[]> buffer_;
+    std::unique_ptr<char[]> decompression_buffer_;
+    std::unique_ptr<Reader> seed_reader_;
+    std::unique_ptr<Reader> data_reader_;
+    std::fstream output_;
+    std::vector<BatchedRetrivalInfo> batched_retrieval_infos_;
+
+    std::fstream GetOutputStream(size_t start_offset);
+    void WriteRetrievedBatch(size_t size_to_write);
+    void ValidateAndWrite(size_t block_index, const char *buffer, size_t count);
+    size_t Decompress(
+        size_t compressed_size,
+        const void *decompression_buffer,
+        void *output_buffer) const;
+
+  public:
+    ChunkReconstructor(
+        SyncCommand::Impl &parent,
+        size_t start_offset,
+        size_t end_offset);
+    void ReconstructFromSeed(size_t block_index, size_t seed_offset);
+    void EnqueueBlockRetrieval(size_t block_index, size_t begin_offset);
+    void FlushBatch(bool force);
+  };
 };
 
 }  // namespace kysync

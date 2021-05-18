@@ -4,14 +4,14 @@ project(ksync)
 set(CMAKE_CXX_STANDARD 20)
 
 include(kydeps/KyDeps.cmake)
-KyDeps(NO_DOWNLOAD NO_UPLOAD DEPENDS gflags glog GTest xxHash httplib protobuf zstd)
+KyDeps(DOWNLOAD NO_UPLOAD DEPENDS gflags glog GTest xxHash httplib protobuf zstd)
 
 # TODO: figure out libraries
 #       https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    add_link_options(-static)
-endif ()
+#if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+#    add_link_options(-static)
+#endif ()
 
 include(CTest)
 enable_testing()
