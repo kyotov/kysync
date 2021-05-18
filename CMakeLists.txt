@@ -94,9 +94,3 @@ add_test(
 add_test(
         NAME performance_tests
         COMMAND perf_tests)
-
-set_tests_properties(
-        tests
-        performance_tests
-        PROPERTIES
-        ENVIRONMENT TEST_DATA_DIR=${CMAKE_SOURCE_DIR}/test_data)
