@@ -10,12 +10,15 @@ KyDeps(DOWNLOAD NO_UPLOAD DEPENDS gflags glog GTest xxHash httplib protobuf zstd
 #       https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-#    add_link_options(-static)
+    #    add_link_options(-static)
     add_compile_options(--coverage)
     add_link_options(--coverage)
 endif ()
 
 include(zsync.cmake)
+
+configure_file(path_config.h.in include/kysync/path_config.h)
+include_directories(${CMAKE_BINARY_DIR}/include)
 
 set(PROTO_DIR ${CMAKE_BINARY_DIR}/proto)
 execute_process(
@@ -54,9 +57,15 @@ target_link_libraries(main
         glog::glog
         gflags)
 
-add_subdirectory(src/tests)
-
 add_executable(kysync
         src/main.cc)
 target_link_libraries(kysync
         main)
+
+include(CTest)
+enable_testing()
+
+add_subdirectory(src/tests)
+add_test(NAME tests COMMAND tests)
+add_test(NAME performance_tests COMMAND perf_tests)
+add_test(NAME http_tests COMMAND http_tests)

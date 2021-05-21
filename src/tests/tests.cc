@@ -1,6 +1,7 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 #include <httplib.h>
+#include <kysync/path_config.h>
 #include <zstd.h>
 
 #include <filesystem>
@@ -560,8 +561,9 @@ std::string GetTestDataPath() {
   // NOTE: This expects that either the test data path is provided through
   // the TEST_DATA_DIR environment variable or that the test data dir exists one
   // level above the test's working directory
-  auto dir_name = std::getenv("TEST_DATA_DIR");
-  return dir_name == nullptr ? "../test_data" : dir_name;
+  auto *dir_name = std::getenv("TEST_DATA_DIR");
+  return dir_name == nullptr ? (CMAKE_SOURCE_DIR / "test_data").string()
+                             : dir_name;
 }
 
 // Test summary:

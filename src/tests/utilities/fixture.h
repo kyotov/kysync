@@ -3,6 +3,8 @@
 
 #include <gtest/gtest.h>
 
+#include <filesystem>
+
 namespace kysync {
 
 class Fixture : public ::testing::Test {
@@ -12,6 +14,10 @@ protected:
   static std::string GetEnv(
       const std::string &name,
       const std::string &default_value);
+
+  static std::filesystem::path GetEnv(
+      const std::string &name,
+      const std::filesystem::path &default_value);
 
   static uintmax_t GetEnv(const std::string &name, uintmax_t default_value);
 };

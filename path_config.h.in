@@ -1,0 +1,9 @@
+#ifndef KSYNC_PATH_CONFIG_H
+#define KSYNC_PATH_CONFIG_H
+
+#include <filesystem>
+
+static const std::filesystem::path CMAKE_SOURCE_DIR = R"(${CMAKE_SOURCE_DIR})";
+static const std::filesystem::path CMAKE_BINARY_DIR = R"(${CMAKE_BINARY_DIR})";
+
+#endif
