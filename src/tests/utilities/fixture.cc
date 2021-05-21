@@ -22,6 +22,12 @@ std::string Fixture::GetEnv(
   return value;
 }
 
+std::filesystem::path Fixture::GetEnv(
+    const std::string& name,
+    const std::filesystem::path& default_value) {
+  return GetEnv(name, default_value.string());
+}
+
 uintmax_t Fixture::GetEnv(const std::string& name, uintmax_t default_value) {
   auto str_value = GetEnv(name, std::to_string(default_value));
   return std::stoull(str_value, nullptr, 10);
