@@ -1,5 +1,6 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+#include <kysync/path_config.h>
 
 #include <chrono>
 #include <fstream>
@@ -33,7 +34,7 @@ protected:
   bool identity_reconstruction;
 
   Performance() {
-    auto root_path = GetEnv("TEST_ROOT_DIR", ".");
+    auto root_path = GetEnv("TEST_ROOT_DIR", CMAKE_BINARY_DIR);
     data_size = GetEnv("TEST_DATA_SIZE", 1'000'000ULL);
     seed_data_size = GetEnv("TEST_SEED_DATA_SIZE", -1ULL);
     fragment_size = GetEnv("TEST_FRAGMENT_SIZE", 123'456);
@@ -96,7 +97,7 @@ void Performance::Execute(
   const fs::path kKysyncPath = kRootPath / "data.bin.kysync";
   const fs::path kPzstPath = kRootPath / "data.bin.pzst";
   const fs::path kOutPath = kRootPath / "data.bin.out";
-  const fs::path kLogPath = GetEnv("TEST_LOG_DIR", ".");
+  const fs::path kLogPath = GetEnv("TEST_LOG_DIR", CMAKE_BINARY_DIR / "log");
 
   std::ofstream log(kLogPath / "perf.log", std::ios::app);
 
@@ -175,7 +176,7 @@ void Performance::ExecuteZsync() {
       << PERFLOG(compression)     //
       << PERFLOG(identity_reconstruction);
 
-  const fs::path zsync_path = GetEnv("ZSYNC_BIN_DIR", ".");
+  const fs::path zsync_path = GetEnv("ZSYNC_BIN_DIR", CMAKE_BINARY_DIR / "zsync/bin");
 
   if (!fs::exists(zsync_path / "zsync")) {
     LOG(WARNING) << "zsync binary not found, skipping zsync test (are you on Windows!?)";
