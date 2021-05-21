@@ -1,13 +1,14 @@
 #include "fixture.h"
 
 #include <glog/logging.h>
+#include <kysync/path_config.h>
 
 namespace kysync {
 
 void Fixture::SetUpTestSuite() {
   google::InitGoogleLogging("tests");
 
-  FLAGS_log_dir = std::getenv("TEST_LOG_DIR");
+  FLAGS_log_dir = GetEnv("TEST_LOG_DIR", (CMAKE_BINARY_DIR / "log").string());
   FLAGS_logtostderr = false;
   FLAGS_alsologtostderr = false;
 }
@@ -15,7 +16,7 @@ void Fixture::SetUpTestSuite() {
 std::string Fixture::GetEnv(
     const std::string& name,
     const std::string& default_value) {
-  auto *env = std::getenv(name.c_str());
+  auto* env = std::getenv(name.c_str());
   auto value = env == nullptr ? default_value : env;
   LOG(INFO) << name << "=" << value;
   return value;

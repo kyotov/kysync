@@ -69,17 +69,3 @@ add_subdirectory(src/tests)
 add_test(NAME tests COMMAND tests)
 add_test(NAME performance_tests COMMAND perf_tests)
 add_test(NAME http_tests COMMAND http_tests)
-
-set(TEST_ENVIRONMENT
-        TEST_ROOT_DIR=${CMAKE_BINARY_DIR}/tmp
-        TEST_LOG_DIR=${CMAKE_BINARY_DIR}/log
-        TEST_DATA_DIR=${CMAKE_SOURCE_DIR}/test_data
-        ZSYNC_BIN_DIR=${CMAKE_BINARY_DIR}/zsync/bin)
-
-set_tests_properties(
-        tests
-        performance_tests
-        http_tests
-
-        PROPERTIES
-        ENVIRONMENT "${TEST_ENVIRONMENT}")

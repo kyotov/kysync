@@ -1,14 +1,15 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 #include <httplib.h>
+#include <kysync/path_config.h>
 
 #include <array>
 #include <fstream>
 #include <sstream>
 
 #include "http_server/http_server.h"
-#include "utilities/temp_path.h"
 #include "utilities/fixture.h"
+#include "utilities/temp_path.h"
 
 namespace kysync {
 
@@ -171,7 +172,8 @@ void CheckGet(const fs::path& path, Client& client) {
 TEST_F(HttpTests, HttpsServer) {  // NOLINT
   auto path = TempPath();
   auto port = 8000;
-  auto cert_path = fs::path(std::getenv("TEST_DATA_DIR"));
+  auto cert_path = fs::path(
+      GetEnv("TEST_DATA_DIR", (CMAKE_SOURCE_DIR / "test_data").string()));
   auto server = HttpServer(cert_path, path.GetPath(), port, true);
   auto client = httplib::SSLClient("localhost", port);
   client.enable_server_certificate_verification(false);
