@@ -20,6 +20,10 @@ public:
 
   int Run();
 
+  void RegisterMetricContainer(
+      const std::string &name,
+      MetricContainer &metric_container);
+
   using MetricCallback = std::function<void(std::string, MetricValueType)>;
   void MetricSnapshot(const MetricCallback &callback) const;
 };

@@ -26,6 +26,9 @@ struct GenDataCommand::Impl {
   void GenChunk(int id, size_t beg, size_t end);
 };
 
+using RandomEngine = std::default_random_engine;
+using RandomValueType = RandomEngine::result_type;
+
 GenDataCommand::GenDataCommand(
     const fs::path &output_path,
     uint64_t data_size,
@@ -49,12 +52,12 @@ GenDataCommand::GenDataCommand(
   LOG(INFO) << "data size: " << impl_->kDataSize;
   LOG(INFO) << "seed data: " << impl_->kSeedData;
   LOG(INFO) << "seed data size: " << impl_->kSeedDataSize;
+
+  LOG(INFO) << "RandomEngine: " << typeid(RandomEngine).name();
+  LOG(INFO) << "sizeof(RandomValueType): " << sizeof(RandomValueType);
 };
 
 GenDataCommand::~GenDataCommand() noexcept = default;
-
-using RandomEngine = std::default_random_engine;
-using RandomValueType = RandomEngine::result_type;
 
 std::vector<RandomValueType> GenVec(size_t size, RandomEngine &random_engine) {
   auto result = std::vector<RandomValueType>();
