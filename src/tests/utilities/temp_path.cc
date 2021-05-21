@@ -10,12 +10,14 @@ namespace fs = std::filesystem;
 
 class TempPath::Impl {
 public:
-  Impl(bool keep, const fs::path path) : kKeep(keep), kPath(path) {}
+  Impl(bool keep, const fs::path path)
+      : kKeep(keep),
+        kPath(GetUniquePath(path)) {}
 
   static fs::path GetUniquePath(const fs::path &root);
 
   const bool kKeep;
-  const fs::path kPath;  
+  const fs::path kPath;
 };
 
 fs::path TempPath::Impl::GetUniquePath(const fs::path &root) {
@@ -29,9 +31,7 @@ fs::path TempPath::Impl::GetUniquePath(const fs::path &root) {
 }
 
 TempPath::TempPath(bool keep, const fs::path &path)
-    : impl_(std::make_unique<TempPath::Impl>(
-          keep,
-          TempPath::Impl::GetUniquePath(path))) {
+    : impl_(std::make_unique<TempPath::Impl>(keep, path)) {
   CHECK(!fs::exists(impl_->kPath))
       << "temporary path " << impl_->kPath << "already exists";
   fs::create_directories(impl_->kPath);
