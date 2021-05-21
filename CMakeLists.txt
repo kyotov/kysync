@@ -10,7 +10,7 @@ KyDeps(DOWNLOAD NO_UPLOAD DEPENDS gflags glog GTest xxHash httplib protobuf zstd
 #       https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-#    add_link_options(-static)
+    #    add_link_options(-static)
     add_compile_options(--coverage)
     add_link_options(--coverage)
 endif ()
@@ -57,41 +57,29 @@ target_link_libraries(main
         glog::glog
         gflags)
 
-add_subdirectory(src/tests)
-
 add_executable(kysync
         src/main.cc)
 target_link_libraries(kysync
         main)
 
-add_executable(gendata
-        src/tests/commands/gen_data_command.cc
-        src/tests/gendata_main.cc)
-target_link_libraries(gendata
-        main)
+include(CTest)
+enable_testing()
 
-add_executable(tests
-        src/tests/utilities/temp_path.cc
-        src/tests/tests.cc
-        src/tests/expectation_check_metrics_visitor.cc)
-target_link_libraries(tests
-        main
-        GTest::gtest
-        GTest::gtest_main)
+add_subdirectory(src/tests)
+add_test(NAME tests COMMAND tests)
+add_test(NAME performance_tests COMMAND perf_tests)
+add_test(NAME http_tests COMMAND http_tests)
 
-add_executable(perf_tests
-        src/tests/perf_tests.cc
-        src/tests/utilities/temp_path.cc
-        src/tests/commands/gen_data_command.cc)
-target_link_libraries(perf_tests
-        main
-        GTest::gtest
-        GTest::gtest_main)
+set(TEST_ENVIRONMENT
+        TEST_ROOT_DIR=${CMAKE_BINARY_DIR}/tmp
+        TEST_LOG_DIR=${CMAKE_BINARY_DIR}/log
+        TEST_DATA_DIR=${CMAKE_SOURCE_DIR}/test_data
+        ZSYNC_BIN_DIR=${CMAKE_BINARY_DIR}/zsync/bin)
 
-add_test(
-        NAME tests
-        COMMAND tests)
+set_tests_properties(
+        tests
+        performance_tests
+        http_tests
 
-add_test(
-        NAME performance_tests
-        COMMAND perf_tests)
+        PROPERTIES
+        ENVIRONMENT "${TEST_ENVIRONMENT}")
