@@ -18,6 +18,8 @@ static fs::path GetUniquePath(const fs::path &root) {
   return root / ("tmp_" + std::to_string(ts) + "_" + std::to_string(counter++));
 }
 
+TempPath::TempPath() : TempPath(false, fs::temp_directory_path()) {}
+
 TempPath::TempPath(bool keep, const fs::path &parent_path)
     : keep(keep),
       path(GetUniquePath(parent_path)) {

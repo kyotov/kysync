@@ -9,10 +9,9 @@ namespace kysync {
 
 class TempPath final {
 public:
-  explicit TempPath(
-      bool keep = false,
-      const std::filesystem::path &parent_path =
-          std::filesystem::temp_directory_path());
+  TempPath();
+
+  TempPath(bool keep, const std::filesystem::path &parent_path);
 
   ~TempPath();
 
