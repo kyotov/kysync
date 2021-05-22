@@ -139,11 +139,9 @@ void CheckGet(const fs::path& path, Client& client) {
   std::string data = "0123456789";
   WriteFile(path / "test.data", data);
 
-  {
-    auto response = client.Get("/test.data");
-    EXPECT_TRUE(response.error() == httplib::Error::Success);
-    EXPECT_EQ(response->body, data);
-  }
+  auto response = client.Get("/test.data");
+  EXPECT_TRUE(response.error() == httplib::Error::Success);
+  EXPECT_EQ(response->body, data);
 
   CheckRangeGet(client, data, 0, 0);
   CheckRangeGet(client, data, 0, 1024);
