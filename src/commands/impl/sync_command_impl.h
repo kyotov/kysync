@@ -56,21 +56,21 @@ class SyncCommand::Impl final {
 
   Impl(
       const SyncCommand &parent,
-      const std::string &data_uri,
-      const std::string &metadata_uri,
-      const std::string &seed_uri,
-      const std::filesystem::path &output_path,
+      std::string data_uri,
+      std::string metadata_uri,
+      std::string seed_uri,
+      std::filesystem::path output_path,
       bool compression_disabled,
       int num_blocks_in_batch,
       int threads);
 
   template <typename T>
   size_t ReadIntoContainer(
-      const Reader &metadata_reader,
+      Reader &metadata_reader,
       size_t offset,
       std::vector<T> &container);
 
-  void ParseHeader(const Reader &metadata_reader);
+  void ParseHeader(Reader &metadata_reader);
   void UpdateCompressedOffsetsAndMaxSize();
   void ReadMetadata();
   void AnalyzeSeedChunk(int id, size_t start_offset, size_t end_offset);
@@ -92,7 +92,7 @@ class SyncCommand::Impl final {
     std::unique_ptr<Reader> seed_reader_;
     std::unique_ptr<Reader> data_reader_;
     std::fstream output_;
-    std::vector<BatchedRetrivalInfo> batched_retrieval_infos_;
+    std::vector<BatchRetrivalInfo> batched_retrieval_infos_;
 
     std::fstream GetOutputStream(size_t start_offset);
     void WriteRetrievedBatch(size_t size_to_write);

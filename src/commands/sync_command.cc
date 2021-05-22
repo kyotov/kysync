@@ -9,6 +9,7 @@
 #include <future>
 #include <ios>
 #include <map>
+#include <utility>
 
 #include "../checksums/strong_checksum_builder.h"
 #include "../checksums/weak_checksum.h"
@@ -21,23 +22,23 @@ namespace kysync {
 
 SyncCommand::Impl::Impl(
     const SyncCommand &parent,
-    const std::string &data_uri,
-    const std::string &metadata_uri,
-    const std::string &seed_uri,
-    const std::filesystem::path &output_path,
+    std::string data_uri,
+    std::string metadata_uri,
+    std::string seed_uri,
+    std::filesystem::path output_path,
     bool compression_disabled,
     int num_blocks_in_batch,
     int threads)
     : kParent(parent),
-      kDataUri(data_uri),
-      kMetadataUri(metadata_uri),
-      kSeedUri(seed_uri),
-      kOutputPath(output_path),
+      kDataUri(std::move(data_uri)),
+      kMetadataUri(std::move(metadata_uri)),
+      kSeedUri(std::move(seed_uri)),
+      kOutputPath(std::move(output_path)),
       kCompressionDiabled(compression_disabled),
       kNumBlocksPerRetrieval(num_blocks_in_batch),
       kThreads(threads) {}
 
-void SyncCommand::Impl::ParseHeader(const Reader &metadata_reader) {
+void SyncCommand::Impl::ParseHeader(Reader &metadata_reader) {
   constexpr size_t kMaxHeaderSize = 1024;
   uint8_t buffer[kMaxHeaderSize];
 
@@ -57,7 +58,7 @@ void SyncCommand::Impl::ParseHeader(const Reader &metadata_reader) {
 
 template <typename T>
 size_t SyncCommand::Impl::ReadIntoContainer(
-    const Reader &metadata_reader,
+    Reader &metadata_reader,
     size_t offset,
     std::vector<T> &container) {
   size_t size_to_read =

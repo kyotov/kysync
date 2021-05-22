@@ -1,5 +1,7 @@
 #include "temp_path.h"
 
+#include <kysync/path_config.h>
+
 #include <atomic>
 
 #include "glog/logging.h"
@@ -15,10 +17,10 @@ static fs::path GetUniquePath(const fs::path &root) {
   auto now = high_resolution_clock::now();
   auto ts = duration_cast<nanoseconds>(now.time_since_epoch()).count();
 
-  return root / ("tmp_" + std::to_string(ts) + "_" + std::to_string(counter++));
+  return root / "tmp" / ("tmp_" + std::to_string(ts) + "_" + std::to_string(counter++));
 }
 
-TempPath::TempPath() : TempPath(false, fs::temp_directory_path()) {}
+TempPath::TempPath() : TempPath(false, CMAKE_BINARY_DIR) {}
 
 TempPath::TempPath(bool keep, const fs::path &parent_path)
     : keep(keep),
@@ -31,7 +33,9 @@ TempPath::TempPath(bool keep, const fs::path &parent_path)
 
 TempPath::~TempPath() {
   if (!keep) {
-    fs::remove_all(path);
+    std::error_code ec;
+    fs::remove_all(path, ec);
+    LOG_IF(ERROR, ec) << " " << ec.message();
   }
 }
 
