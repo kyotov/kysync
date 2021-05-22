@@ -144,7 +144,7 @@ TEST_F(Tests, FileReaderSimple) {  // NOLINT
   const auto *data = "0123456789";
 
   TempPath tmp;
-  auto path = tmp.GetPath() / "data.bin";
+  auto path = tmp.path / "data.bin";
 
   std::ofstream f(path, std::ios::binary);
   f.write(data, strlen(data));
@@ -282,9 +282,9 @@ TEST_F(Tests, SimplePrepareCommand) {  // NOLINT
   std::stringstream output_compressed;
 
   auto tmp = TempPath();
-  auto data_path = tmp.GetPath() / "data.bin";
-  auto kysync_path = tmp.GetPath() / "data.bin.kysync";
-  auto pzst_path = tmp.GetPath() / "data.bin.pzst";
+  auto data_path = tmp.path / "data.bin";
+  auto kysync_path = tmp.path / "data.bin.kysync";
+  auto pzst_path = tmp.path / "data.bin.pzst";
 
   WriteFile(data_path, data);
   auto c = PrepareCommand(data_path, kysync_path, pzst_path, block);
@@ -309,9 +309,9 @@ TEST_F(Tests, SimplePrepareCommand2) {  // NOLINT
   auto block_count = (data.size() + block - 1) / block;
 
   auto tmp = TempPath();
-  auto data_path = tmp.GetPath() / "data.bin";
-  auto kysync_path = tmp.GetPath() / "data.bin.kysync";
-  auto pzst_path = tmp.GetPath() / "data.bin.pzst";
+  auto data_path = tmp.path / "data.bin";
+  auto kysync_path = tmp.path / "data.bin.kysync";
+  auto pzst_path = tmp.path / "data.bin.pzst";
 
   WriteFile(data_path, data);
   auto c = PrepareCommand(data_path, kysync_path, pzst_path, block);
@@ -335,10 +335,10 @@ TEST_F(Tests, MetadataRoundtrip) {  // NOLINT
   std::string data = "0123456789";
 
   auto tmp = TempPath();
-  auto data_path = tmp.GetPath() / "data.bin";
-  auto kysync_path = tmp.GetPath() / "data.bin.kysync";
-  auto pzst_path = tmp.GetPath() / "data.bin.pzst";
-  auto output_path = tmp.GetPath() / "output.bin";
+  auto data_path = tmp.path / "data.bin";
+  auto kysync_path = tmp.path / "data.bin.kysync";
+  auto pzst_path = tmp.path / "data.bin.pzst";
+  auto output_path = tmp.path / "output.bin";
 
   WriteFile(data_path, data);
   auto pc = PrepareCommand(data_path, kysync_path, pzst_path, block);
@@ -374,11 +374,11 @@ void EndToEndTest(
 
   auto tmp = TempPath();
 
-  auto data_path = tmp.GetPath() / "data.bin";
-  auto kysync_path = tmp.GetPath() / "data.bin.kysync";
-  auto pzst_path = tmp.GetPath() / "data.bin.pzst";
-  auto seed_data_path = tmp.GetPath() / "seed_data.bin";
-  auto output_path = tmp.GetPath() / "output.bin";
+  auto data_path = tmp.path / "data.bin";
+  auto kysync_path = tmp.path / "data.bin.kysync";
+  auto pzst_path = tmp.path / "data.bin.pzst";
+  auto seed_data_path = tmp.path / "seed_data.bin";
+  auto output_path = tmp.path / "output.bin";
 
   WriteFile(data_path, data);
   WriteFile(seed_data_path, seed_data);
@@ -511,7 +511,7 @@ void EndToEndFilesTest(
   LOG(INFO) << "Using seed file " << seed_data_file_name;
 
   TempPath tmp;
-  auto temp_path_name = tmp.GetPath();
+  auto temp_path_name = tmp.path;
   auto metadata_file_name = temp_path_name / "i.ksync";
   auto compressed_file_name = temp_path_name / "i.pzst";
   auto return_code = PrepareCommand(
@@ -611,7 +611,7 @@ TEST_F(Tests, SyncFileFromSeed) {  // NOLINT
       false,
       sync_file_name + ".ksync",
       seed_file_name,
-      tmp.GetPath(),
+      tmp.path,
       sync_file_name,
       std::move(expected_metrics));
 }
@@ -636,7 +636,7 @@ TEST_F(Tests, SyncNonCompressedFile) {  // NOLINT
       true,
       sync_file_name + ".ksync",
       seed_file_name,
-      tmp.GetPath(),
+      tmp.path,
       sync_file_name,
       std::move(expected_metrics));
 }
@@ -645,9 +645,7 @@ TEST_F(Tests, SyncNonCompressedFile) {  // NOLINT
 // This does not do testing for race conditions.
 TEST(SyncCommand, GetTempPath) {  // NOLINT
   TempPath sample_paths[2];
-  LOG(INFO) << "Got sample paths: " << sample_paths[0].GetPath() << " and "
-            << sample_paths[1].GetPath();
-  EXPECT_NE(sample_paths[0].GetPath(), sample_paths[1].GetPath());
+  EXPECT_NE(sample_paths[0].path, sample_paths[1].path);
 }
 
 // Note: This function and the following 2 tests are temporary and will be

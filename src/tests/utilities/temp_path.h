@@ -7,19 +7,17 @@
 
 namespace kysync {
 
-class TempPath {
-  PIMPL;
-  NO_COPY_OR_MOVE(TempPath);
-
+class TempPath final {
 public:
   explicit TempPath(
       bool keep = false,
-      const std::filesystem::path &path =
+      const std::filesystem::path &parent_path =
           std::filesystem::temp_directory_path());
 
   ~TempPath();
 
-  [[nodiscard]] std::filesystem::path GetPath() const;
+  const bool keep;
+  const std::filesystem::path path;
 };
 
 }  // namespace kysync

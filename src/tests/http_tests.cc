@@ -170,24 +170,24 @@ void CheckGet(const fs::path& path, Client& client) {
 }
 
 TEST_F(HttpTests, HttpsServer) {  // NOLINT
-  auto path = TempPath();
+  auto tmp = TempPath();
   auto port = 8000;
   auto cert_path = fs::path(
       GetEnv("TEST_DATA_DIR", (CMAKE_SOURCE_DIR / "test_data").string()));
-  auto server = HttpServer(cert_path, path.GetPath(), port, true);
+  auto server = HttpServer(cert_path, tmp.path, port, true);
   auto client = httplib::SSLClient("localhost", port);
   client.enable_server_certificate_verification(false);
 
-  CheckGet(path.GetPath(), client);
+  CheckGet(tmp.path, client);
 }
 
 TEST_F(HttpTests, HttpServer) {  // NOLINT
-  auto path = TempPath();
+  auto tmp = TempPath();
   auto port = 8000;
-  auto server = HttpServer(path.GetPath(), port, true);
+  auto server = HttpServer(tmp.path, port, true);
   auto client = httplib::Client("localhost", port);
 
-  CheckGet(path.GetPath(), client);
+  CheckGet(tmp.path, client);
 }
 
 }  // namespace kysync
