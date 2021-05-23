@@ -5,12 +5,18 @@
 
 namespace kysync {
 
-void Fixture::SetUpTestSuite() {
-  google::InitGoogleLogging("tests");
+bool Fixture::glog_initialized_ = false;
 
-  FLAGS_log_dir = GetEnv("TEST_LOG_DIR", (CMAKE_BINARY_DIR / "log").string());
-  FLAGS_logtostderr = false;
-  FLAGS_alsologtostderr = false;
+void Fixture::SetUpTestSuite() {
+  if (!glog_initialized_) {
+    FLAGS_log_dir = GetEnv("TEST_LOG_DIR", (CMAKE_BINARY_DIR / "log").string());
+    google::InitGoogleLogging("tests");
+
+    FLAGS_logtostderr = false;
+    FLAGS_alsologtostderr = false;
+
+    glog_initialized_ = true;
+  }
 }
 
 std::string Fixture::GetEnv(
