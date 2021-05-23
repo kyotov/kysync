@@ -645,8 +645,6 @@ TEST_F(Tests, SyncNonCompressedFile) {  // NOLINT
 // This does not do testing for race conditions.
 TEST(SyncCommand, GetTempPath) {  // NOLINT
   TempPath sample_paths[2];
-  LOG(INFO) << "Got sample paths: " << sample_paths[0].GetPath() << " and "
-            << sample_paths[1].GetPath();
   EXPECT_NE(sample_paths[0].GetPath(), sample_paths[1].GetPath());
 }
 
