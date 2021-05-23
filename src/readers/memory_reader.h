@@ -8,17 +8,15 @@
 namespace kysync {
 
 class MemoryReader final : public Reader {
-  PIMPL;
-  NO_COPY_OR_MOVE(MemoryReader);
+  const void *data_;
+  size_t data_size_;
 
 public:
-  MemoryReader(const void *buffer, size_t size);
-
-  ~MemoryReader() override;
+  MemoryReader(const void *data, size_t data_size);
 
   [[nodiscard]] size_t GetSize() const override;
 
-  size_t Read(void *buffer, size_t offset, size_t size) const override;
+  size_t Read(void *buffer, size_t offset, size_t size) override;
 };
 
 }  // namespace kysync

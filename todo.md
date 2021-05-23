@@ -1,7 +1,7 @@
 ## bugs
 
 * HttpReader fails with no message when diff is too big, e.g. kysync.exe -command sync
-  -data-uri="http://mirror.math.princeton.edu/pub/ubuntu-iso/20.04/ubuntu-20.04.2.0-desktop-amd64.iso" -metadata-uri="
+  -data_-uri="http://mirror.math.princeton.edu/pub/ubuntu-iso/20.04/ubuntu-20.04.2.0-desktop-amd64.iso" -metadata-uri="
   file://C:\Users\Kamen Yotov\Downloads\ubuntu-20.04.2.0-desktop-amd64.iso.ksync" -input-filename="C:\Users\Kamen
   Yotov\Downloads\ubuntu-20.04.1-desktop-amd64.iso" -output-filename=x.iso -threads=128
     * this is due to F0218 00:41:16.029953 22644 HttpReader.cpp:39] Check failed: res.error() == httplib::Success (4 vs.

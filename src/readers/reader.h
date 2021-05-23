@@ -7,24 +7,22 @@
 #include "../metrics/metric_container.h"
 #include "../metrics/metric_visitor.h"
 #include "../utilities/utilities.h"
-#include "batched_retrieval_info.h"
+#include "batch_retrieval_info.h"
 
 namespace kysync {
 
 class Reader : public MetricContainer {
-  PIMPL;
+  Metric total_reads_;
+  Metric total_bytes_read_;
 
 public:
-  Reader();
-
-  virtual ~Reader();
-
   [[nodiscard]] virtual size_t GetSize() const = 0;
 
-  virtual size_t Read(void *buffer, size_t offset, size_t size) const;
+  virtual size_t Read(void *buffer, size_t offset, size_t size);
+
   virtual size_t Read(
       void *buffer,
-      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) const;
+      std::vector<BatchRetrivalInfo> &batch_retrieval_infos);
 
   void Accept(MetricVisitor &visitor) override;
 
