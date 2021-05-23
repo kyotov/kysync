@@ -8,15 +8,17 @@
 namespace kysync {
 
 class TempPath final {
+  const std::filesystem::path path_;
+  const bool keep_;
+
 public:
   TempPath();
 
-  TempPath(bool keep, const std::filesystem::path &parent_path);
+  TempPath(const std::filesystem::path &parent_path, bool keep);
 
   ~TempPath();
 
-  const bool keep;
-  const std::filesystem::path path;
+  std::filesystem::path GetPath() const;
 };
 
 }  // namespace kysync
