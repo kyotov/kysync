@@ -12,6 +12,9 @@
 namespace kysync {
 
 class Reader : public MetricContainer {
+  Metric total_reads_;
+  Metric total_bytes_read_;
+
 public:
   [[nodiscard]] virtual size_t GetSize() const = 0;
 
@@ -24,10 +27,6 @@ public:
   void Accept(MetricVisitor &visitor) override;
 
   static std::unique_ptr<Reader> Create(const std::string &uri);
-
-private:
-  Metric total_reads_;
-  Metric total_bytes_read_;
 };
 
 }  // namespace kysync

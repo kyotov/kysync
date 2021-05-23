@@ -158,26 +158,23 @@ size_t Read(
   return count;
 }
 
-static auto GetSplitPos(const std::string &url) {
+HttpReader::HttpReader(const std::string &url) {
   auto pos = url.find("//");
   CHECK_NE(pos, url.npos);
   pos = url.find('/', pos + 2);
   CHECK_NE(pos, url.npos);
-  return pos;
-}
 
-HttpReader::HttpReader(const std::string &url)
-    : host(url.substr(0, GetSplitPos(url))),
-      path(url.substr(GetSplitPos(url)))  //
-{
-  client_ = std::make_unique<httplib::Client>(host.c_str());
+  host_ = url.substr(0, pos);
+  path_ = url.substr(pos);
+
+  client_ = std::make_unique<httplib::Client>(host_.c_str());
   client_->set_keep_alive(true);
 }
 
 HttpReader::~HttpReader() = default;
 
 size_t HttpReader::GetSize() const {
-  auto res = client_->Head(path.c_str());
+  auto res = client_->Head(path_.c_str());
 
   CHECK(res->has_header("Content-Length"));
   auto size = res->get_header_value("Content-Length");
@@ -188,7 +185,8 @@ size_t HttpReader::GetSize() const {
 size_t HttpReader::Read(void *buffer, size_t offset, size_t size) {
   auto beg_offset = offset;
   auto end_offset = offset + size - 1;
-  auto count = kysync::Read(*client_, path, buffer, {{beg_offset, end_offset}});
+  auto count =
+      kysync::Read(*client_, path_, buffer, {{beg_offset, end_offset}});
   return Reader::Read(buffer, offset, count);
 }
 
@@ -201,7 +199,7 @@ size_t HttpReader::Read(
         retrieval_info.source_begin_offset + retrieval_info.size_to_read - 1;
     ranges.push_back({retrieval_info.source_begin_offset, end_offset});
   }
-  auto count = kysync::Read(*client_, path, buffer, ranges);
+  auto count = kysync::Read(*client_, path_, buffer, ranges);
   return Reader::Read(nullptr, 0, count);
 }
 

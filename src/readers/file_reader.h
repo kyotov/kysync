@@ -9,11 +9,10 @@
 namespace kysync {
 
 class FileReader final : public Reader {
+  std::filesystem::path path_;
   std::ifstream data_;
 
 public:
-  const std::filesystem::path path;
-
   explicit FileReader(const std::filesystem::path &path);
 
   [[nodiscard]] size_t GetSize() const override;

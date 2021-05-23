@@ -8,6 +8,8 @@
 namespace kysync {
 
 class Fixture : public ::testing::Test {
+  static bool glog_initialized_;
+
 protected:
   static void SetUpTestSuite();
 

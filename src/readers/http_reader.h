@@ -4,18 +4,17 @@
 #include "reader.h"
 
 namespace httplib {
-  class Client;
+class Client;
 }
 
 namespace kysync {
 
 class HttpReader final : public Reader {
+  std::string host_;
+  std::string path_;
   std::unique_ptr<httplib::Client> client_;
 
 public:
-  const std::string host;
-  const std::string path;
-
   explicit HttpReader(const std::string &url);
 
   ~HttpReader();

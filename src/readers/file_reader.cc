@@ -7,12 +7,12 @@ namespace kysync {
 namespace fs = std::filesystem;
 
 FileReader::FileReader(const std::filesystem::path &path)
-    : path(path),
+    : path_(path),
       data_(std::ifstream(path, std::ios::binary)) {
   CHECK(data_) << "unable to open " << path << " for reading";
 }
 
-size_t FileReader::GetSize() const { return fs::file_size(path); }
+size_t FileReader::GetSize() const { return fs::file_size(path_); }
 
 size_t FileReader::Read(void *buffer, size_t offset, size_t size) {
   // the seekg was failing if the eof bit was set... :(
