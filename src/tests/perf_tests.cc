@@ -162,8 +162,9 @@ void Performance::ExecuteZsync() {
   const fs::path kZsyncPath = kRootPath / "data.bin.kysync";
   const fs::path kPzstPath = kRootPath / "data.bin.pzst";
   const fs::path kOutPath = kRootPath / "data.bin.out";
+  const fs::path kLogPath = GetEnv("TEST_LOG_DIR", CMAKE_BINARY_DIR / "log");
 
-  std::ofstream log("perf.log", std::ios::app);
+  std::ofstream log(kLogPath / "perf.log", std::ios::app);
 
   log << std::endl                //
       << PERFLOG(path_)            //

@@ -9,13 +9,13 @@ bool Fixture::glog_initialized_ = false;
 
 void Fixture::SetUpTestSuite() {
   if (!glog_initialized_) {
-    glog_initialized_ = true;
-
+    FLAGS_log_dir = GetEnv("TEST_LOG_DIR", (CMAKE_BINARY_DIR / "log").string());
     google::InitGoogleLogging("tests");
 
-    FLAGS_log_dir = GetEnv("TEST_LOG_DIR", (CMAKE_BINARY_DIR / "log").string());
     FLAGS_logtostderr = false;
     FLAGS_alsologtostderr = false;
+
+    glog_initialized_ = true;
   }
 }
 
