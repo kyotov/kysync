@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD 20)
 include(kydeps/KyDeps.cmake)
 KyDeps(DOWNLOAD NO_UPLOAD DEPENDS gflags glog GTest xxHash httplib protobuf zstd)
 
+#set(CMAKE_CXX_CLANG_TIDY "C:/Program Files/LLVM/bin/clang-tidy.exe";)
+
 # TODO: figure out libraries
 #       https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160
 

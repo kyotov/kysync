@@ -90,7 +90,7 @@ void Performance::Execute(
     const TempPath &tmp,
     MetricContainer *metric_container,
     const GetUriCallback &get_uri_callback) {
-  const fs::path kRootPath = tmp.path;
+  const fs::path kRootPath = tmp.GetPath();
   const fs::path kDataPath = kRootPath / "data.bin";
   const fs::path kSeedDataPath =
       identity_reconstruction_ ? kDataPath : kRootPath / "seed_data.bin";
@@ -113,7 +113,7 @@ void Performance::Execute(
       << PERFLOG(identity_reconstruction_);
 
   auto gen_data = GenDataCommand(  //
-      tmp.path,
+      tmp.GetPath(),
       data_size_,
       seed_data_size_,
       fragment_size_,
@@ -139,10 +139,10 @@ void Performance::Execute(
 }
 
 void Performance::Execute(bool use_http) {
-  const auto tmp = TempPath(false, path_);
+  const auto tmp = TempPath(path_, false);
 
   if (use_http) {
-    auto server = HttpServer(tmp.path, 8000, true);
+    auto server = HttpServer(tmp.GetPath(), 8000, true);
     Execute(tmp, &server, [](auto path) {
       return "http://localhost:8000/" + path.filename().string();
     });
@@ -152,10 +152,10 @@ void Performance::Execute(bool use_http) {
 }
 
 void Performance::ExecuteZsync() {
-  const auto tmp = TempPath(true, path_);
-  auto server = HttpServer(tmp.path, 8000, true);
+  const auto tmp = TempPath(path_, true);
+  auto server = HttpServer(tmp.GetPath(), 8000, true);
 
-  const fs::path kRootPath = tmp.path;
+  const fs::path kRootPath = tmp.GetPath();
   const fs::path kDataPath = kRootPath / "data.bin";
   const fs::path kSeedDataPath =
       identity_reconstruction_ ? kDataPath : kRootPath / "seed_data.bin";
@@ -184,7 +184,7 @@ void Performance::ExecuteZsync() {
   }
 
   auto gen_data = GenDataCommand(  //
-      tmp.path,
+      tmp.GetPath(),
       data_size_,
       seed_data_size_,
       fragment_size_,

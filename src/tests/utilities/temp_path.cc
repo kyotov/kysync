@@ -18,21 +18,24 @@ static fs::path GetUniquePath(const fs::path &root) {
   return root / ("tmp_" + std::to_string(ts) + "_" + std::to_string(counter++));
 }
 
-TempPath::TempPath() : TempPath(false, fs::temp_directory_path()) {}
+TempPath::TempPath() : TempPath(fs::temp_directory_path(), false) {}
 
-TempPath::TempPath(bool keep, const fs::path &parent_path)
-    : keep(keep),
-      path(GetUniquePath(parent_path)) {
-  CHECK(!fs::exists(path)) << path << " already exists";
+TempPath::TempPath(const fs::path &parent_path, bool keep)
+    : path_(GetUniquePath(parent_path)),
+      keep_(keep)  //
+{
+  CHECK(!fs::exists(path_)) << path_ << " already exists";
 
-  fs::create_directories(path);
-  LOG(INFO) << "using " << path;
+  fs::create_directories(path_);
+  LOG(INFO) << "using " << path_;
 }
 
 TempPath::~TempPath() {
-  if (!keep) {
-    fs::remove_all(path);
+  if (!keep_) {
+    fs::remove_all(path_);
   }
 }
+
+std::filesystem::path TempPath::GetPath() const { return path_; }
 
 }  // namespace kysync
