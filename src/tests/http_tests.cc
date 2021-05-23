@@ -172,20 +172,20 @@ TEST_F(HttpTests, HttpsServer) {  // NOLINT
   auto port = 8000;
   auto cert_path = fs::path(
       GetEnv("TEST_DATA_DIR", (CMAKE_SOURCE_DIR / "test_data").string()));
-  auto server = HttpServer(cert_path, tmp.path, port, true);
+  auto server = HttpServer(cert_path, tmp.GetPath(), port, true);
   auto client = httplib::SSLClient("localhost", port);
   client.enable_server_certificate_verification(false);
 
-  CheckGet(tmp.path, client);
+  CheckGet(tmp.GetPath(), client);
 }
 
 TEST_F(HttpTests, HttpServer) {  // NOLINT
   auto tmp = TempPath();
   auto port = 8000;
-  auto server = HttpServer(tmp.path, port, true);
+  auto server = HttpServer(tmp.GetPath(), port, true);
   auto client = httplib::Client("localhost", port);
 
-  CheckGet(tmp.path, client);
+  CheckGet(tmp.GetPath(), client);
 }
 
 }  // namespace kysync
