@@ -18,8 +18,8 @@
 #include "../readers/http_reader.h"
 #include "../readers/memory_reader.h"
 #include "expectation_check_metrics_visitor.h"
-#include "utilities/temp_path.h"
 #include "utilities/fixture.h"
+#include "utilities/temp_path.h"
 
 namespace kysync {
 
@@ -684,7 +684,7 @@ TEST(HttplibRetrieval, MultirangeNoncontiguous) {
 // Note: This function and the following 2 tests are temporary and will be
 // removed after http_tests.cc have been pushed
 void HttpReaderMultirangeTest(
-    std::vector<BatchedRetrivalInfo> &batched_retrieval_infos,
+    std::vector<BatchRetrivalInfo> &batched_retrieval_infos,
     std::string &expected_string) {
   std::string uri(
       "http://mirror.math.princeton.edu/pub/ubuntu-iso/20.04/"
@@ -705,7 +705,7 @@ void HttpReaderMultirangeTest(
 }
 
 TEST(HttpReaderRetrieval, MultirangeContiguous) {
-  std::vector<BatchedRetrivalInfo> batched_retrieval_infos;
+  std::vector<BatchRetrivalInfo> batched_retrieval_infos;
   size_t block_size = 4;
   batched_retrieval_infos.push_back(
       {.block_index = 0,
@@ -722,7 +722,7 @@ TEST(HttpReaderRetrieval, MultirangeContiguous) {
 }
 
 TEST(HttpReaderRetrieval, MultirangeNoncontiguous) {
-  std::vector<BatchedRetrivalInfo> batched_retrieval_infos;
+  std::vector<BatchRetrivalInfo> batched_retrieval_infos;
   size_t block_size = 4;
   batched_retrieval_infos.push_back(
       {.block_index = 0,
