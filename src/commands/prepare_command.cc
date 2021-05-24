@@ -16,54 +16,54 @@
 namespace kysync {
 
 PrepareCommand::PrepareCommand(
-    fs::path input_filename,
-    fs::path output_ksync_filename,
-    fs::path output_compressed_filename,
+    fs::path input_file_path,
+    fs::path output_ksync_file_path,
+    fs::path output_compressed_file_path,
     size_t block_size)
-    : kInputFilename(std::move(input_filename)),
-      kOutputKsyncFilename(
-          !output_ksync_filename.empty() ? std::move(output_ksync_filename)
-                                         : input_filename.string() + ".kysync"),
-      kOutputCompressedFilename(
-          !output_compressed_filename.empty()
-              ? std::move(output_compressed_filename)
-              : input_filename.string() + ".pzst"),
-      kBlockSize(block_size) {}
+    : input_file_path_(std::move(input_file_path)),
+      output_ksync_file_path_(
+          !output_ksync_file_path.empty() ? std::move(output_ksync_file_path)
+                                         : input_file_path.string() + ".kysync"),
+      output_compressed_file_path_(
+          !output_compressed_file_path.empty()
+              ? std::move(output_compressed_file_path)
+              : input_file_path.string() + ".pzst"),
+      block_size_(block_size) {}
 
 int PrepareCommand::Run() {
-  auto unique_buffer = std::make_unique<char[]>(kBlockSize);
+  auto unique_buffer = std::make_unique<char[]>(block_size_);
   auto *buffer = unique_buffer.get();
 
-  auto compression_buffer_size = ZSTD_compressBound(kBlockSize);
+  auto compression_buffer_size = ZSTD_compressBound(block_size_);
   auto unique_compression_buffer =
       std::make_unique<char[]>(compression_buffer_size);
   auto *compression_buffer = unique_compression_buffer.get();
 
-  auto input = std::ifstream(kInputFilename, std::ios::binary);
-  CHECK(input) << "error reading from " << kInputFilename;
+  auto input = std::ifstream(input_file_path_, std::ios::binary);
+  CHECK(input) << "error reading from " << input_file_path_;
 
-  auto output = std::ofstream(kOutputCompressedFilename, std::ios::binary);
-  CHECK(output) << "unable to write to " << kOutputCompressedFilename;
+  auto output = std::ofstream(output_compressed_file_path_, std::ios::binary);
+  CHECK(output) << "unable to write to " << output_compressed_file_path_;
 
-  const size_t kDataSize = fs::file_size(kInputFilename);
-  StartNextPhase(kDataSize);
+  const size_t data_size = fs::file_size(input_file_path_);
+  StartNextPhase(data_size);
 
   StrongChecksumBuilder hash;
 
-  while (auto count = input.read(buffer, kBlockSize).gcount()) {
-    memset(buffer + count, 0, kBlockSize - count);
+  while (auto count = input.read(buffer, block_size_).gcount()) {
+    memset(buffer + count, 0, block_size_ - count);
 
     hash.Update(buffer, count);
 
-    weak_checksums_.push_back(WeakChecksum(buffer, kBlockSize));
-    strong_checksums_.push_back(StrongChecksum::Compute(buffer, kBlockSize));
+    weak_checksums_.push_back(WeakChecksum(buffer, block_size_));
+    strong_checksums_.push_back(StrongChecksum::Compute(buffer, block_size_));
 
     size_t compressed_size = ZSTD_compress(
         compression_buffer,
         compression_buffer_size,
         buffer,
         count,
-        kCompressionLevel);
+        compression_level_);
     CHECK(!ZSTD_isError(compressed_size)) << ZSTD_getErrorName(compressed_size);
     output.write(compression_buffer, compressed_size);
     compressed_sizes_.push_back(compressed_size);
@@ -74,15 +74,15 @@ int PrepareCommand::Run() {
 
   // produce the ksync metadata output
 
-  auto output_ksync = std::ofstream(kOutputKsyncFilename, std::ios::binary);
-  CHECK(output_ksync) << "unable to write to " << kOutputKsyncFilename;
+  auto output_ksync = std::ofstream(output_ksync_file_path_, std::ios::binary);
+  CHECK(output_ksync) << "unable to write to " << output_ksync_file_path_;
 
   StartNextPhase(1);
 
   auto header = Header();
   header.set_version(2);
-  header.set_size(kDataSize);
-  header.set_block_size(kBlockSize);
+  header.set_size(data_size);
+  header.set_block_size(block_size_);
   header.set_hash(hash.Digest().ToString());
   google::protobuf::util::SerializeDelimitedToOstream(header, &output_ksync);
   AdvanceProgress(header.ByteSizeLong());

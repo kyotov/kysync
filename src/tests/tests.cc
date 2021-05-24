@@ -66,7 +66,7 @@ TEST_F(Tests, SimpleStringChecksum) {  // NOLINT
 }
 
 TEST_F(Tests, StreamingStringChecksum) {  // NOLINT
-  constexpr int kCount = 10'000;
+  static constexpr int kCount = 10'000;
   std::stringstream s;
 
   const auto *data = "0123456789";
@@ -232,10 +232,10 @@ public:
   }
 
   static int GetCompressionLevel(const PrepareCommand &c) {
-    return c.kCompressionLevel;
+    return c.compression_level_;
   }
 
-  static size_t GetBlockSize(const PrepareCommand &c) { return c.kBlockSize; }
+  static size_t GetBlockSize(const PrepareCommand &c) { return c.block_size_; }
 };
 
 std::stringstream CreateInputStream(const std::string &data) {
@@ -326,7 +326,7 @@ TEST_F(Tests, SimplePrepareCommand2) {  // NOLINT
   EXPECT_EQ(StrongChecksum::Compute("1234", block), scs[2]);
 }
 
-void t() {
+TEST(Tests2, MetadataRoundtrip) {  // NOLINT
   auto block = 4;
   std::string data = "0123456789";
 
@@ -360,10 +360,6 @@ void t() {
   EXPECT_EQ(
       KySyncTest::ExamineStrongChecksums(pc),
       KySyncTest::ExamineStrongChecksums(sc));
-}
-
-TEST(Tests2, MetadataRoundtrip) {  // NOLINT
-  t();
 }
 
 void EndToEndTest(
@@ -580,7 +576,7 @@ TEST_F(Tests, EndToEndFiles) {  // NOLINT
   std::string test_data_path = GetTestDataPath();
   LOG(INFO) << "Using test data path: " << test_data_path;
 
-  const uint64_t kExpectedCompressedSize = 42;
+  static constexpr uint64_t kExpectedCompressedSize = 42;
   RunEndToEndFilesTestFor(
       test_data_path + "/test_file_small.txt",
       kExpectedCompressedSize);

@@ -1,5 +1,5 @@
-#ifndef KSYNC_COMMAND_H
-#define KSYNC_COMMAND_H
+#ifndef KSYNC__SRC_COMMANDS_COMMAND_H
+#define KSYNC__SRC_COMMANDS_COMMAND_H
 
 #include <memory>
 
@@ -27,4 +27,4 @@ public:
 
 }  // namespace kysync
 
-#endif  // KSYNC_COMMAND_H
+#endif  // KSYNC__SRC_COMMANDS_COMMAND_H

@@ -1,5 +1,5 @@
-#ifndef KSYNC_SYNC_COMMAND_H
-#define KSYNC_SYNC_COMMAND_H
+#ifndef KSYNC__SRC_COMMANDS_SYNC_COMMAND_H
+#define KSYNC__SRC_COMMANDS_SYNC_COMMAND_H
 
 #include <bitset>
 #include <filesystem>
@@ -15,13 +15,13 @@ namespace kysync {
 class SyncCommand final : public Command {
   friend class KySyncTest;
 
-  const std::string kDataUri;
-  const std::string kMetadataUri;
-  const std::string kSeedUri;
-  const std::filesystem::path kOutputPath;
-  const bool kCompressionDiabled;
-  const int kNumBlocksPerRetrieval;
-  const int kThreads;
+  const std::string data_uri_;
+  const std::string metadata_uri_;
+  const std::string seed_uri_;
+  const std::filesystem::path output_path_;
+  const bool compression_disabled_;
+  const int blocks_per_batch_;
+  const int threads_;
 
   Metric weak_checksum_matches_;
   Metric weak_checksum_false_positive_;
@@ -114,4 +114,4 @@ public:
 
 }  // namespace kysync
 
-#endif  // KSYNC_SYNC_COMMAND_H
+#endif  // KSYNC__SRC_COMMANDS_SYNC_COMMAND_H

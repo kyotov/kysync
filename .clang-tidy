@@ -1,7 +1,11 @@
 Checks: '-*,readability-identifier-naming'
 #,-llvmlibc-*,-modernize-use-trailing-return-type,-fuchsia-default-arguments-calls,-fuchsia-default-arguments-declarations,-hicpp-signed-bitwise,-fuchsia-overloaded-operator'
 
+
 CheckOptions:
+  - {key: readability-identifier-naming.StaticConstantCase, value: CamelCase}
+  - {key: readability-identifier-naming.StaticConstantPrefix, value: "k"}
+  - {key: readability-identifier-naming.LocalVariableCase, value: lower_case}
   - {key: readability-identifier-naming.FunctionCase, value: CamelCase}
   - {key: readability-identifier-naming.MemberCase, value: lower_case}
   - {key: readability-identifier-naming.MemberSuffix, value: "_"}

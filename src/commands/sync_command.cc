@@ -20,11 +20,11 @@
 namespace kysync {
 
 void SyncCommand::ParseHeader(Reader &metadata_reader) {
-  constexpr size_t kMaxHeaderSize = 1024;
-  uint8_t buffer[kMaxHeaderSize];
+  constexpr size_t max_header_size = 1024;
+  uint8_t buffer[max_header_size];
 
-  metadata_reader.Read(buffer, 0, kMaxHeaderSize);
-  auto cs = google::protobuf::io::CodedInputStream(buffer, kMaxHeaderSize);
+  metadata_reader.Read(buffer, 0, max_header_size);
+  auto cs = google::protobuf::io::CodedInputStream(buffer, max_header_size);
   auto header = Header();
   google::protobuf::util::ParseDelimitedFromCodedStream(&header, &cs, nullptr);
 
@@ -65,7 +65,7 @@ void SyncCommand::UpdateCompressedOffsetsAndMaxSize() {
 }
 
 void SyncCommand::ReadMetadata() {
-  auto metadata_reader = Reader::Create(kMetadataUri);
+  auto metadata_reader = Reader::Create(metadata_uri_);
 
   StartNextPhase(metadata_reader->GetSize());
   LOG(INFO) << "reading metadata...";
@@ -75,7 +75,7 @@ void SyncCommand::ReadMetadata() {
   auto offset = header_size_;
   offset += ReadIntoContainer(*metadata_reader, offset, weak_checksums_);
   offset += ReadIntoContainer(*metadata_reader, offset, strong_checksums_);
-  offset += ReadIntoContainer(*metadata_reader, offset, compressed_sizes_);
+  ReadIntoContainer(*metadata_reader, offset, compressed_sizes_);
 
   UpdateCompressedOffsetsAndMaxSize();
 
@@ -93,10 +93,10 @@ void SyncCommand::AnalyzeSeedChunk(
   auto *buffer = smart_buffer.get() + block_;
   memset(buffer, 0, block_);
 
-  auto seed_reader = Reader::Create(kSeedUri);
+  auto seed_reader = Reader::Create(seed_uri_);
   auto seed_size = seed_reader->GetSize();
 
-  uint32_t _wcs = 0;
+  uint32_t running_wcs = 0;
 
   int64_t warmup = block_ - 1;
 
@@ -147,15 +147,16 @@ void SyncCommand::AnalyzeSeedChunk(
      * abandon the idea completely.
      * https://github.com/kyotov/ksync/blob/2d98f83cd1516066416e8319fbfa995e3f49f3dd/commands/SyncCommand.cpp#L166-L220
      */
-    _wcs =
-        WeakChecksum(static_cast<const void *>(buffer), block_, _wcs, callback);
+    running_wcs =
+        WeakChecksum(static_cast<const void *>(buffer), block_,
+        running_wcs, callback);
 
     AdvanceProgress(block_);
   }
 }
 
 void SyncCommand::AnalyzeSeed() {
-  auto seed_reader = Reader::Create(kSeedUri);
+  auto seed_reader = Reader::Create(seed_uri_);
   auto seed_data_size = seed_reader->GetSize();
 
   StartNextPhase(seed_data_size);
@@ -165,7 +166,7 @@ void SyncCommand::AnalyzeSeed() {
       seed_data_size,
       block_,
       block_,
-      kThreads,
+      threads_,
       // TODO: fold this function in here so we would not need the lambda
       [this](auto id, auto beg, auto end) { AnalyzeSeedChunk(id, beg, end); });
 }
@@ -184,7 +185,7 @@ std::fstream SyncCommand::ChunkReconstructor::GetOutputStream(
   // https://stackoverflow.com/questions/39256916/does-stdofstream-truncate-or-append-by-default#:~:text=It%20truncates%20by%20default
   // Using ate or app does not resolve this.
   std::fstream output(
-      parent_impl_.kOutputPath,
+      parent_impl_.output_path_,
       std::ios::binary | std::fstream::out | std::fstream::in);
   output.exceptions(std::fstream::failbit | std::fstream::badbit);
   output.seekp(start_offset);
@@ -240,7 +241,7 @@ void SyncCommand::ChunkReconstructor::WriteRetrievedBatch(
         std::min(size_to_write - size_consumed, retrieval_info.size_to_read);
     output_.seekp(retrieval_info.offset_to_write_to);
     auto batch_member_write_size = 0;
-    if (parent_impl_.kCompressionDiabled) {
+    if (parent_impl_.compression_disabled_) {
       batch_member_write_size = batch_member_read_size;
     } else {
       LOG_ASSERT(retrieval_info.size_to_read == batch_member_read_size)
@@ -266,14 +267,14 @@ void SyncCommand::ChunkReconstructor::WriteRetrievedBatch(
 
 void SyncCommand::ChunkReconstructor::FlushBatch(bool force) {
   if (!(force ||
-        batched_retrieval_infos_.size() >= parent_impl_.kNumBlocksPerRetrieval))
+        batched_retrieval_infos_.size() >= parent_impl_.blocks_per_batch_))
   {
     return;
   }
   if (batched_retrieval_infos_.size() <= 0) {
     return;
   }
-  char *read_buffer = parent_impl_.kCompressionDiabled
+  char *read_buffer = parent_impl_.compression_disabled_
                           ? buffer_.get()
                           : decompression_buffer_.get();
   auto count = data_reader_->Read(read_buffer, batched_retrieval_infos_);
@@ -286,7 +287,7 @@ void SyncCommand::ChunkReconstructor::EnqueueBlockRetrieval(
     size_t block_index,
     size_t begin_offset) {
   size_t offset_to_write_to = output_.tellp();
-  if (parent_impl_.kCompressionDiabled) {
+  if (parent_impl_.compression_disabled_) {
     batched_retrieval_infos_.push_back(
         {.block_index = block_index,
          .source_begin_offset = begin_offset,
@@ -334,11 +335,11 @@ SyncCommand::ChunkReconstructor::ChunkReconstructor(
     size_t end_offset)
     : parent_impl_(parent_instance) {
   buffer_ = std::make_unique<char[]>(
-      parent_impl_.block_ * parent_impl_.kNumBlocksPerRetrieval);
+      parent_impl_.block_ * parent_impl_.blocks_per_batch_);
   decompression_buffer_ = std::make_unique<char[]>(
-      parent_impl_.max_compressed_size_ * parent_impl_.kNumBlocksPerRetrieval);
-  seed_reader_ = Reader::Create(parent_impl_.kSeedUri);
-  data_reader_ = Reader::Create(parent_impl_.kDataUri);
+      parent_impl_.max_compressed_size_ * parent_impl_.blocks_per_batch_);
+  seed_reader_ = Reader::Create(parent_impl_.seed_uri_);
+  data_reader_ = Reader::Create(parent_impl_.data_uri_);
   output_ = GetOutputStream(start_offset);
 }
 
@@ -372,21 +373,21 @@ void SyncCommand::ReconstructSourceChunk(
 }
 
 void SyncCommand::ReconstructSource() {
-  auto data_reader = Reader::Create(kDataUri);
+  auto data_reader = Reader::Create(data_uri_);
   auto data_size = size_;
 
   StartNextPhase(data_size);
   LOG(INFO) << "reconstructing target...";
 
-  std::ofstream output(kOutputPath, std::ios::binary);
+  std::ofstream output(output_path_, std::ios::binary);
   CHECK(output);
-  std::filesystem::resize_file(kOutputPath, data_size);
+  std::filesystem::resize_file(output_path_, data_size);
 
   Parallelize(
       data_size,
       block_,
       0,
-      kThreads,
+      threads_,
       [this](auto id, auto beg, auto end) {
         ReconstructSourceChunk(id, beg, end);
       });
@@ -394,13 +395,13 @@ void SyncCommand::ReconstructSource() {
   StartNextPhase(data_size);
   LOG(INFO) << "verifying target...";
 
-  constexpr auto kBufferSize = 1024 * 1024;
+  static constexpr auto kBufferSize = 1024 * 1024;
   auto smart_buffer = std::make_unique<char[]>(kBufferSize);
   auto *buffer = smart_buffer.get();
 
   StrongChecksumBuilder output_hash;
 
-  std::ifstream read_for_hash_check(kOutputPath, std::ios::binary);
+  std::ifstream read_for_hash_check(output_path_, std::ios::binary);
   while (read_for_hash_check) {
     auto count = read_for_hash_check.read(buffer, kBufferSize).gcount();
     output_hash.Update(buffer, count);
@@ -421,17 +422,17 @@ SyncCommand::SyncCommand(
     bool compression_disabled,
     int num_blocks_in_batch,
     int threads)
-    : kDataUri(
+    : data_uri_(
           compression_disabled || data_uri.starts_with("memory://") ||
                   data_uri.ends_with(".pzst")
               ? data_uri
               : data_uri + ".pzst"),
-      kMetadataUri(!metadata_uri.empty() ? metadata_uri : data_uri + ".kysync"),
-      kSeedUri(seed_uri),
-      kOutputPath(output_path),
-      kCompressionDiabled(compression_disabled),
-      kNumBlocksPerRetrieval(num_blocks_in_batch),
-      kThreads(threads),
+      metadata_uri_(!metadata_uri.empty() ? metadata_uri : data_uri + ".kysync"),
+      seed_uri_(seed_uri),
+      output_path_(output_path),
+      compression_disabled_(compression_disabled),
+      blocks_per_batch_(num_blocks_in_batch),
+      threads_(threads),
       set_(std::make_unique<std::bitset<k4Gb>>()) {}
 
 int SyncCommand::Run() {
