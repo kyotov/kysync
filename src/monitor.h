@@ -32,9 +32,6 @@ class Monitor final : public MetricVisitor {
 
   void Update();
 
-  void Visit(const std::string &name, Metric &value) override;
-  void Visit(const std::string &name, MetricContainer &container) override;
-
 public:
   explicit Monitor(Command &);
 
@@ -46,6 +43,9 @@ public:
 
   using MetricCallback = std::function<void(std::string, MetricValueType)>;
   void MetricSnapshot(const MetricCallback &callback);
+
+  void Visit(const std::string &name, Metric &value) override;
+  void Visit(const std::string &name, MetricContainer &container) override;
 };
 
 }  // namespace kysync
