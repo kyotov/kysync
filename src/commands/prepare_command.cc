@@ -50,7 +50,7 @@ int PrepareCommand::Run() {
   auto output = std::ofstream(output_compressed_file_path_, std::ios::binary);
   CHECK(output) << "unable to write to " << output_compressed_file_path_;
 
-  const size_t data_size = fs::file_size(input_file_path_);
+  size_t data_size = fs::file_size(input_file_path_);
   StartNextPhase(data_size);
 
   StrongChecksumBuilder hash;

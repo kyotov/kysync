@@ -473,7 +473,7 @@ bool DoFilesMatch(
 
 void SyncFile(
     const fs::path &source_file_name,
-    const bool compression_disabled,
+    bool compression_disabled,
     const fs::path &metadata_file_name,
     const fs::path &seed_data_file_name,
     const fs::path &temp_path_name,

@@ -20,11 +20,11 @@
 namespace kysync {
 
 void SyncCommand::ParseHeader(Reader &metadata_reader) {
-  constexpr size_t max_header_size = 1024;
-  uint8_t buffer[max_header_size];
+  static constexpr size_t kMaxHeaderSize = 1024;
+  uint8_t buffer[kMaxHeaderSize];
 
-  metadata_reader.Read(buffer, 0, max_header_size);
-  auto cs = google::protobuf::io::CodedInputStream(buffer, max_header_size);
+  metadata_reader.Read(buffer, 0, kMaxHeaderSize);
+  auto cs = google::protobuf::io::CodedInputStream(buffer, kMaxHeaderSize);
   auto header = Header();
   google::protobuf::util::ParseDelimitedFromCodedStream(&header, &cs, nullptr);
 
@@ -213,7 +213,7 @@ size_t SyncCommand::ChunkReconstructor::Decompress(
     size_t compressed_size,
     const void *decompression_buffer,
     void *output_buffer) const {
-  auto const expected_size_after_decompression =
+  auto expected_size_after_decompression =
       ZSTD_getFrameContentSize(decompression_buffer, compressed_size);
   CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_ERROR)
       << " Not compressed by zstd!";

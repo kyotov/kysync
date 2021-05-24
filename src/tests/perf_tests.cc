@@ -90,14 +90,14 @@ void Performance::Execute(
     const TempPath &tmp,
     MetricContainer *metric_container,
     const GetUriCallback &get_uri_callback) {
-  const fs::path root_path = tmp.GetPath();
-  const fs::path data_file_path = root_path / "data.bin";
-  const fs::path seed_data_file_path =
+  fs::path root_path = tmp.GetPath();
+  fs::path data_file_path = root_path / "data.bin";
+  fs::path seed_data_file_path =
       identity_reconstruction_ ? data_file_path : root_path / "seed_data.bin";
-  const fs::path kysync_file_path = root_path / "data.bin.kysync";
-  const fs::path compressed_file_path = root_path / "data.bin.pzst";
-  const fs::path output_file_path = root_path / "data.bin.out";
-  const fs::path log_directory_path =
+  fs::path kysync_file_path = root_path / "data.bin.kysync";
+  fs::path compressed_file_path = root_path / "data.bin.pzst";
+  fs::path output_file_path = root_path / "data.bin.out";
+  fs::path log_directory_path =
       GetEnv("TEST_LOG_DIR", CMAKE_BINARY_DIR / "log");
 
   std::ofstream log(log_directory_path / "perf.log", std::ios::app);
@@ -140,7 +140,7 @@ void Performance::Execute(
 }
 
 void Performance::Execute(bool use_http) {
-  const auto tmp = TempPath(path_, false);
+  auto tmp = TempPath(path_, false);
 
   if (use_http) {
     auto server = HttpServer(tmp.GetPath(), 8000, true);
@@ -153,16 +153,16 @@ void Performance::Execute(bool use_http) {
 }
 
 void Performance::ExecuteZsync() {
-  const auto tmp = TempPath(path_, true);
+  auto tmp = TempPath(path_, true);
   auto server = HttpServer(tmp.GetPath(), 8000, true);
 
-  const fs::path root_path = tmp.GetPath();
-  const fs::path data_file_path = root_path / "data.bin";
-  const fs::path seed_data_file_path =
+  fs::path root_path = tmp.GetPath();
+  fs::path data_file_path = root_path / "data.bin";
+  fs::path seed_data_file_path =
       identity_reconstruction_ ? data_file_path : root_path / "seed_data.bin";
-  const fs::path zsync_file_path = root_path / "data.bin.kysync";
-  const fs::path output_file_path = root_path / "data.bin.out";
-  const fs::path log_directory_path =
+  fs::path zsync_file_path = root_path / "data.bin.kysync";
+  fs::path output_file_path = root_path / "data.bin.out";
+  fs::path log_directory_path =
       GetEnv("TEST_LOG_DIR", CMAKE_BINARY_DIR / "log");
 
   std::ofstream log(log_directory_path / "perf.log", std::ios::app);
@@ -178,8 +178,7 @@ void Performance::ExecuteZsync() {
       << PERFLOG(compression_)     //
       << PERFLOG(identity_reconstruction_);
 
-  const fs::path zsync_path =
-      GetEnv("ZSYNC_BIN_DIR", CMAKE_BINARY_DIR / "zsync/bin");
+  fs::path zsync_path = GetEnv("ZSYNC_BIN_DIR", CMAKE_BINARY_DIR / "zsync/bin");
 
   if (!fs::exists(zsync_path / "zsync")) {
     LOG(WARNING)
