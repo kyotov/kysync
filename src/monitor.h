@@ -4,6 +4,7 @@
 #include <functional>
 #include <list>
 #include <stack>
+#include <vector>
 
 #include "commands/command.h"
 #include "metrics/metric_visitor.h"

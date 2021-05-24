@@ -20,10 +20,10 @@ static fs::path GetUniquePath(const fs::path &root) {
   return root / ("tmp_" + std::to_string(ts) + "_" + std::to_string(counter++));
 }
 
-TempPath::TempPath() : TempPath(CMAKE_BINARY_DIR, false) {}
+TempPath::TempPath() : TempPath(CMAKE_BINARY_DIR / "tmp", false) {}
 
 TempPath::TempPath(const fs::path &parent_path, bool keep)
-    : path_(GetUniquePath(parent_path) / "tmp"),
+    : path_(GetUniquePath(parent_path)),
       keep_(keep)  //
 {
   CHECK(!fs::exists(path_)) << path_ << " already exists";
