@@ -15,6 +15,8 @@ class Reader : public MetricContainer {
   Metric total_bytes_read_;
 
 public:
+  virtual ~Reader() = default;
+
   [[nodiscard]] virtual size_t GetSize() const = 0;
 
   virtual size_t Read(void *buffer, size_t offset, size_t size);

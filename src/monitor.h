@@ -4,6 +4,7 @@
 #include <functional>
 #include <list>
 #include <stack>
+#include <unordered_map>
 #include <vector>
 
 #include "commands/command.h"
