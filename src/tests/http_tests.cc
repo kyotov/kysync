@@ -167,18 +167,18 @@ void CheckGet(const fs::path& path, Client& client) {
   }
 }
 
-TEST_F(HttpTests, HttpsServer) {  // NOLINT
-  auto tmp = TempPath();
-  auto port = 8000;
-  auto cert_path = fs::path(
-      GetEnv("TEST_DATA_DIR", (CMAKE_SOURCE_DIR / "test_data").string()));
-  auto server = HttpServer(cert_path, tmp.GetPath(), port, true);
-  auto client = httplib::SSLClient("localhost", port);
-  client.enable_server_certificate_verification(false);
-
-  CheckGet(tmp.GetPath(), client);
-  server.Stop();
-}
+//TEST_F(HttpTests, HttpsServer) {  // NOLINT
+//  auto tmp = TempPath();
+//  auto port = 8000;
+//  auto cert_path = fs::path(
+//      GetEnv("TEST_DATA_DIR", (CMAKE_SOURCE_DIR / "test_data").string()));
+//  auto server = HttpServer(cert_path, tmp.GetPath(), port, true);
+//  auto client = httplib::SSLClient("localhost", port);
+//  client.enable_server_certificate_verification(false);
+//
+//  CheckGet(tmp.GetPath(), client);
+//  server.Stop();
+//}
 
 TEST_F(HttpTests, HttpServer) {  // NOLINT
   auto tmp = TempPath();

@@ -10,8 +10,9 @@ if (WIN32)
     add_compile_options(-EHsc)
     set(CMAKE_CXX_CLANG_TIDY
             "C:/Program Files/LLVM/bin/clang-tidy.exe";
-#            -checks=-*,readability*;
-#            --dump-config;
+            -checks=-*,readability-identifier-naming;
+#            --list-checks;
+            #            --dump-config;
             )
 endif ()
 
