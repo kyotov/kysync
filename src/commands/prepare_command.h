@@ -3,9 +3,11 @@
 
 #include <filesystem>
 #include <memory>
+#include <vector>
 
 #include "../readers/reader.h"
 #include "command.h"
+#include "../checksums/strong_checksum.h"
 
 namespace kysync {
 
@@ -15,19 +17,26 @@ class KySyncTest;
 
 class PrepareCommand final : public Command {
   friend class KySyncTest;
-  PIMPL;
-  NO_COPY_OR_MOVE(PrepareCommand);
+
+  const fs::path kInputFilename;
+  const fs::path kOutputKsyncFilename;
+  const fs::path kOutputCompressedFilename;
+  const size_t kBlockSize;
+
+  std::vector<uint32_t> weak_checksums_;
+  std::vector<StrongChecksum> strong_checksums_;
+  std::vector<uint64_t> compressed_sizes_;
+  const int kCompressionLevel = 1;
+
+  Metric compressed_bytes_;
 
 public:
   PrepareCommand(
-      const fs::path &input_filename,
-      const fs::path &output_ksync_filename,
-      const fs::path &output_compressed_filename,
+      fs::path input_filename,
+      fs::path output_ksync_filename,
+      fs::path output_compressed_filename,
       size_t block_size);
 
-  ~PrepareCommand() override;
-
-  // TODO: can this be const??
   int Run() override;
 
   void Accept(MetricVisitor &visitor) override;

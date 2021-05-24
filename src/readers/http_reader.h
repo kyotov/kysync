@@ -3,23 +3,32 @@
 
 #include "reader.h"
 
+namespace httplib {
+  class Client;
+}
+
 namespace kysync {
 
 class HttpReader : public Reader {
-  PIMPL;
-  NO_COPY_OR_MOVE(HttpReader);
+  std::string kHost;
+  std::string kPath;
+  std::unique_ptr<httplib::Client> cli_;
+
+  // FIXME: httplib::ranges --> std::vector<std::pair<int64_t, int64_t>>
+  size_t Read(void *buffer, std::vector<std::pair<int64_t, int64_t>> ranges);
 
 public:
   explicit HttpReader(const std::string &url);
 
-  ~HttpReader() override;
+  ~HttpReader();
 
   [[nodiscard]] size_t GetSize() const override;
 
-  size_t Read(void *buffer, size_t offset, size_t size) const override;
+  size_t Read(void *buffer, size_t offset, size_t size) override;
+
   size_t Read(
       void *buffer,
-      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) const override;
+      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) override;
 };
 
 }  // namespace kysync

@@ -9,8 +9,6 @@
 
 #include "../checksums/strong_checksum.h"
 #include "../checksums/weak_checksum.h"
-#include "../commands/impl/prepare_command_impl.h"
-#include "../commands/impl/sync_command_impl.h"
 #include "../commands/prepare_command.h"
 #include "../commands/sync_command.h"
 #include "../config.h"
@@ -18,8 +16,8 @@
 #include "../readers/http_reader.h"
 #include "../readers/memory_reader.h"
 #include "expectation_check_metrics_visitor.h"
-#include "utilities/temp_path.h"
 #include "utilities/fixture.h"
+#include "utilities/temp_path.h"
 
 namespace kysync {
 
@@ -201,32 +199,32 @@ class KySyncTest {
 public:
   static const std::vector<uint32_t> &ExamineWeakChecksums(
       const PrepareCommand &c) {
-    return c.impl_->weak_checksums_;
+    return c.weak_checksums_;
   }
 
   static const std::vector<StrongChecksum> &ExamineStrongChecksums(
       const PrepareCommand &c) {
-    return c.impl_->strong_checksums_;
+    return c.strong_checksums_;
   }
 
   static const std::vector<uint32_t> &ExamineWeakChecksums(
       const SyncCommand &c) {
-    return c.impl_->weak_checksums_;
+    return c.weak_checksums_;
   }
 
   static const std::vector<StrongChecksum> &ExamineStrongChecksums(
       const SyncCommand &c) {
-    return c.impl_->strong_checksums_;
+    return c.strong_checksums_;
   }
 
-  static void ReadMetadata(const SyncCommand &c) { c.impl_->ReadMetadata(); }
+  static void ReadMetadata(SyncCommand &c) { c.ReadMetadata(); }
 
-  static std::vector<size_t> ExamineAnalisys(const SyncCommand &c) {
+  static std::vector<size_t> ExamineAnalisys(SyncCommand &c) {
     std::vector<size_t> result;
 
-    for (size_t i = 0; i < c.impl_->block_count_; i++) {
-      auto wcs = c.impl_->weak_checksums_[i];
-      auto data = c.impl_->analysis_[wcs];
+    for (size_t i = 0; i < c.block_count_; i++) {
+      auto wcs = c.weak_checksums_[i];
+      auto data = c.analysis_[wcs];
       result.push_back(data.seed_offset);
     }
 
@@ -234,12 +232,10 @@ public:
   }
 
   static int GetCompressionLevel(const PrepareCommand &c) {
-    return c.impl_->kCompressionLevel;
+    return c.kCompressionLevel;
   }
 
-  static size_t GetBlockSize(const PrepareCommand &c) {
-    return c.impl_->kBlockSize;
-  }
+  static size_t GetBlockSize(const PrepareCommand &c) { return c.kBlockSize; }
 };
 
 std::stringstream CreateInputStream(const std::string &data) {
@@ -330,7 +326,7 @@ TEST_F(Tests, SimplePrepareCommand2) {  // NOLINT
   EXPECT_EQ(StrongChecksum::Compute("1234", block), scs[2]);
 }
 
-TEST_F(Tests, MetadataRoundtrip) {  // NOLINT
+void t() {
   auto block = 4;
   std::string data = "0123456789";
 
@@ -343,6 +339,8 @@ TEST_F(Tests, MetadataRoundtrip) {  // NOLINT
   WriteFile(data_path, data);
   auto pc = PrepareCommand(data_path, kysync_path, pzst_path, block);
   pc.Run();
+
+  LOG(ERROR) << "foo";
 
   auto sc = SyncCommand(
       "file://" + data_path.string(),
@@ -362,6 +360,10 @@ TEST_F(Tests, MetadataRoundtrip) {  // NOLINT
   EXPECT_EQ(
       KySyncTest::ExamineStrongChecksums(pc),
       KySyncTest::ExamineStrongChecksums(sc));
+}
+
+TEST(Tests2, MetadataRoundtrip) {  // NOLINT
+  t();
 }
 
 void EndToEndTest(

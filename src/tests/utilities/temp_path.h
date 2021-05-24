@@ -3,19 +3,16 @@
 
 #include <filesystem>
 
-#include "../../utilities/utilities.h"
-
 namespace kysync {
 
 class TempPath {
-  PIMPL;
-  NO_COPY_OR_MOVE(TempPath);
+  const bool kKeep;
+  const std::filesystem::path kPath;
 
 public:
-  explicit TempPath(
-      bool keep = false,
-      const std::filesystem::path &path =
-          std::filesystem::temp_directory_path());
+  TempPath();
+
+  TempPath(const std::filesystem::path &parent_path, bool keep);
 
   ~TempPath();
 

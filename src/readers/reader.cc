@@ -12,30 +12,15 @@ namespace kysync {
 
 namespace fs = std::filesystem;
 
-class Reader::Impl {
-public:
-  Metric total_reads_;
-  Metric total_bytes_read_;
-
-  void Accept(MetricVisitor &visitor) {
-    VISIT_METRICS(total_reads_);
-    VISIT_METRICS(total_bytes_read_);
-  }
-};
-
-Reader::Reader() : impl_(std::make_unique<Impl>()) {}
-
-Reader::~Reader() = default;
-
-size_t Reader::Read(void * /*buffer*/, size_t /*offset*/, size_t size) const {
-  impl_->total_reads_++;
-  impl_->total_bytes_read_ += size;
+size_t Reader::Read(void * /*buffer*/, size_t /*offset*/, size_t size) {
+  total_reads_++;
+  total_bytes_read_ += size;
   return size;
 }
 
 size_t Reader::Read(
     void *buffer,
-    std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) const {
+    std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) {
   size_t size_read = 0;
   for (auto &retrieval_info : batched_retrieval_infos) {
     size_read += Read(
@@ -46,7 +31,10 @@ size_t Reader::Read(
   return size_read;
 }
 
-void Reader::Accept(MetricVisitor &visitor) { impl_->Accept(visitor); }
+void Reader::Accept(MetricVisitor &visitor) {
+  VISIT_METRICS(total_reads_);
+  VISIT_METRICS(total_bytes_read_);
+}
 
 std::unique_ptr<Reader> Reader::Create(const std::string &uri) {
   if (uri.starts_with("http://") || uri.starts_with("https://")) {

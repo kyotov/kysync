@@ -3,7 +3,6 @@
 
 #include <memory>
 
-#include "../utilities/utilities.h"
 #include "strong_checksum.h"
 
 struct XXH3_state_s;

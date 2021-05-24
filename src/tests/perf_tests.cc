@@ -139,7 +139,7 @@ void Performance::Execute(
 }
 
 void Performance::Execute(bool use_http) {
-  const auto tmp = TempPath(false, path);
+  const auto tmp = TempPath(path, false);
 
   if (use_http) {
     auto server = HttpServer(tmp.GetPath(), 8000, true);
@@ -152,7 +152,7 @@ void Performance::Execute(bool use_http) {
 }
 
 void Performance::ExecuteZsync() {
-  const auto tmp = TempPath(true, path);
+  const auto tmp = TempPath(path, true);
   auto server = HttpServer(tmp.GetPath(), 8000, true);
 
   const fs::path kRootPath = tmp.GetPath();
