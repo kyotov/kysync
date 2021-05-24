@@ -5,6 +5,7 @@
 
 #include <filesystem>
 #include <future>
+#include <semaphore>
 #include <sstream>
 #include <utility>
 
@@ -36,7 +37,7 @@ void HttpServer::Logger(const Request& req, const Response& res) {
   }
 }
 
-void HttpServer::Init() {
+void HttpServer::Start() {
   server->set_mount_point("/", kRoot.string().c_str());
 
   server->set_logger([this](auto req, auto res) { Logger(req, res); });
@@ -56,7 +57,7 @@ HttpServer::HttpServer(fs::path root, int port, bool log_headers)
       kPort(port),
       kLogHeaders(log_headers),
       server(std::make_unique<Server>()) {
-  Init();
+  Start();
 }
 
 HttpServer::HttpServer(
@@ -70,7 +71,7 @@ HttpServer::HttpServer(
       server(std::make_unique<SSLServer>(
           (cert_path / "cert.pem").string().c_str(),
           (cert_path / "key.pem").string().c_str())) {
-  Init();
+  Start();
 }
 
 void HttpServer::Stop() {
@@ -80,8 +81,6 @@ void HttpServer::Stop() {
   }
 }
 
-HttpServer::~HttpServer() {
-  Stop();
-};
+HttpServer::~HttpServer() { Stop(); };
 
 }  // namespace kysync

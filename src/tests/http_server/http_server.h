@@ -26,7 +26,7 @@ class HttpServer final : public MetricContainer {
   Metric total_bytes{};
 
   void Logger(const httplib::Request& req, const httplib::Response& res);
-  void Init();
+  void Start();
 
 public:
   HttpServer(std::filesystem::path root, int port, bool log_headers);
