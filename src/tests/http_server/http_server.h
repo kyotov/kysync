@@ -22,8 +22,8 @@ class HttpServer final : public MetricContainer {
   std::unique_ptr<httplib::Server> server;
   std::thread thread;
 
-  Metric requests;
-  Metric total_bytes;
+  Metric requests{};
+  Metric total_bytes{};
 
   void Logger(const httplib::Request& req, const httplib::Response& res);
   void Init();

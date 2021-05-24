@@ -23,12 +23,12 @@ class SyncCommand final : public Command {
   int blocks_per_batch_;
   int threads_;
 
-  Metric weak_checksum_matches_;
-  Metric weak_checksum_false_positive_;
-  Metric strong_checksum_matches_;
-  Metric reused_bytes_;
-  Metric downloaded_bytes_;
-  Metric decompressed_bytes_;
+  Metric weak_checksum_matches_{};
+  Metric weak_checksum_false_positive_{};
+  Metric strong_checksum_matches_{};
+  Metric reused_bytes_{};
+  Metric downloaded_bytes_{};
+  Metric decompressed_bytes_{};
 
   size_t size_{};
   size_t header_size_{};

@@ -9,11 +9,11 @@
 namespace kysync {
 
 class Command : public MetricContainer {
-  Metric progress_monitor_enabled_;
-  Metric progress_phase_;
-  Metric progress_next_phase_;
-  Metric progress_total_bytes_;
-  Metric progress_current_bytes_;
+  Metric progress_monitor_enabled_{};
+  Metric progress_phase_{};
+  Metric progress_next_phase_{};
+  Metric progress_total_bytes_{};
+  Metric progress_current_bytes_{};
 
 public:
   virtual int Run() = 0;

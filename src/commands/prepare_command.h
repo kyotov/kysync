@@ -28,7 +28,7 @@ class PrepareCommand final : public Command {
   std::vector<uint64_t> compressed_sizes_;
   int compression_level_ = 1;
 
-  Metric compressed_bytes_;
+  Metric compressed_bytes_{};
 
 public:
   PrepareCommand(

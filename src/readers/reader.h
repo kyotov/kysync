@@ -11,8 +11,8 @@
 namespace kysync {
 
 class Reader : public MetricContainer {
-  Metric total_reads_;
-  Metric total_bytes_read_;
+  Metric total_reads_{};
+  Metric total_bytes_read_{};
 
 public:
   virtual ~Reader() = default;

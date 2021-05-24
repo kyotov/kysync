@@ -16,8 +16,8 @@ namespace kysync {
 // FIXME: I'd really have liked to extend private MetricVisitor but clang barfs!
 class Monitor final : public MetricVisitor {
   struct Phase {
-    Metric bytes;
-    Metric ms;
+    Metric bytes{};
+    Metric ms{};
   };
 
   std::list<Phase> phases_;
