@@ -6,35 +6,35 @@
 namespace kysync {
 
 static void ReadHttpLine(std::istream &input, std::string &buffer, int max) {
-  enum {  //
-    NOT_IN_TERMINATING_STATE,
-    POSSIBLY_TERMINATING,
-    TERMINATED
+  enum class State {  //
+    kNotInTerminatingState,
+    kPossiblyTerminating,
+    kTerminated
   };
 
-  for (auto state = NOT_IN_TERMINATING_STATE;
-       state != TERMINATED && buffer.size() < max;)
+  for (auto state = State::kNotInTerminatingState;
+       state != State::kTerminated && buffer.size() < max;)
   {
     char c{};
     CHECK_EQ(input.get(c).gcount(), 1);
     buffer += c;
     switch (state) {
-      case NOT_IN_TERMINATING_STATE:  // not in \r\n
+      case State::kNotInTerminatingState:  // not in \r\n
         if (c == '\r') {
-          state = POSSIBLY_TERMINATING;
+          state = State::kPossiblyTerminating;
         }
         break;
-      case POSSIBLY_TERMINATING:  // just after \r
+      case State::kPossiblyTerminating:  // just after \r
         if (c == '\n') {          // seen \r\n
-          state = TERMINATED;
+          state = State::kTerminated;
         } else if (c == '\r') {  // handle \r\r\n
-          state = POSSIBLY_TERMINATING;
+          state = State::kPossiblyTerminating;
         } else {
-          state = NOT_IN_TERMINATING_STATE;
+          state = State::kNotInTerminatingState;
         }
         break;
-      default:
-        LOG_ASSERT(false) << " Unexpected internal state: " << state;
+      case State::kTerminated:
+        break;
     }
   }
 }
@@ -73,16 +73,16 @@ static void ParseMultipartByterangesResponse(
   size_t beg = 0;
   size_t end = 0;
 
-  enum {  //
-    BOUNDARY,
-    HEADER,
-    DATA_CHUNK,
-    TERMINATED
+  enum class State {  //
+    kBoundary,
+    kHeader,
+    kDataChunk,
+    kTerminated
   };
 
-  for (auto state = BOUNDARY; state != TERMINATED;) {
+  for (auto state = State::kBoundary; state != State::kTerminated;) {
     switch (state) {
-      case BOUNDARY: {
+      case State::kBoundary: {
         buffer.clear();
         ReadHttpLine(body, buffer, 2);
         if (buffer == crlf) {
@@ -93,18 +93,18 @@ static void ParseMultipartByterangesResponse(
         buffer.clear();
         ReadHttpLine(body, buffer, 2);
         if (buffer == crlf) {
-          state = HEADER;
+          state = State::kHeader;
         } else {
           CHECK_EQ(buffer, dash);
-          state = TERMINATED;
+          state = State::kTerminated;
         }
         break;
       }
-      case HEADER: {
+      case State::kHeader: {
         buffer.clear();
         ReadHttpLine(body, buffer, 1024);
         if (buffer == crlf) {  // end of headers
-          state = DATA_CHUNK;
+          state = State::kDataChunk;
           break;  // continue with data chunk
         }
         auto re = std::regex(
@@ -117,29 +117,23 @@ static void ParseMultipartByterangesResponse(
         }
         break;  // continue with headers
       }
-      case DATA_CHUNK: {
+      case State::kDataChunk: {
         chunk_callback(beg, end, body);
-        state = BOUNDARY;
+        state = State::kBoundary;
         break;
       }
-      default:
-        LOG_ASSERT(false)
-            << " Unexpected state when parsing multipart response:  " << state;
+      case State::kTerminated:
+        break;
     }
   }
 }
 
-size_t Read(
-    httplib::Client &client,
-    const std::string &path,
-    void *buffer,
-    const httplib::Ranges &ranges)  // FIXME: { wrapping is bad w/o this comment
-{
+size_t HttpReader::Read(void *buffer, httplib::Ranges ranges) {
   auto range_header = httplib::make_range_header(ranges);
-  auto res = client.Get(path.c_str(), {range_header});
+  auto res = client_->Get(path_.c_str(), {range_header});
 
-  CHECK(res.error() == httplib::Error::Success) << path;
-  CHECK(res->status == 206 || res->status == 200) << path;
+  CHECK(res.error() == httplib::Error::Success) << path_;
+  CHECK(res->status == 206 || res->status == 200) << path_;
 
   size_t count = 0;
   if (IsMultirangeResponse(res.value())) {
@@ -185,8 +179,7 @@ size_t HttpReader::GetSize() const {
 size_t HttpReader::Read(void *buffer, size_t offset, size_t size) {
   auto beg_offset = offset;
   auto end_offset = offset + size - 1;
-  auto count =
-      kysync::Read(*client_, path_, buffer, {{beg_offset, end_offset}});
+  auto count = Read(buffer, {{beg_offset, end_offset}});
   return Reader::Read(buffer, offset, count);
 }
 
@@ -199,7 +192,7 @@ size_t HttpReader::Read(
         retrieval_info.source_begin_offset + retrieval_info.size_to_read - 1;
     ranges.push_back({retrieval_info.source_begin_offset, end_offset});
   }
-  auto count = kysync::Read(*client_, path_, buffer, ranges);
+  auto count = Read(buffer, ranges);
   return Reader::Read(nullptr, 0, count);
 }
 

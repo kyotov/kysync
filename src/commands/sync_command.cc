@@ -1,5 +1,6 @@
 #include "sync_command.h"
 
+#include <glog/logging.h>
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/util/delimited_message_util.h>
 #include <src/commands/pb/header.pb.h>
@@ -15,31 +16,11 @@
 #include "../checksums/weak_checksum.h"
 #include "../config.h"
 #include "../utilities/parallelize.h"
-#include "glog/logging.h"
-#include "impl/sync_command_impl.h"
 
 namespace kysync {
 
-SyncCommand::Impl::Impl(
-    const SyncCommand &parent,
-    std::string data_uri,
-    std::string metadata_uri,
-    std::string seed_uri,
-    std::filesystem::path output_path,
-    bool compression_disabled,
-    int num_blocks_in_batch,
-    int threads)
-    : kParent(parent),
-      kDataUri(std::move(data_uri)),
-      kMetadataUri(std::move(metadata_uri)),
-      kSeedUri(std::move(seed_uri)),
-      kOutputPath(std::move(output_path)),
-      kCompressionDiabled(compression_disabled),
-      kNumBlocksPerRetrieval(num_blocks_in_batch),
-      kThreads(threads) {}
-
-void SyncCommand::Impl::ParseHeader(Reader &metadata_reader) {
-  constexpr size_t kMaxHeaderSize = 1024;
+void SyncCommand::ParseHeader(Reader &metadata_reader) {
+  static constexpr size_t kMaxHeaderSize = 1024;
   uint8_t buffer[kMaxHeaderSize];
 
   metadata_reader.Read(buffer, 0, kMaxHeaderSize);
@@ -57,7 +38,7 @@ void SyncCommand::Impl::ParseHeader(Reader &metadata_reader) {
 }
 
 template <typename T>
-size_t SyncCommand::Impl::ReadIntoContainer(
+size_t SyncCommand::ReadIntoContainer(
     Reader &metadata_reader,
     size_t offset,
     std::vector<T> &container) {
@@ -67,11 +48,11 @@ size_t SyncCommand::Impl::ReadIntoContainer(
   size_t size_read =
       metadata_reader.Read(container.data(), offset, size_to_read);
   CHECK_EQ(size_to_read, size_read) << "cannot Read metadata";
-  kParent.AdvanceProgress(size_read);
+  AdvanceProgress(size_read);
   return size_read;
 }
 
-void SyncCommand::Impl::UpdateCompressedOffsetsAndMaxSize() {
+void SyncCommand::UpdateCompressedOffsetsAndMaxSize() {
   compressed_file_offsets_.push_back(0);
   if (!compressed_sizes_.empty()) {
     max_compressed_size_ = compressed_sizes_[0];
@@ -83,28 +64,28 @@ void SyncCommand::Impl::UpdateCompressedOffsetsAndMaxSize() {
   }
 }
 
-void SyncCommand::Impl::ReadMetadata() {
-  auto metadata_reader = Reader::Create(kMetadataUri);
+void SyncCommand::ReadMetadata() {
+  auto metadata_reader = Reader::Create(metadata_uri_);
 
-  kParent.StartNextPhase(metadata_reader->GetSize());
+  StartNextPhase(metadata_reader->GetSize());
   LOG(INFO) << "reading metadata...";
 
   ParseHeader(*metadata_reader);
-  kParent.AdvanceProgress(header_size_);
+  AdvanceProgress(header_size_);
   auto offset = header_size_;
   offset += ReadIntoContainer(*metadata_reader, offset, weak_checksums_);
   offset += ReadIntoContainer(*metadata_reader, offset, strong_checksums_);
-  offset += ReadIntoContainer(*metadata_reader, offset, compressed_sizes_);
+  ReadIntoContainer(*metadata_reader, offset, compressed_sizes_);
 
   UpdateCompressedOffsetsAndMaxSize();
 
   for (size_t index = 0; index < block_count_; index++) {
-    set_[weak_checksums_[index]] = true;
+    (*set_)[weak_checksums_[index]] = true;
     analysis_[weak_checksums_[index]] = {index, -1ULL};
   }
 }
 
-void SyncCommand::Impl::AnalyzeSeedChunk(
+void SyncCommand::AnalyzeSeedChunk(
     int /*id*/,
     size_t start_offset,
     size_t end_offset) {
@@ -112,10 +93,10 @@ void SyncCommand::Impl::AnalyzeSeedChunk(
   auto *buffer = smart_buffer.get() + block_;
   memset(buffer, 0, block_);
 
-  auto seed_reader = Reader::Create(kSeedUri);
+  auto seed_reader = Reader::Create(seed_uri_);
   auto seed_size = seed_reader->GetSize();
 
-  uint32_t _wcs = 0;
+  uint32_t running_wcs = 0;
 
   int64_t warmup = block_ - 1;
 
@@ -128,7 +109,7 @@ void SyncCommand::Impl::AnalyzeSeedChunk(
        * https://github.com/kyotov/ksync/blob/2d98f83cd1516066416e8319fbfa995e3f49f3dd/commands/SyncCommand.cpp#L128-L132
        */
       if (--warmup < 0 && seed_offset + offset + block_ <= seed_size &&
-          set_[wcs]) {
+          (*set_)[wcs]) {
         weak_checksum_matches_++;
         auto &data = analysis_[wcs];
 
@@ -136,7 +117,7 @@ void SyncCommand::Impl::AnalyzeSeedChunk(
         auto seed_digest = StrongChecksum::Compute(buffer + offset, block_);
 
         if (source_digest == seed_digest) {
-          set_[wcs] = false;
+          (*set_)[wcs] = false;
           if (kWarmupAfterMatch) {
             warmup = block_ - 1;
           }
@@ -166,30 +147,31 @@ void SyncCommand::Impl::AnalyzeSeedChunk(
      * abandon the idea completely.
      * https://github.com/kyotov/ksync/blob/2d98f83cd1516066416e8319fbfa995e3f49f3dd/commands/SyncCommand.cpp#L166-L220
      */
-    _wcs =
-        WeakChecksum(static_cast<const void *>(buffer), block_, _wcs, callback);
+    running_wcs =
+        WeakChecksum(static_cast<const void *>(buffer), block_,
+        running_wcs, callback);
 
-    kParent.AdvanceProgress(block_);
+    AdvanceProgress(block_);
   }
 }
 
-void SyncCommand::Impl::AnalyzeSeed() {
-  auto seed_reader = Reader::Create(kSeedUri);
+void SyncCommand::AnalyzeSeed() {
+  auto seed_reader = Reader::Create(seed_uri_);
   auto seed_data_size = seed_reader->GetSize();
 
-  kParent.StartNextPhase(seed_data_size);
+  StartNextPhase(seed_data_size);
   LOG(INFO) << "analyzing seed data...";
 
   Parallelize(
       seed_data_size,
       block_,
       block_,
-      kThreads,
+      threads_,
       // TODO: fold this function in here so we would not need the lambda
       [this](auto id, auto beg, auto end) { AnalyzeSeedChunk(id, beg, end); });
 }
 
-std::fstream SyncCommand::Impl::ChunkReconstructor::GetOutputStream(
+std::fstream SyncCommand::ChunkReconstructor::GetOutputStream(
     size_t start_offset) {
   // NOTE: The fstream object is consciously initialized with both out and in
   // modes although this function only writes to the file.
@@ -203,14 +185,14 @@ std::fstream SyncCommand::Impl::ChunkReconstructor::GetOutputStream(
   // https://stackoverflow.com/questions/39256916/does-stdofstream-truncate-or-append-by-default#:~:text=It%20truncates%20by%20default
   // Using ate or app does not resolve this.
   std::fstream output(
-      parent_impl_.kOutputPath,
+      parent_impl_.output_path_,
       std::ios::binary | std::fstream::out | std::fstream::in);
   output.exceptions(std::fstream::failbit | std::fstream::badbit);
   output.seekp(start_offset);
   return std::move(output);
 }
 
-bool SyncCommand::Impl::FoundMatchingSeedOffset(
+bool SyncCommand::FoundMatchingSeedOffset(
     size_t block_index,
     size_t *matching_seed_offset) const {
   auto wcs = weak_checksums_[block_index];
@@ -227,11 +209,11 @@ bool SyncCommand::Impl::FoundMatchingSeedOffset(
   }
 }
 
-size_t SyncCommand::Impl::ChunkReconstructor::Decompress(
+size_t SyncCommand::ChunkReconstructor::Decompress(
     size_t compressed_size,
     const void *decompression_buffer,
     void *output_buffer) const {
-  auto const expected_size_after_decompression =
+  auto expected_size_after_decompression =
       ZSTD_getFrameContentSize(decompression_buffer, compressed_size);
   CHECK(expected_size_after_decompression != ZSTD_CONTENTSIZE_ERROR)
       << " Not compressed by zstd!";
@@ -250,7 +232,7 @@ size_t SyncCommand::Impl::ChunkReconstructor::Decompress(
   return decompressed_size;
 }
 
-void SyncCommand::Impl::ChunkReconstructor::WriteRetrievedBatch(
+void SyncCommand::ChunkReconstructor::WriteRetrievedBatch(
     size_t size_to_write) {
   size_t size_consumed = 0;
   size_t size_written = 0;
@@ -259,7 +241,7 @@ void SyncCommand::Impl::ChunkReconstructor::WriteRetrievedBatch(
         std::min(size_to_write - size_consumed, retrieval_info.size_to_read);
     output_.seekp(retrieval_info.offset_to_write_to);
     auto batch_member_write_size = 0;
-    if (parent_impl_.kCompressionDiabled) {
+    if (parent_impl_.compression_disabled_) {
       batch_member_write_size = batch_member_read_size;
     } else {
       LOG_ASSERT(retrieval_info.size_to_read == batch_member_read_size)
@@ -283,16 +265,16 @@ void SyncCommand::Impl::ChunkReconstructor::WriteRetrievedBatch(
       << size_to_write << " but could write " << size_consumed << " instead.";
 }
 
-void SyncCommand::Impl::ChunkReconstructor::FlushBatch(bool force) {
+void SyncCommand::ChunkReconstructor::FlushBatch(bool force) {
   if (!(force ||
-        batched_retrieval_infos_.size() >= parent_impl_.kNumBlocksPerRetrieval))
+        batched_retrieval_infos_.size() >= parent_impl_.blocks_per_batch_))
   {
     return;
   }
   if (batched_retrieval_infos_.size() <= 0) {
     return;
   }
-  char *read_buffer = parent_impl_.kCompressionDiabled
+  char *read_buffer = parent_impl_.compression_disabled_
                           ? buffer_.get()
                           : decompression_buffer_.get();
   auto count = data_reader_->Read(read_buffer, batched_retrieval_infos_);
@@ -301,11 +283,11 @@ void SyncCommand::Impl::ChunkReconstructor::FlushBatch(bool force) {
   parent_impl_.downloaded_bytes_ += count;
 }
 
-void SyncCommand::Impl::ChunkReconstructor::EnqueueBlockRetrieval(
+void SyncCommand::ChunkReconstructor::EnqueueBlockRetrieval(
     size_t block_index,
     size_t begin_offset) {
   size_t offset_to_write_to = output_.tellp();
-  if (parent_impl_.kCompressionDiabled) {
+  if (parent_impl_.compression_disabled_) {
     batched_retrieval_infos_.push_back(
         {.block_index = block_index,
          .source_begin_offset = begin_offset,
@@ -322,7 +304,7 @@ void SyncCommand::Impl::ChunkReconstructor::EnqueueBlockRetrieval(
   output_.seekp(static_cast<size_t>(output_.tellp()) + parent_impl_.block_);
 }
 
-void SyncCommand::Impl::ChunkReconstructor::ValidateAndWrite(
+void SyncCommand::ChunkReconstructor::ValidateAndWrite(
     size_t block_index,
     const char *buffer,
     size_t count) {
@@ -344,24 +326,24 @@ void SyncCommand::Impl::ChunkReconstructor::ValidateAndWrite(
     CHECK_EQ(count, parent_impl_.size_ % parent_impl_.block_);
   }
   output_.write(buffer, count);
-  parent_impl_.kParent.AdvanceProgress(count);
+  parent_impl_.AdvanceProgress(count);
 }
 
-SyncCommand::Impl::ChunkReconstructor::ChunkReconstructor(
-    SyncCommand::Impl &parent_instance,
+SyncCommand::ChunkReconstructor::ChunkReconstructor(
+    SyncCommand &parent_instance,
     size_t start_offset,
     size_t end_offset)
     : parent_impl_(parent_instance) {
   buffer_ = std::make_unique<char[]>(
-      parent_impl_.block_ * parent_impl_.kNumBlocksPerRetrieval);
+      parent_impl_.block_ * parent_impl_.blocks_per_batch_);
   decompression_buffer_ = std::make_unique<char[]>(
-      parent_impl_.max_compressed_size_ * parent_impl_.kNumBlocksPerRetrieval);
-  seed_reader_ = Reader::Create(parent_impl_.kSeedUri);
-  data_reader_ = Reader::Create(parent_impl_.kDataUri);
+      parent_impl_.max_compressed_size_ * parent_impl_.blocks_per_batch_);
+  seed_reader_ = Reader::Create(parent_impl_.seed_uri_);
+  data_reader_ = Reader::Create(parent_impl_.data_uri_);
   output_ = GetOutputStream(start_offset);
 }
 
-void SyncCommand::Impl::ChunkReconstructor::ReconstructFromSeed(
+void SyncCommand::ChunkReconstructor::ReconstructFromSeed(
     size_t block_index,
     size_t seed_offset) {
   auto count =
@@ -370,7 +352,7 @@ void SyncCommand::Impl::ChunkReconstructor::ReconstructFromSeed(
   parent_impl_.reused_bytes_ += count;
 }
 
-void SyncCommand::Impl::ReconstructSourceChunk(
+void SyncCommand::ReconstructSourceChunk(
     int /*id*/,
     size_t start_offset,
     size_t end_offset) {
@@ -390,62 +372,46 @@ void SyncCommand::Impl::ReconstructSourceChunk(
   chunk_reconstructor.FlushBatch(true);
 }
 
-void SyncCommand::Impl::ReconstructSource() {
-  auto data_reader = Reader::Create(kDataUri);
+void SyncCommand::ReconstructSource() {
+  auto data_reader = Reader::Create(data_uri_);
   auto data_size = size_;
 
-  kParent.StartNextPhase(data_size);
+  StartNextPhase(data_size);
   LOG(INFO) << "reconstructing target...";
 
-  std::ofstream output(kOutputPath, std::ios::binary);
+  std::ofstream output(output_path_, std::ios::binary);
   CHECK(output);
-  std::filesystem::resize_file(kOutputPath, data_size);
+  std::filesystem::resize_file(output_path_, data_size);
 
   Parallelize(
       data_size,
       block_,
       0,
-      kThreads,
+      threads_,
       [this](auto id, auto beg, auto end) {
         ReconstructSourceChunk(id, beg, end);
       });
 
-  kParent.StartNextPhase(data_size);
+  StartNextPhase(data_size);
   LOG(INFO) << "verifying target...";
 
-  constexpr auto kBufferSize = 1024 * 1024;
+  static constexpr auto kBufferSize = 1024 * 1024;
   auto smart_buffer = std::make_unique<char[]>(kBufferSize);
   auto *buffer = smart_buffer.get();
 
   StrongChecksumBuilder output_hash;
 
-  std::ifstream read_for_hash_check(kOutputPath, std::ios::binary);
+  std::ifstream read_for_hash_check(output_path_, std::ios::binary);
   while (read_for_hash_check) {
     auto count = read_for_hash_check.read(buffer, kBufferSize).gcount();
     output_hash.Update(buffer, count);
-    kParent.AdvanceProgress(count);
+    AdvanceProgress(count);
   }
 
   CHECK_EQ(hash_, output_hash.Digest().ToString())
       << "mismatch in hash of reconstructed data";
 
-  kParent.StartNextPhase(0);
-}
-
-int SyncCommand::Impl::Run() {
-  ReadMetadata();
-  AnalyzeSeed();
-  ReconstructSource();
-  return 0;
-}
-
-void SyncCommand::Impl::Accept(MetricVisitor &visitor) {
-  VISIT_METRICS(weak_checksum_matches_);
-  VISIT_METRICS(weak_checksum_false_positive_);
-  VISIT_METRICS(strong_checksum_matches_);
-  VISIT_METRICS(reused_bytes_);
-  VISIT_METRICS(downloaded_bytes_);
-  VISIT_METRICS(decompressed_bytes_);
+  StartNextPhase(0);
 }
 
 SyncCommand::SyncCommand(
@@ -456,26 +422,34 @@ SyncCommand::SyncCommand(
     bool compression_disabled,
     int num_blocks_in_batch,
     int threads)
-    : impl_(new Impl(
-          *this,
+    : data_uri_(
           compression_disabled || data_uri.starts_with("memory://") ||
                   data_uri.ends_with(".pzst")
               ? data_uri
-              : data_uri + ".pzst",
-          !metadata_uri.empty() ? metadata_uri : data_uri + ".kysync",
-          seed_uri,
-          output_path,
-          compression_disabled,
-          num_blocks_in_batch,
-          threads)) {}
+              : data_uri + ".pzst"),
+      metadata_uri_(!metadata_uri.empty() ? metadata_uri : data_uri + ".kysync"),
+      seed_uri_(seed_uri),
+      output_path_(output_path),
+      compression_disabled_(compression_disabled),
+      blocks_per_batch_(num_blocks_in_batch),
+      threads_(threads),
+      set_(std::make_unique<std::bitset<k4Gb>>()) {}
 
-SyncCommand::~SyncCommand() = default;
-
-int SyncCommand::Run() { return impl_->Run(); }
+int SyncCommand::Run() {
+  ReadMetadata();
+  AnalyzeSeed();
+  ReconstructSource();
+  return 0;
+}
 
 void SyncCommand::Accept(MetricVisitor &visitor) {
   Command::Accept(visitor);
-  impl_->Accept(visitor);
+  VISIT_METRICS(weak_checksum_matches_);
+  VISIT_METRICS(weak_checksum_false_positive_);
+  VISIT_METRICS(strong_checksum_matches_);
+  VISIT_METRICS(reused_bytes_);
+  VISIT_METRICS(downloaded_bytes_);
+  VISIT_METRICS(decompressed_bytes_);
 }
 
 }  // namespace kysync

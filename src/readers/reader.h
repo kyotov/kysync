@@ -6,16 +6,17 @@
 
 #include "../metrics/metric_container.h"
 #include "../metrics/metric_visitor.h"
-#include "../utilities/utilities.h"
 #include "batch_retrieval_info.h"
 
 namespace kysync {
 
 class Reader : public MetricContainer {
-  Metric total_reads_;
-  Metric total_bytes_read_;
+  Metric total_reads_{};
+  Metric total_bytes_read_{};
 
 public:
+  virtual ~Reader() = default;
+
   [[nodiscard]] virtual size_t GetSize() const = 0;
 
   virtual size_t Read(void *buffer, size_t offset, size_t size);

@@ -17,11 +17,10 @@ static fs::path GetUniquePath(const fs::path &root) {
   auto now = high_resolution_clock::now();
   auto ts = duration_cast<nanoseconds>(now.time_since_epoch()).count();
 
-  return root / "tmp" /
-         ("tmp_" + std::to_string(ts) + "_" + std::to_string(counter++));
+  return root / ("tmp_" + std::to_string(ts) + "_" + std::to_string(counter++));
 }
 
-TempPath::TempPath() : TempPath(CMAKE_BINARY_DIR, false) {}
+TempPath::TempPath() : TempPath(CMAKE_BINARY_DIR / "tmp", false) {}
 
 TempPath::TempPath(const fs::path &parent_path, bool keep)
     : path_(GetUniquePath(parent_path)),

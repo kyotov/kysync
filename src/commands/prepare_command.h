@@ -1,11 +1,13 @@
-#ifndef KSYNC_PREPARE_COMMAND_H
-#define KSYNC_PREPARE_COMMAND_H
+#ifndef KSYNC__SRC_COMMANDS_PREPARE_COMMAND_H
+#define KSYNC__SRC_COMMANDS_PREPARE_COMMAND_H
 
 #include <filesystem>
 #include <memory>
+#include <vector>
 
 #include "../readers/reader.h"
 #include "command.h"
+#include "../checksums/strong_checksum.h"
 
 namespace kysync {
 
@@ -15,19 +17,26 @@ class KySyncTest;
 
 class PrepareCommand final : public Command {
   friend class KySyncTest;
-  PIMPL;
-  NO_COPY_OR_MOVE(PrepareCommand);
+
+  fs::path input_file_path_;
+  fs::path output_ksync_file_path_;
+  fs::path output_compressed_file_path_;
+  size_t block_size_;
+
+  std::vector<uint32_t> weak_checksums_;
+  std::vector<StrongChecksum> strong_checksums_;
+  std::vector<uint64_t> compressed_sizes_;
+  int compression_level_ = 1;
+
+  Metric compressed_bytes_{};
 
 public:
   PrepareCommand(
-      const fs::path &input_filename,
-      const fs::path &output_ksync_filename,
-      const fs::path &output_compressed_filename,
+      fs::path input_file_path,
+      fs::path output_ksync_file_path,
+      fs::path output_compressed_file_path,
       size_t block_size);
 
-  ~PrepareCommand() override;
-
-  // TODO: can this be const??
   int Run() override;
 
   void Accept(MetricVisitor &visitor) override;
@@ -35,4 +44,4 @@ public:
 
 }  // namespace kysync
 
-#endif  // KSYNC_PREPARE_COMMAND_H
+#endif  // KSYNC__SRC_COMMANDS_PREPARE_COMMAND_H

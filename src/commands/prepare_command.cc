@@ -12,113 +12,97 @@
 #include "../checksums/strong_checksum_builder.h"
 #include "../checksums/weak_checksum.h"
 #include "../utilities/streams.h"
-#include "impl/prepare_command_impl.h"
 
 namespace kysync {
 
-PrepareCommand::Impl::Impl(
-    const PrepareCommand &parent,
-    fs::path input_filename,
-    fs::path output_ksync_filename,
-    fs::path output_compressed_filename,
+PrepareCommand::PrepareCommand(
+    fs::path input_file_path,
+    fs::path output_ksync_file_path,
+    fs::path output_compressed_file_path,
     size_t block_size)
-    : kParent(parent),
-      kInputFilename(std::move(input_filename)),
-      kOutputKsyncFilename(std::move(output_ksync_filename)),
-      kOutputCompressedFilename(std::move(output_compressed_filename)),
-      kBlockSize(block_size) {}
+    : input_file_path_(std::move(input_file_path)),
+      output_ksync_file_path_(std::move(output_ksync_file_path)),
+      output_compressed_file_path_(std::move(output_compressed_file_path)),
+      block_size_(block_size)  //
+{
+  if (output_ksync_file_path_.empty()) {
+    output_ksync_file_path_ = input_file_path_;
+    output_ksync_file_path_.append(".kysync");
+  }
+  if (output_compressed_file_path_.empty()) {
+    output_compressed_file_path_ = input_file_path_;
+    output_compressed_file_path_.append(".pzst");
+  }
+}
 
-int PrepareCommand::Impl::Run() {
-  auto unique_buffer = std::make_unique<char[]>(kBlockSize);
+int PrepareCommand::Run() {
+  auto unique_buffer = std::make_unique<char[]>(block_size_);
   auto *buffer = unique_buffer.get();
 
-  auto compression_buffer_size = ZSTD_compressBound(kBlockSize);
+  auto compression_buffer_size = ZSTD_compressBound(block_size_);
   auto unique_compression_buffer =
       std::make_unique<char[]>(compression_buffer_size);
   auto *compression_buffer = unique_compression_buffer.get();
 
-  auto input = std::ifstream(kInputFilename, std::ios::binary);
-  CHECK(input) << "error reading from " << kInputFilename;
+  auto input = std::ifstream(input_file_path_, std::ios::binary);
+  CHECK(input) << "error reading from " << input_file_path_;
 
-  auto output = std::ofstream(kOutputCompressedFilename, std::ios::binary);
-  CHECK(output) << "unable to write to " << kOutputCompressedFilename;
+  auto output = std::ofstream(output_compressed_file_path_, std::ios::binary);
+  CHECK(output) << "unable to write to " << output_compressed_file_path_;
 
-  const size_t kDataSize = fs::file_size(kInputFilename);
-  kParent.StartNextPhase(kDataSize);
+  size_t data_size = fs::file_size(input_file_path_);
+  StartNextPhase(data_size);
 
   StrongChecksumBuilder hash;
 
-  while (auto count = input.read(buffer, kBlockSize).gcount()) {
-    memset(buffer + count, 0, kBlockSize - count);
+  while (auto count = input.read(buffer, block_size_).gcount()) {
+    memset(buffer + count, 0, block_size_ - count);
 
     hash.Update(buffer, count);
 
-    weak_checksums_.push_back(WeakChecksum(buffer, kBlockSize));
-    strong_checksums_.push_back(StrongChecksum::Compute(buffer, kBlockSize));
+    weak_checksums_.push_back(WeakChecksum(buffer, block_size_));
+    strong_checksums_.push_back(StrongChecksum::Compute(buffer, block_size_));
 
     size_t compressed_size = ZSTD_compress(
         compression_buffer,
         compression_buffer_size,
         buffer,
         count,
-        kCompressionLevel);
+        compression_level_);
     CHECK(!ZSTD_isError(compressed_size)) << ZSTD_getErrorName(compressed_size);
     output.write(compression_buffer, compressed_size);
     compressed_sizes_.push_back(compressed_size);
     compressed_bytes_ += compressed_size;
 
-    kParent.AdvanceProgress(count);
+    AdvanceProgress(count);
   }
 
   // produce the ksync metadata output
 
-  auto output_ksync = std::ofstream(kOutputKsyncFilename, std::ios::binary);
-  CHECK(output_ksync) << "unable to write to " << kOutputKsyncFilename;
+  auto output_ksync = std::ofstream(output_ksync_file_path_, std::ios::binary);
+  CHECK(output_ksync) << "unable to write to " << output_ksync_file_path_;
 
-  kParent.StartNextPhase(1);
+  StartNextPhase(1);
 
   auto header = Header();
   header.set_version(2);
-  header.set_size(kDataSize);
-  header.set_block_size(kBlockSize);
+  header.set_size(data_size);
+  header.set_block_size(block_size_);
   header.set_hash(hash.Digest().ToString());
   google::protobuf::util::SerializeDelimitedToOstream(header, &output_ksync);
-  kParent.AdvanceProgress(header.ByteSizeLong());
+  AdvanceProgress(header.ByteSizeLong());
 
-  kParent.AdvanceProgress(StreamWrite(output_ksync, weak_checksums_));
-  kParent.AdvanceProgress(StreamWrite(output_ksync, strong_checksums_));
-  kParent.AdvanceProgress(StreamWrite(output_ksync, compressed_sizes_));
+  AdvanceProgress(StreamWrite(output_ksync, weak_checksums_));
+  AdvanceProgress(StreamWrite(output_ksync, strong_checksums_));
+  AdvanceProgress(StreamWrite(output_ksync, compressed_sizes_));
 
-  kParent.StartNextPhase(0);
+  StartNextPhase(0);
   return 0;
 }
 
-PrepareCommand::PrepareCommand(
-    const fs::path &input_filename,
-    const fs::path &output_ksync_filename,
-    const fs::path &output_compressed_filename,
-    size_t block_size)
-    // FIXME: std::make_unique<Impl>(...) does not work here, supposedly because
-    //        Impl::Impl is private. I don't understand why it is not the same
-    //        as calling the contructor. If we can call the constructor we
-    //        should be able to call make_unique in the same context. Research.
-    : impl_(new Impl(
-          *this,
-          input_filename,
-          !output_ksync_filename.empty() ? output_ksync_filename.string()
-                                         : input_filename.string() + ".kysync",
-          !output_compressed_filename.empty()
-              ? output_compressed_filename.string()
-              : input_filename.string() + ".pzst",
-          block_size)){};
-
-PrepareCommand::~PrepareCommand() = default;
-
-int PrepareCommand::Run() { return impl_->Run(); }
-
 void PrepareCommand::Accept(MetricVisitor &visitor) {
   Command::Accept(visitor);
-  VISIT_METRICS(impl_->compressed_bytes_);
+  VISIT_METRICS(compressed_bytes_);
 }
 
 }  // namespace kysync

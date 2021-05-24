@@ -5,18 +5,14 @@
 #include <vector>
 
 #include "../../commands/command.h"
-#include "../../utilities/utilities.h"
 
 namespace kysync {
 
 class SystemCommand final : public Command {
-  PIMPL;
-  NO_COPY_OR_MOVE(SystemCommand);
+  const std::string kCommand;
 
 public:
   explicit SystemCommand(std::string command);
-
-  ~SystemCommand() noexcept final;
 
   int Run();
 };

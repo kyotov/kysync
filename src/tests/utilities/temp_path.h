@@ -3,8 +3,6 @@
 
 #include <filesystem>
 
-#include "../../utilities/utilities.h"
-
 namespace kysync {
 
 class TempPath final {

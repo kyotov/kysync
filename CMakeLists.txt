@@ -6,7 +6,15 @@ set(CMAKE_CXX_STANDARD 20)
 include(kydeps/KyDeps.cmake)
 KyDeps(DOWNLOAD NO_UPLOAD DEPENDS gflags glog GTest xxHash httplib protobuf zstd)
 
-#set(CMAKE_CXX_CLANG_TIDY "C:/Program Files/LLVM/bin/clang-tidy.exe";)
+if (WIN32)
+    add_compile_options(-EHsc)
+    set(CMAKE_CXX_CLANG_TIDY
+            "C:/Program Files/LLVM/bin/clang-tidy.exe";
+            -checks=-*,readability-identifier-naming;
+#            --list-checks;
+            #            --dump-config;
+            )
+endif ()
 
 # TODO: figure out libraries
 #       https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160
@@ -29,12 +37,18 @@ include_directories(${PROTO_DIR})
 
 protobuf_generate(
         PROTOS src/commands/pb/header.proto
-        OUT_VAR HEADER_PROTO
+        OUT_VAR PROTO
         LANGUAGE cpp
         PROTOC_OUT_DIR ${PROTO_DIR})
+add_library(proto
+        ${PROTO})
+target_link_libraries(proto
+        ${Protobuf_LIBRARIES}
+        protobuf::libprotobuf-lite
+        protobuf::libprotobuf)
+set_target_properties(proto PROPERTIES CXX_CLANG_TIDY "")
 
 add_library(main STATIC
-        ${HEADER_PROTO}
         src/utilities/parallelize.cc
         src/utilities/streams.cc
         src/utilities/timer.cc
@@ -50,9 +64,7 @@ add_library(main STATIC
         src/checksums/strong_checksum_builder.cc
         src/monitor.cc)
 target_link_libraries(main
-        ${Protobuf_LIBRARIES}
-        protobuf::libprotobuf-lite
-        protobuf::libprotobuf
+        proto
         zstd::libzstd_static
         xxHash::xxhash
         httplib::httplib

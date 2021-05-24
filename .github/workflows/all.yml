@@ -1,7 +1,6 @@
 name: All
 
 on:
-  push:
   pull_request:
   workflow_dispatch:
 
@@ -15,6 +14,7 @@ jobs:
         os: [ ubuntu-latest, windows-latest, macos-latest ]
 
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
 
     steps:
       - uses: actions/checkout@v2

@@ -3,19 +3,17 @@
 
 #include <memory>
 
-#include "../utilities/utilities.h"
 #include "strong_checksum.h"
+
+struct XXH3_state_s;
 
 namespace kysync {
 
 class StrongChecksumBuilder final {
-  PIMPL;
-  NO_COPY_OR_MOVE(StrongChecksumBuilder);
+  XXH3_state_s* state_;
 
 public:
   StrongChecksumBuilder();
-
-  ~StrongChecksumBuilder();
 
   void Update(const void* buffer, size_t size);
 

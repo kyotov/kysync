@@ -6,13 +6,13 @@
 #include <map>
 
 #include "../metrics/metric_visitor.h"
-#include "../utilities/utilities.h"
 
 namespace kysync {
 
 class ExpectationCheckMetricVisitor final : public MetricVisitor {
-  PIMPL;
-  NO_COPY_OR_MOVE(ExpectationCheckMetricVisitor);
+  std::map<std::string, uint64_t> expectations_;
+  std::map<std::string, uint64_t> unchecked_;
+  std::string context_;
 
 public:
   explicit ExpectationCheckMetricVisitor(

@@ -5,13 +5,19 @@
 #include <utility>
 
 #include "../../commands/command.h"
-#include "../../utilities/utilities.h"
 
 namespace kysync {
 
 class GenDataCommand final : public Command {
-  PIMPL;
-  NO_COPY_OR_MOVE(GenDataCommand);
+  const std::filesystem::path kPath;
+  const std::filesystem::path kData;
+  const std::filesystem::path kSeedData;
+  const size_t kDataSize;
+  const size_t kSeedDataSize;
+  const size_t kFragmentSize;
+  const size_t kDiffSize;
+
+  void GenChunk(int id, size_t beg, size_t end);
 
 public:
   GenDataCommand(
@@ -20,8 +26,6 @@ public:
       uint64_t seed_data_size,
       uint64_t fragment_size,
       uint32_t similarity);
-
-  ~GenDataCommand() noexcept final;
 
   int Run() override;
 };
