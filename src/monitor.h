@@ -2,7 +2,7 @@
 #define KSYNC_MONITOR_H
 
 #include <functional>
-#include <memory>
+#include <list>
 #include <stack>
 
 #include "commands/command.h"

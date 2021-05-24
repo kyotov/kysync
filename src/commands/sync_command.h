@@ -15,13 +15,13 @@ namespace kysync {
 class SyncCommand final : public Command {
   friend class KySyncTest;
 
-  const std::string data_uri_;
-  const std::string metadata_uri_;
-  const std::string seed_uri_;
-  const std::filesystem::path output_path_;
-  const bool compression_disabled_;
-  const int blocks_per_batch_;
-  const int threads_;
+  std::string data_uri_;
+  std::string metadata_uri_;
+  std::string seed_uri_;
+  std::filesystem::path output_path_;
+  bool compression_disabled_;
+  int blocks_per_batch_;
+  int threads_;
 
   Metric weak_checksum_matches_;
   Metric weak_checksum_false_positive_;

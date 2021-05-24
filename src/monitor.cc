@@ -6,12 +6,7 @@
 #include <future>
 #include <iomanip>
 #include <iostream>
-#include <list>
-#include <stack>
 #include <unordered_map>
-
-#include "metrics/metric_visitor.h"
-#include "utilities/timer.h"
 
 namespace kysync {
 
