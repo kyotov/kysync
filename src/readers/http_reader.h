@@ -14,6 +14,9 @@ class HttpReader final : public Reader {
   std::string path_;
   std::unique_ptr<httplib::Client> client_;
 
+  // FIXME: httplib::Ranges
+  size_t Read(void *buffer, std::vector<std::pair<int64_t, int64_t>> ranges);
+
 public:
   explicit HttpReader(const std::string &url);
 

@@ -77,7 +77,7 @@ class SyncCommand final : public Command {
     std::unique_ptr<Reader> seed_reader_;
     std::unique_ptr<Reader> data_reader_;
     std::fstream output_;
-    std::vector<BatchedRetrivalInfo> batched_retrieval_infos_;
+    std::vector<BatchRetrivalInfo> batched_retrieval_infos_;
 
     std::fstream GetOutputStream(size_t start_offset);
     void WriteRetrievedBatch(size_t size_to_write);

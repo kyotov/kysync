@@ -131,10 +131,10 @@ static void ParseMultipartByterangesResponse(
 
 size_t HttpReader::Read(void *buffer, httplib::Ranges ranges) {
   auto range_header = httplib::make_range_header(ranges);
-  auto res = cli_->Get(kPath.c_str(), {range_header});
+  auto res = client_->Get(path_.c_str(), {range_header});
 
-  CHECK(res.error() == httplib::Error::Success) << kPath;
-  CHECK(res->status == 206 || res->status == 200) << kPath;
+  CHECK(res.error() == httplib::Error::Success) << path_;
+  CHECK(res->status == 206 || res->status == 200) << path_;
 
   size_t count = 0;
   if (IsMultirangeResponse(res.value())) {
@@ -180,8 +180,7 @@ size_t HttpReader::GetSize() const {
 size_t HttpReader::Read(void *buffer, size_t offset, size_t size) {
   auto beg_offset = offset;
   auto end_offset = offset + size - 1;
-  auto count =
-      kysync::Read(*client_, path_, buffer, {{beg_offset, end_offset}});
+  auto count = Read(buffer, {{beg_offset, end_offset}});
   return Reader::Read(buffer, offset, count);
 }
 
@@ -194,7 +193,7 @@ size_t HttpReader::Read(
         retrieval_info.source_begin_offset + retrieval_info.size_to_read - 1;
     ranges.push_back({retrieval_info.source_begin_offset, end_offset});
   }
-  auto count = kysync::Read(*client_, path_, buffer, ranges);
+  auto count = Read(buffer, ranges);
   return Reader::Read(nullptr, 0, count);
 }
 
