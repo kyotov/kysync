@@ -73,9 +73,15 @@ HttpServer::HttpServer(
   Init();
 }
 
+void HttpServer::Stop() {
+  if (server->is_running()) {
+    server->stop();
+    thread.join();
+  }
+}
+
 HttpServer::~HttpServer() {
-  server->stop();
-  thread.join();
+  Stop();
 };
 
 }  // namespace kysync

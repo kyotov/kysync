@@ -8,7 +8,11 @@ KyDeps(DOWNLOAD NO_UPLOAD DEPENDS gflags glog GTest xxHash httplib protobuf zstd
 
 if (WIN32)
     add_compile_options(-EHsc)
-    set(CMAKE_CXX_CLANG_TIDY "C:/Program Files/LLVM/bin/clang-tidy.exe")
+    set(CMAKE_CXX_CLANG_TIDY
+            "C:/Program Files/LLVM/bin/clang-tidy.exe";
+#            -checks=-*,readability*;
+#            --dump-config;
+            )
 endif ()
 
 # TODO: figure out libraries
@@ -41,10 +45,7 @@ target_link_libraries(proto
         ${Protobuf_LIBRARIES}
         protobuf::libprotobuf-lite
         protobuf::libprotobuf)
-set_target_properties(
-        proto
-        PROPERTIES
-        CXX_CLANG_TIDY "")
+set_target_properties(proto PROPERTIES CXX_CLANG_TIDY "")
 
 add_library(main STATIC
         src/utilities/parallelize.cc

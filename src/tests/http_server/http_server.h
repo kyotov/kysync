@@ -37,6 +37,8 @@ public:
       int port,
       bool log_headers);
 
+  void Stop();
+
   ~HttpServer();
 
   void Accept(MetricVisitor& visitor) override;

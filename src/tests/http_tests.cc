@@ -177,6 +177,7 @@ TEST_F(HttpTests, HttpsServer) {  // NOLINT
   client.enable_server_certificate_verification(false);
 
   CheckGet(tmp.GetPath(), client);
+  server.Stop();
 }
 
 TEST_F(HttpTests, HttpServer) {  // NOLINT
@@ -186,6 +187,7 @@ TEST_F(HttpTests, HttpServer) {  // NOLINT
   auto client = httplib::Client("localhost", port);
 
   CheckGet(tmp.GetPath(), client);
+  server.Stop();
 }
 
 }  // namespace kysync
