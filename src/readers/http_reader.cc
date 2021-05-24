@@ -6,11 +6,16 @@
 namespace kysync {
 
 static void ReadHttpLine(std::istream &input, std::string &buffer, int max) {
-  enum states { NOT_IN_TERMINATING_STATE, POSSIBLY_TERMINATING, TERMINATED };
+  enum {  //
+    NOT_IN_TERMINATING_STATE,
+    POSSIBLY_TERMINATING,
+    TERMINATED
+  };
+
   for (auto state = NOT_IN_TERMINATING_STATE;
        state != TERMINATED && buffer.size() < max;)
   {
-    char c;
+    char c{};
     CHECK_EQ(input.get(c).gcount(), 1);
     buffer += c;
     switch (state) {
@@ -44,13 +49,13 @@ static void CheckPrefixAndAdvance(
   CHECK(std::equal(prefix.begin(), prefix.end(), buffer.begin()));
 }
 
-using ChunkCallback = std::function<
-    void(size_t /*beg*/, size_t /*end*/, std::istream & /*data*/)>;
-
 static bool IsMultirangeResponse(httplib::Response &response) {
   return response.get_header_value("Content-Type")
       .starts_with("multipart/byteranges");
 }
+
+using ChunkCallback = std::function<
+    void(size_t /*beg*/, size_t /*end*/, std::istream & /*data*/)>;
 
 static void ParseMultipartByterangesResponse(
     httplib::Response &response,
@@ -67,18 +72,23 @@ static void ParseMultipartByterangesResponse(
 
   size_t beg = 0;
   size_t end = 0;
-  enum { BOUNDARY, HEADER, DATA_CHUNK, TERMINATED };
+
+  enum {  //
+    BOUNDARY,
+    HEADER,
+    DATA_CHUNK,
+    TERMINATED
+  };
+
   for (auto state = BOUNDARY; state != TERMINATED;) {
     switch (state) {
       case BOUNDARY: {
         buffer.clear();
         ReadHttpLine(body, buffer, 2);
         if (buffer == crlf) {
-          continue;
+          continue;  // keep skipping \r\n until -- shows up
         }
         CHECK_EQ(buffer, dash);
-        //          CheckPrefixAndAdvance(body, crlf, buffer);
-        //          CheckPrefixAndAdvance(body, dash, buffer);
         CheckPrefixAndAdvance(body, boundary, buffer);
         buffer.clear();
         ReadHttpLine(body, buffer, 2);
@@ -123,8 +133,8 @@ size_t HttpReader::Read(void *buffer, httplib::Ranges ranges) {
   auto range_header = httplib::make_range_header(ranges);
   auto res = cli_->Get(kPath.c_str(), {range_header});
 
-  CHECK(res.error() == httplib::Error::Success);
-  CHECK(res->status == 206 || res->status == 200);
+  CHECK(res.error() == httplib::Error::Success) << kPath;
+  CHECK(res->status == 206 || res->status == 200) << kPath;
 
   size_t count = 0;
   if (IsMultirangeResponse(res.value())) {
@@ -145,20 +155,21 @@ size_t HttpReader::Read(void *buffer, httplib::Ranges ranges) {
 
 HttpReader::HttpReader(const std::string &url) {
   auto pos = url.find("//");
-  CHECK(pos != url.npos);
+  CHECK_NE(pos, url.npos);
   pos = url.find('/', pos + 2);
-  CHECK(pos != url.npos);
+  CHECK_NE(pos, url.npos);
 
-  kHost = url.substr(0, pos);
-  kPath = url.substr(pos);
-  cli_ = std::make_unique<httplib::Client>(kHost.c_str());
-  cli_->set_keep_alive(true);
+  host_ = url.substr(0, pos);
+  path_ = url.substr(pos);
+
+  client_ = std::make_unique<httplib::Client>(host_.c_str());
+  client_->set_keep_alive(true);
 }
 
 HttpReader::~HttpReader() = default;
 
 size_t HttpReader::GetSize() const {
-  auto res = cli_->Head(kPath.c_str());
+  auto res = client_->Head(path_.c_str());
 
   CHECK(res->has_header("Content-Length"));
   auto size = res->get_header_value("Content-Length");
@@ -169,20 +180,21 @@ size_t HttpReader::GetSize() const {
 size_t HttpReader::Read(void *buffer, size_t offset, size_t size) {
   auto beg_offset = offset;
   auto end_offset = offset + size - 1;
-  auto count = Read(buffer, {{beg_offset, end_offset}});
+  auto count =
+      kysync::Read(*client_, path_, buffer, {{beg_offset, end_offset}});
   return Reader::Read(buffer, offset, count);
 }
 
 size_t HttpReader::Read(
     void *buffer,
-    std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) {
+    std::vector<BatchRetrivalInfo> &batched_retrieval_infos) {
   httplib::Ranges ranges;
   for (auto &retrieval_info : batched_retrieval_infos) {
     auto end_offset =
         retrieval_info.source_begin_offset + retrieval_info.size_to_read - 1;
     ranges.push_back({retrieval_info.source_begin_offset, end_offset});
   }
-  auto count = Read(buffer, ranges);
+  auto count = kysync::Read(*client_, path_, buffer, ranges);
   return Reader::Read(nullptr, 0, count);
 }
 

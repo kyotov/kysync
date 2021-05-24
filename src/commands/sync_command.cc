@@ -1,6 +1,5 @@
 #include "sync_command.h"
 
-#include <glog/logging.h>
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/util/delimited_message_util.h>
 #include <src/commands/pb/header.pb.h>
@@ -10,6 +9,7 @@
 #include <future>
 #include <ios>
 #include <map>
+#include <utility>
 
 #include "../checksums/strong_checksum_builder.h"
 #include "../checksums/weak_checksum.h"
@@ -374,7 +374,7 @@ void SyncCommand::ReconstructSource() {
   auto data_reader = Reader::Create(kDataUri);
   auto data_size = size_;
 
-  StartNextPhase(data_size);
+  kParent.StartNextPhase(data_size);
   LOG(INFO) << "reconstructing target...";
 
   std::ofstream output(kOutputPath, std::ios::binary);

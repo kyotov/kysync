@@ -8,11 +8,11 @@
 namespace kysync {
 
 class MemoryReader final : public Reader {
-  const void* const kBuffer;
-  const size_t kSize;
+  const void *data_;
+  size_t data_size_;
 
 public:
-  MemoryReader(const void *buffer, size_t size);
+  MemoryReader(const void *data, size_t data_size);
 
   [[nodiscard]] size_t GetSize() const override;
 

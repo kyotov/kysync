@@ -6,7 +6,7 @@
 
 #include "../metrics/metric_container.h"
 #include "../metrics/metric_visitor.h"
-#include "batched_retrieval_info.h"
+#include "batch_retrieval_info.h"
 
 namespace kysync {
 
@@ -21,7 +21,7 @@ public:
 
   virtual size_t Read(
       void *buffer,
-      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos);
+      std::vector<BatchRetrivalInfo> &batch_retrieval_infos);
 
   void Accept(MetricVisitor &visitor) override;
 

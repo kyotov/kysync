@@ -20,9 +20,9 @@ size_t Reader::Read(void * /*buffer*/, size_t /*offset*/, size_t size) {
 
 size_t Reader::Read(
     void *buffer,
-    std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) {
+    std::vector<BatchRetrivalInfo> &batch_retrieval_infos) {
   size_t size_read = 0;
-  for (auto &retrieval_info : batched_retrieval_infos) {
+  for (auto &retrieval_info : batch_retrieval_infos) {
     size_read += Read(
         static_cast<char *>(buffer) + size_read,
         retrieval_info.source_begin_offset,
@@ -56,12 +56,16 @@ std::unique_ptr<Reader> Reader::Create(const std::string &uri) {
   std::string memory = "memory://";
   if (uri.starts_with(memory)) {
     auto s = uri.substr(memory.size());
+
+    // TODO: review this pointer arithmetic business...
+    //       there may be a better way to implement this
+
     char *current;
 
     // should this be necessary!? at some point it just started failing without
     errno = 0;
 
-    auto buffer = (void *)strtoull(s.c_str(), &current, 16);
+    auto buffer = (void *)(strtoull(s.c_str(), &current, 16));
     if (errno != 0 || *current != ':') {
       LOG(ERROR) << "errno=" << errno << " current=" << (int)*current
                  << " uri=" << uri;

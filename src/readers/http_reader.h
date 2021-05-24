@@ -9,13 +9,10 @@ namespace httplib {
 
 namespace kysync {
 
-class HttpReader : public Reader {
-  std::string kHost;
-  std::string kPath;
-  std::unique_ptr<httplib::Client> cli_;
-
-  // FIXME: httplib::ranges --> std::vector<std::pair<int64_t, int64_t>>
-  size_t Read(void *buffer, std::vector<std::pair<int64_t, int64_t>> ranges);
+class HttpReader final : public Reader {
+  std::string host_;
+  std::string path_;
+  std::unique_ptr<httplib::Client> client_;
 
 public:
   explicit HttpReader(const std::string &url);
@@ -28,7 +25,7 @@ public:
 
   size_t Read(
       void *buffer,
-      std::vector<BatchedRetrivalInfo> &batched_retrieval_infos) override;
+      std::vector<BatchRetrivalInfo> &batched_retrieval_infos) override;
 };
 
 }  // namespace kysync
