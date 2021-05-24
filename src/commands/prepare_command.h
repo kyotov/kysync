@@ -18,15 +18,15 @@ class KySyncTest;
 class PrepareCommand final : public Command {
   friend class KySyncTest;
 
-  const fs::path input_file_path_;
-  const fs::path output_ksync_file_path_;
-  const fs::path output_compressed_file_path_;
-  const size_t block_size_;
+  fs::path input_file_path_;
+  fs::path output_ksync_file_path_;
+  fs::path output_compressed_file_path_;
+  size_t block_size_;
 
   std::vector<uint32_t> weak_checksums_;
   std::vector<StrongChecksum> strong_checksums_;
   std::vector<uint64_t> compressed_sizes_;
-  const int compression_level_ = 1;
+  int compression_level_ = 1;
 
   Metric compressed_bytes_;
 

@@ -21,14 +21,19 @@ PrepareCommand::PrepareCommand(
     fs::path output_compressed_file_path,
     size_t block_size)
     : input_file_path_(std::move(input_file_path)),
-      output_ksync_file_path_(
-          !output_ksync_file_path.empty() ? std::move(output_ksync_file_path)
-                                         : input_file_path.string() + ".kysync"),
-      output_compressed_file_path_(
-          !output_compressed_file_path.empty()
-              ? std::move(output_compressed_file_path)
-              : input_file_path.string() + ".pzst"),
-      block_size_(block_size) {}
+      output_ksync_file_path_(std::move(output_ksync_file_path)),
+      output_compressed_file_path_(std::move(output_compressed_file_path)),
+      block_size_(block_size)  //
+{
+  if (output_ksync_file_path_.empty()) {
+    output_ksync_file_path_ = input_file_path_;
+    output_ksync_file_path_.append(".kysync");
+  }
+  if (output_compressed_file_path_.empty()) {
+    output_compressed_file_path_ = input_file_path_;
+    output_compressed_file_path_.append(".pzst");
+  }
+}
 
 int PrepareCommand::Run() {
   auto unique_buffer = std::make_unique<char[]>(block_size_);
