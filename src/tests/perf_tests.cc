@@ -219,9 +219,9 @@ TEST_F(Performance, KySync_Http) {  // NOLINT
   Execute(Performance::Http::kUse, Performance::Tool::kKySync);
 }
 
-TEST_F(Performance, Zsync) {  // NOLINT
-  Execute(Performance::Http::kDontUse, Performance::Tool::kZsync);
-}
+//TEST_F(Performance, Zsync) {  // NOLINT
+//  Execute(Performance::Http::kDontUse, Performance::Tool::kZsync);
+//}
 
 TEST_F(Performance, Zsync_Http) {  // NOLINT
   Execute(Performance::Http::kUse, Performance::Tool::kZsync);
