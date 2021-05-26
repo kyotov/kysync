@@ -20,9 +20,18 @@
 
 namespace kysync {
 
+#define PERFLOG(X) #X << "=" << X << std::endl
+
 class Performance : public Fixture {
 protected:
-  fs::path path_;
+  std::unique_ptr<TempPath> tmp_path_;
+  fs::path root_path_;
+  fs::path log_directory_path_;
+  fs::path data_file_path_;
+  fs::path seed_data_file_path_;
+  fs::path metadata_file_path_;
+  fs::path compressed_file_path_;
+  fs::path output_file_path_;
   size_t data_size_;
   size_t seed_data_size_;
   size_t fragment_size_;
@@ -32,9 +41,22 @@ protected:
   int threads_;
   bool compression_;
   bool identity_reconstruction_;
+  std::ofstream log_;
 
-  Performance() {
-    auto root_path = GetEnv("TEST_ROOT_DIR", CMAKE_BINARY_DIR);
+  void SetUp() {
+    tmp_path_ = std::make_unique<TempPath>(
+        GetEnv("TEST_ROOT_DIR", CMAKE_BINARY_DIR / "tmp"),
+        false);
+    root_path_ = tmp_path_->GetPath();
+    log_directory_path_ = GetEnv("TEST_LOG_DIR", CMAKE_BINARY_DIR / "log");
+    data_file_path_ = root_path_ / "data.bin";
+    seed_data_file_path_ = identity_reconstruction_
+                               ? data_file_path_
+                               : root_path_ / "seed_data.bin";
+    metadata_file_path_ = root_path_ / "data.bin.metadata";
+    compressed_file_path_ = root_path_ / "data.bin.compressed";
+    output_file_path_ = root_path_ / "data.bin.out";
+
     data_size_ = GetEnv("TEST_DATA_SIZE", 1'000'000ULL);
     seed_data_size_ = GetEnv("TEST_SEED_DATA_SIZE", -1ULL);
     fragment_size_ = GetEnv("TEST_FRAGMENT_SIZE", 123'456);
@@ -44,139 +66,120 @@ protected:
     threads_ = GetEnv("TEST_THREADS", 32);
     compression_ = GetEnv("TEST_COMPRESSION", false);
     identity_reconstruction_ = GetEnv("TEST_IDENTITY_RECONSTRUCTION", false);
+
+    log_.open(log_directory_path_ / "perf.log", std::ios::app);
+    log_ << std::endl                       //
+         << PERFLOG(root_path_)             //
+         << PERFLOG(data_file_path_)        //
+         << PERFLOG(seed_data_file_path_)   //
+         << PERFLOG(metadata_file_path_)    //
+         << PERFLOG(compressed_file_path_)  //
+         << PERFLOG(output_file_path_)      //
+         << PERFLOG(data_size_)             //
+         << PERFLOG(seed_data_size_)        //
+         << PERFLOG(fragment_size_)         //
+         << PERFLOG(block_size_)            //
+         << PERFLOG(similarity_)            //
+         << PERFLOG(threads_)               //
+         << PERFLOG(compression_)           //
+         << PERFLOG(identity_reconstruction_);
+
+    auto gen_data = GenDataCommand(  //
+        root_path_,
+        data_size_,
+        seed_data_size_,
+        fragment_size_,
+        similarity_);
+    MetricSnapshot(gen_data);
   }
 
-  using GetUriCallback = std::function<std::string(const fs::path &)>;
+  enum class Http {
+    kDontUse,
+    kUse,
+  };
 
-  void Execute(
-      const TempPath &tmp,
-      MetricContainer *metric_container,
-      const GetUriCallback &get_uri_callback);
+  enum class Tool { kKySync, kZsync };
 
-  void Execute(bool use_http);
+  Http http_;
+  HttpServer *server_ = nullptr;
 
+  std::string GetUri(const fs::path &path) {
+    if (http_ == Http::kUse) {
+      return "http://localhost:8000/" + path.filename().string();
+    } else {
+      return "file://" + path.string();
+    }
+  }
+
+  void Execute(Http http, Tool tool) {
+    auto execute = [&]() {
+      switch (tool) {
+        case Tool::kKySync:
+          ExecuteKySync();
+          break;
+        case Tool::kZsync:
+          ExecuteZsync();
+          break;
+      };
+    };
+
+    http_ = http;
+    switch (http_) {
+      case Http::kUse: {
+        auto server = HttpServer(root_path_, 8000, true);
+        server_ = &server;
+        execute();
+        break;
+      }
+      case Http::kDontUse: {
+        server_ = nullptr;
+        execute();
+        break;
+      }
+    }
+  }
+
+  void MetricSnapshot(Command &command) {
+    auto monitor = Monitor(command);
+
+    if (server_ != nullptr) {
+      monitor.RegisterMetricContainer("HttpServer", *server_);
+    }
+
+    EXPECT_EQ(monitor.Run(), 0);
+
+    const auto *command_name = typeid(command).name();
+    monitor.MetricSnapshot([&](std::string key, auto value) {
+      log_ << command_name << ":" << key << "=" << value << std::endl;
+    });
+  }
+
+  void ExecuteKySync();
   void ExecuteZsync();
 };
 
-#define PERFLOG(X) #X << "=" << X << std::endl
-
-void MetricSnapshot(
-    std::ofstream &log,
-    Command &command,
-    MetricContainer *metric_container) {
-  auto monitor = Monitor(command);
-
-  if (metric_container != nullptr) {
-    monitor.RegisterMetricContainer(
-        typeid(*metric_container).name(),
-        *metric_container);
-  }
-
-  EXPECT_EQ(monitor.Run(), 0);
-
-  const auto *command_name = typeid(command).name();
-  monitor.MetricSnapshot([&](std::string key, auto value) {
-    // TODO: clean-up again... removed to see HttpServer data
-    //    if (key.starts_with("//phases")) {
-    log << command_name << ":" << key << "=" << value << std::endl;
-    //    }
-  });
-};
-
-using GetUriCallback = std::function<std::string(const fs::path &)>;
-
 // FIXME: passing the metric_container is kind of ugly... find a better way
-void Performance::Execute(
-    const TempPath &tmp,
-    MetricContainer *metric_container,
-    const GetUriCallback &get_uri_callback) {
-  fs::path root_path = tmp.GetPath();
-  fs::path data_file_path = root_path / "data.bin";
-  fs::path seed_data_file_path =
-      identity_reconstruction_ ? data_file_path : root_path / "seed_data.bin";
-  fs::path kysync_file_path = root_path / "data.bin.kysync";
-  fs::path compressed_file_path = root_path / "data.bin.pzst";
-  fs::path output_file_path = root_path / "data.bin.out";
-  fs::path log_directory_path =
-      GetEnv("TEST_LOG_DIR", CMAKE_BINARY_DIR / "log");
-
-  std::ofstream log(log_directory_path / "perf.log", std::ios::app);
-
-  log << std::endl                 //
-      << PERFLOG(path_)            //
-      << PERFLOG(data_size_)       //
-      << PERFLOG(seed_data_size_)  //
-      << PERFLOG(fragment_size_)   //
-      << PERFLOG(block_size_)      //
-      << PERFLOG(similarity_)      //
-      << PERFLOG(threads_)         //
-      << PERFLOG(compression_)     //
-      << PERFLOG(identity_reconstruction_);
-
-  auto gen_data = GenDataCommand(  //
-      tmp.GetPath(),
-      data_size_,
-      seed_data_size_,
-      fragment_size_,
-      similarity_);
-  MetricSnapshot(log, gen_data, nullptr);
-
+void Performance::ExecuteKySync() {
   auto prepare = PrepareCommand(  //
-      data_file_path,
-      kysync_file_path,
-      compressed_file_path,
+      data_file_path_,
+      metadata_file_path_,
+      compressed_file_path_,
       block_size_);
-  MetricSnapshot(log, prepare, nullptr);
+  MetricSnapshot(prepare);
 
   auto sync = SyncCommand(  //
-      get_uri_callback(data_file_path),
-      get_uri_callback(kysync_file_path),
-      "file://" + seed_data_file_path.string(),  // seed is always local
-      output_file_path,
+      GetUri(data_file_path_),
+      GetUri(metadata_file_path_),
+      "file://" + seed_data_file_path_.string(),  // seed is always local
+      output_file_path_,
       !compression_,
       blocks_in_batch_,
       threads_);
-  MetricSnapshot(log, sync, metric_container);
-}
-
-void Performance::Execute(bool use_http) {
-  auto tmp = TempPath(path_, false);
-
-  if (use_http) {
-    auto server = HttpServer(tmp.GetPath(), 8000, true);
-    Execute(tmp, &server, [](auto path) {
-      return "http://localhost:8000/" + path.filename().string();
-    });
-  } else {
-    Execute(tmp, nullptr, [](auto path) { return "file://" + path.string(); });
-  }
+  MetricSnapshot(sync);
 }
 
 void Performance::ExecuteZsync() {
-  auto tmp = TempPath(path_, true);
-  auto server = HttpServer(tmp.GetPath(), 8000, true);
-
-  fs::path root_path = tmp.GetPath();
-  fs::path data_file_path = root_path / "data.bin";
-  fs::path seed_data_file_path =
-      identity_reconstruction_ ? data_file_path : root_path / "seed_data.bin";
-  fs::path zsync_file_path = root_path / "data.bin.kysync";
-  fs::path output_file_path = root_path / "data.bin.out";
-  fs::path log_directory_path =
-      GetEnv("TEST_LOG_DIR", CMAKE_BINARY_DIR / "log");
-
-  std::ofstream log(log_directory_path / "perf.log", std::ios::app);
-
-  log << std::endl                 //
-      << PERFLOG(path_)            //
-      << PERFLOG(data_size_)       //
-      << PERFLOG(seed_data_size_)  //
-      << PERFLOG(fragment_size_)   //
-      << PERFLOG(block_size_)      //
-      << PERFLOG(similarity_)      //
-      << PERFLOG(threads_)         //
-      << PERFLOG(compression_)     //
-      << PERFLOG(identity_reconstruction_);
+  auto server = HttpServer(root_path_, 8000, true);
 
   fs::path zsync_path = GetEnv("ZSYNC_BIN_DIR", CMAKE_BINARY_DIR / "zsync/bin");
 
@@ -186,46 +189,42 @@ void Performance::ExecuteZsync() {
     return;
   }
 
-  auto gen_data = GenDataCommand(  //
-      tmp.GetPath(),
-      data_size_,
-      seed_data_size_,
-      fragment_size_,
-      similarity_);
-  MetricSnapshot(log, gen_data, &server);
-
   {
     std::stringstream command;
-    command << zsync_path << "/zsyncmake " << data_file_path  //
-            << " -o " << root_path / "data.bin.zsync"         //
+    command << zsync_path << "/zsyncmake " << data_file_path_  //
+            << " -o " << metadata_file_path_                   //
             << " -u data.bin";
     LOG(INFO) << command.str();
     auto prepare = SystemCommand(command.str());
-    MetricSnapshot(log, prepare, &server);
+    MetricSnapshot(prepare);
   }
 
   {
     std::stringstream command;
-    command << zsync_path << "/zsync -q"             //
-            << " -i " << seed_data_file_path         //
-            << " -o " << root_path / "data.bin.out"  //
-            << " http://localhost:8000/data.bin.zsync";
+    command << zsync_path << "/zsync -q "      //
+            << " -i " << seed_data_file_path_  //
+            << " -o " << output_file_path_     //
+            << " " << GetUri(metadata_file_path_);
     LOG(INFO) << command.str();
     auto sync = SystemCommand(command.str());
-    MetricSnapshot(log, sync, &server);
+    MetricSnapshot(sync);
   }
 }
 
-TEST_F(Performance, Simple) {  // NOLINT
-  Execute(false);
+TEST_F(Performance, KySync) {  // NOLINT
+  Execute(Performance::Http::kDontUse, Performance::Tool::kKySync);
 }
 
-TEST_F(Performance, Http) {  // NOLINT
-  Execute(true);
+TEST_F(Performance, KySync_Http) {  // NOLINT
+  Execute(Performance::Http::kUse, Performance::Tool::kKySync);
 }
 
 TEST_F(Performance, Zsync) {  // NOLINT
-  ExecuteZsync();
+  Execute(Performance::Http::kDontUse, Performance::Tool::kZsync);
+}
+
+TEST_F(Performance, Zsync_Http) {  // NOLINT
+  Execute(Performance::Http::kUse, Performance::Tool::kZsync);
 }
 
 TEST_F(Performance, Detect) {  // NOLINT
@@ -238,7 +237,7 @@ TEST_F(Performance, Detect) {  // NOLINT
 
   for (;;) {
     auto beg = Now();
-    Execute(false);
+    Execute(Performance::Http::kDontUse, Performance::Tool::kKySync);
     auto end = Now();
     if (DeltaMs(beg, end) > target_ms) {
       break;

@@ -30,7 +30,7 @@ GenDataCommand::GenDataCommand(
       kFragmentSize(fragment_size),
       kDiffSize(fragment_size * (100 - similarity) / 100)  //
 {
-  CHECK(fs::is_directory(kPath));
+  CHECK(fs::is_directory(kPath)) << kPath;
   CHECK_LE(similarity, 100);
 
   // TODO: can we automate this for all fields?
