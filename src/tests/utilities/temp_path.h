@@ -6,8 +6,8 @@
 namespace kysync {
 
 class TempPath final {
-  const std::filesystem::path path_;
-  const bool keep_;
+  std::filesystem::path path_;
+  bool keep_;
 
 public:
   TempPath();

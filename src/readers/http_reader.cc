@@ -129,7 +129,8 @@ static void ParseMultipartByterangesResponse(
 }
 
 size_t HttpReader::Read(void *buffer, httplib::Ranges ranges) {
-  auto range_header = httplib::make_range_header(ranges);
+  // TODO(kyotov): maybe make httplib contribution to pass ranges by const ref
+  auto range_header = httplib::make_range_header(std::move(ranges));
   auto res = client_->Get(path_.c_str(), {range_header});
 
   CHECK(res.error() == httplib::Error::Success) << path_;
