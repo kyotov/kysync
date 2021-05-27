@@ -15,7 +15,7 @@ class StrongChecksumBuilder final {
 public:
   StrongChecksumBuilder();
 
-  void Update(const void* buffer, size_t size);
+  void Update(const void* buffer, std::streamsize size);
 
   StrongChecksum Digest();
 };

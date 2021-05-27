@@ -20,30 +20,44 @@
 
 namespace kysync {
 
-#define PERFLOG(X) #X << "=" << X << std::endl
+// NOTE: using #X so macro is necessary
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+#define PERFLOG(X) #X << "=" << (X) << std::endl
 
 class Performance : public Fixture {
 protected:
-  std::unique_ptr<TempPath> tmp_path_;
-  fs::path root_path_;
-  fs::path log_directory_path_;
-  fs::path data_file_path_;
-  fs::path seed_data_file_path_;
-  fs::path metadata_file_path_;
-  fs::path compressed_file_path_;
-  fs::path output_file_path_;
-  size_t data_size_;
-  size_t seed_data_size_;
-  size_t fragment_size_;
-  size_t block_size_;
-  int similarity_;
-  int blocks_in_batch_;
-  int threads_;
-  bool compression_;
-  bool identity_reconstruction_;
-  std::ofstream log_;
+  enum class Http {
+    kDontUse,
+    kUse,
+  };
 
-  void SetUp() {
+  enum class Tool { kKySync, kZsync };
+
+private:
+  std::unique_ptr<TempPath> tmp_path_{};
+  fs::path root_path_{};
+  fs::path log_directory_path_{};
+  fs::path data_file_path_{};
+  fs::path seed_data_file_path_{};
+  fs::path metadata_file_path_{};
+  fs::path compressed_file_path_{};
+  fs::path output_file_path_{};
+  std::streamsize data_size_{};
+  std::streamsize seed_data_size_{};
+  std::streamsize fragment_size_{};
+  std::streamsize block_size_{};
+  int similarity_{};
+  int blocks_in_batch_{};
+  int threads_{};
+  bool compression_{};
+  bool identity_reconstruction_{};
+  std::ofstream log_{};
+
+  Http http_{};
+  HttpServer *server_ = nullptr;
+
+protected:
+  void SetUp() override {
     tmp_path_ = std::make_unique<TempPath>(
         GetEnv("TEST_ROOT_DIR", CMAKE_BINARY_DIR / "tmp"),
         false);
@@ -57,13 +71,13 @@ protected:
     compressed_file_path_ = root_path_ / "data.bin.compressed";
     output_file_path_ = root_path_ / "data.bin.out";
 
-    data_size_ = GetEnv("TEST_DATA_SIZE", 1'000'000ULL);
-    seed_data_size_ = GetEnv("TEST_SEED_DATA_SIZE", -1ULL);
+    data_size_ = GetEnv("TEST_DATA_SIZE", 1'000'000);
+    seed_data_size_ = GetEnv("TEST_SEED_DATA_SIZE", -1);
     fragment_size_ = GetEnv("TEST_FRAGMENT_SIZE", 123'456);
     block_size_ = GetEnv("TEST_BLOCK_SIZE", 16'384);
-    similarity_ = GetEnv("TEST_SIMILARITY", 90);
-    blocks_in_batch_ = GetEnv("TEST_BLOCKS_IN_BATCH", 4);
-    threads_ = GetEnv("TEST_THREADS", 32);
+    similarity_ = GetEnvInt("TEST_SIMILARITY", 90);
+    blocks_in_batch_ = GetEnvInt("TEST_BLOCKS_IN_BATCH", 4);
+    threads_ = GetEnvInt("TEST_THREADS", 32);
     compression_ = GetEnv("TEST_COMPRESSION", false);
     identity_reconstruction_ = GetEnv("TEST_IDENTITY_RECONSTRUCTION", false);
 
@@ -93,22 +107,10 @@ protected:
     MetricSnapshot(gen_data);
   }
 
-  enum class Http {
-    kDontUse,
-    kUse,
-  };
-
-  enum class Tool { kKySync, kZsync };
-
-  Http http_;
-  HttpServer *server_ = nullptr;
-
   std::string GetUri(const fs::path &path) {
-    if (http_ == Http::kUse) {
-      return "http://localhost:8000/" + path.filename().string();
-    } else {
-      return "file://" + path.string();
-    }
+    return http_ == Http::kUse
+               ? "http://localhost:8000/" + path.filename().string()
+               : "file://" + path.string();
   }
 
   void Execute(Http http, Tool tool) {
@@ -149,9 +151,34 @@ protected:
     EXPECT_EQ(monitor.Run(), 0);
 
     const auto *command_name = typeid(command).name();
-    monitor.MetricSnapshot([&](std::string key, auto value) {
+    monitor.MetricSnapshot([&](const std::string &key, auto value) {
       log_ << command_name << ":" << key << "=" << value << std::endl;
     });
+  }
+
+  void Detect() {
+    // NOTE: the default is artificially low so as not to eat time on the github.
+    //       in real life, for performance testing we would want ~30s here.
+    int target_ms = GetEnvInt("TEST_TARGET_MS", 1'000);
+
+    data_size_ = 1'000'000;
+    identity_reconstruction_ = true;
+
+    for (;;) {
+      auto beg = Now();
+      Execute(Performance::Http::kDontUse, Performance::Tool::kKySync);
+      auto end = Now();
+      if (DeltaMs(beg, end) > target_ms) {
+        break;
+      }
+      std::streamsize min_factor = 2;
+      std::streamsize max_factor = 16;
+      data_size_ *= std::max(
+          min_factor,
+          std::min(max_factor, target_ms / DeltaMs(beg, end)));
+    }
+
+    LOG(INFO) << "detected test size = " << data_size_;
   }
 
   void ExecuteKySync();
@@ -219,37 +246,12 @@ TEST_F(Performance, KySync_Http) {  // NOLINT
   Execute(Performance::Http::kUse, Performance::Tool::kKySync);
 }
 
-//TEST_F(Performance, Zsync) {  // NOLINT
-//  Execute(Performance::Http::kDontUse, Performance::Tool::kZsync);
-//}
-
 TEST_F(Performance, Zsync_Http) {  // NOLINT
   Execute(Performance::Http::kUse, Performance::Tool::kZsync);
 }
 
 TEST_F(Performance, Detect) {  // NOLINT
-  // NOTE: the default is artificially low so as not to eat time on the github.
-  //       in real life, for performance testing we would want ~30s here.
-  size_t target_ms = GetEnv("TEST_TARGET_MS", 1'000);
-
-  data_size_ = 1'000'000;
-  identity_reconstruction_ = true;
-
-  for (;;) {
-    auto beg = Now();
-    Execute(Performance::Http::kDontUse, Performance::Tool::kKySync);
-    auto end = Now();
-    if (DeltaMs(beg, end) > target_ms) {
-      break;
-    }
-    size_t min_factor = 2;
-    size_t max_factor = 16;
-    data_size_ *= std::max(
-        min_factor,
-        std::min(max_factor, target_ms / DeltaMs(beg, end)));
-  }
-
-  LOG(INFO) << "detected test size = " << data_size_;
+  Detect();
 }
 
 }  // namespace kysync

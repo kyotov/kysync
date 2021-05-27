@@ -1,13 +1,13 @@
-#ifndef KSYNC__SRC_COMMANDS_PREPARE_COMMAND_H
-#define KSYNC__SRC_COMMANDS_PREPARE_COMMAND_H
+#ifndef KSYNC_SRC_COMMANDS_PREPARE_COMMAND_H
+#define KSYNC_SRC_COMMANDS_PREPARE_COMMAND_H
 
 #include <filesystem>
 #include <memory>
 #include <vector>
 
+#include "../checksums/strong_checksum.h"
 #include "../readers/reader.h"
 #include "command.h"
-#include "../checksums/strong_checksum.h"
 
 namespace kysync {
 
@@ -21,11 +21,11 @@ class PrepareCommand final : public Command {
   fs::path input_file_path_;
   fs::path output_ksync_file_path_;
   fs::path output_compressed_file_path_;
-  size_t block_size_;
+  std::streamsize block_size_;
 
   std::vector<uint32_t> weak_checksums_;
   std::vector<StrongChecksum> strong_checksums_;
-  std::vector<uint64_t> compressed_sizes_;
+  std::vector<std::streamsize> compressed_sizes_;
   int compression_level_ = 1;
 
   Metric compressed_bytes_{};
@@ -35,7 +35,7 @@ public:
       fs::path input_file_path,
       fs::path output_ksync_file_path,
       fs::path output_compressed_file_path,
-      size_t block_size);
+      std::streamsize block_size);
 
   int Run() override;
 
@@ -44,4 +44,4 @@ public:
 
 }  // namespace kysync
 
-#endif  // KSYNC__SRC_COMMANDS_PREPARE_COMMAND_H
+#endif  // KSYNC_SRC_COMMANDS_PREPARE_COMMAND_H

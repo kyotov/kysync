@@ -7,6 +7,8 @@
 #include <fstream>
 #include <sstream>
 
+#include "../readers/batch_retrieval_info.h"
+#include "../readers/reader.h"
 #include "http_server/http_server.h"
 #include "utilities/fixture.h"
 #include "utilities/temp_path.h"
@@ -19,6 +21,7 @@ class HttpTests : public Fixture {};
 
 void WriteFile(const fs::path& path, const std::string& data) {
   std::ofstream f(path);
+  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
   f.write(data.c_str(), data.size());
 }
 
@@ -38,6 +41,7 @@ static void CheckPrefixAndAdvance(
     const std::string& prefix,
     std::string& buffer) {
   buffer.resize(prefix.size(), ' ');
+  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
   input.read(buffer.data(), prefix.size());
   CHECK_EQ(input.gcount(), prefix.size());
   CHECK(std::equal(prefix.begin(), prefix.end(), buffer.begin()));
@@ -45,7 +49,7 @@ static void CheckPrefixAndAdvance(
 
 static void ReadLine(std::istream& input, std::string& buffer, int max) {
   for (auto state = 0; state >= 0 && buffer.size() < max;) {
-    char c;
+    char c = 0;
     CHECK_EQ(input.get(c).gcount(), 1);
     buffer += c;
     switch (state) {
@@ -60,16 +64,21 @@ static void ReadLine(std::istream& input, std::string& buffer, int max) {
         } else {
           state = 0;
         }
+        break;
+      default:
+        CHECK(false) << "invalid state";
     }
   }
 }
 
-using ChunkCallback =
-    std::function<void(size_t /*beg*/, size_t /*end*/, std::istream& /*data*/)>;
+using ChunkCallback = std::function<void(
+    std::streamoff /*beg*/,
+    std::streamoff /*end*/,
+    std::istream& /*data*/)>;
 
 static void ParseMultipartByterangesResponse(
-    httplib::Response response,
-    ChunkCallback chunk_callback) {
+    const httplib::Response& response,
+    const ChunkCallback& chunk_callback) {
   auto content_type = response.get_header_value("Content-Type");
   CHECK(content_type.starts_with("multipart/byteranges"));
 
@@ -82,8 +91,8 @@ static void ParseMultipartByterangesResponse(
 
   auto body = std::stringstream(response.body);
 
-  size_t beg = 0;
-  size_t end = 0;
+  std::streamoff beg = 0;
+  std::streamoff end = 0;
 
   for (auto state = 0; state >= 0;) {
     switch (state) {
@@ -130,6 +139,9 @@ static void ParseMultipartByterangesResponse(
         state = 0;
         break;  // back to boundary
       }
+
+      default:
+        CHECK(false) << "invalid state";
     }
   }
 }
@@ -157,7 +169,7 @@ void CheckGet(const fs::path& path, Client& client) {
     EXPECT_TRUE(result.error() == httplib::Error::Success);
     ParseMultipartByterangesResponse(
         result.value(),
-        [&](size_t beg, size_t end, std::istream& s) {
+        [&](std::streamoff beg, std::streamoff end, std::istream& s) {
           auto len = end - beg + 1;
           std::vector<char> buffer(len);
           s.read(buffer.data(), len);
@@ -169,7 +181,7 @@ void CheckGet(const fs::path& path, Client& client) {
 
 TEST_F(HttpTests, HttpsServer) {  // NOLINT
   auto tmp = TempPath();
-  auto port = 8000;
+  auto port = 8001;
   auto cert_path = fs::path(
       GetEnv("TEST_DATA_DIR", (CMAKE_SOURCE_DIR / "test_data").string()));
   auto server = HttpServer(cert_path, tmp.GetPath(), port, true);
@@ -182,12 +194,109 @@ TEST_F(HttpTests, HttpsServer) {  // NOLINT
 
 TEST_F(HttpTests, HttpServer) {  // NOLINT
   auto tmp = TempPath();
-  auto port = 8000;
+  auto port = 8001;
   auto server = HttpServer(tmp.GetPath(), port, true);
   auto client = httplib::Client("localhost", port);
 
   CheckGet(tmp.GetPath(), client);
   server.Stop();
+}
+
+// Note: This function and the following 2 tests are temporary and will be
+// removed after http_tests.cc have been pushed
+void HttpClientMultiRangeTest(
+    httplib::Ranges ranges,
+    std::streamsize expected_body_size) {
+  auto port = 8001;
+  auto server = HttpServer(CMAKE_SOURCE_DIR / "test_data", port, true);
+  auto range_header = httplib::make_range_header(std::move(ranges));
+  httplib::Client http_client("http://localhost:8001");
+  std::string path("/ubuntu-20.04.2.0-desktop-amd64.list");
+  auto res = http_client.Get(path.c_str(), {range_header});
+  CHECK(res.error() == httplib::Error::Success);
+  CHECK_EQ(res->status, 206);
+  LOG(INFO) << "Got body: " << res->body;
+  EXPECT_EQ(res->body.size(), expected_body_size);
+}
+
+TEST_F(HttpTests, HttpLibMultirangeContiguous) {  // NOLINT
+  auto block_size = 4;
+  httplib::Ranges ranges;
+  ranges.push_back({0, block_size - 1});
+  ranges.push_back({block_size, block_size * 2 - 1});
+  std::string expected_string("/isolinu");
+  HttpClientMultiRangeTest(ranges, 229);
+}
+
+TEST_F(HttpTests, HttpLibMultirangeNoncontiguous) {  // NOLINT
+  auto block_size = 4;
+  httplib::Ranges ranges;
+  ranges.push_back({0, block_size - 1});
+  ranges.push_back({block_size + 1, block_size * 2});
+  std::string expected_string("/isoinux");
+  HttpClientMultiRangeTest(ranges, 229);
+}
+
+// Note: This function and the following 2 tests are temporary and will be
+// removed after http_tests.cc have been pushed
+void HttpReaderMultirangeTest(
+    std::vector<BatchRetrivalInfo>& batched_retrieval_infos,
+    std::string& expected_string) {
+  auto port = 8001;
+  auto server = HttpServer(CMAKE_SOURCE_DIR / "test_data", port, true);
+  std::string uri("http://localhost:8001/ubuntu-20.04.2.0-desktop-amd64.list");
+  auto reader = Reader::Create(uri);
+  std::streamsize total_size = 0;
+  for (auto& retrieval_info : batched_retrieval_infos) {
+    total_size += retrieval_info.size_to_read;
+  }
+  auto buffer = std::vector<char>(total_size);
+  auto size_read = reader->Read(buffer.data(), batched_retrieval_infos);
+  EXPECT_EQ(size_read, expected_string.size());
+  EXPECT_TRUE(
+      std::memcmp(
+          buffer.data(),
+          expected_string.c_str(),
+          expected_string.size()) == 0);
+}
+
+TEST_F(HttpTests, HttpReaderMultirangeContiguous) {  // NOLINT
+  std::vector<BatchRetrivalInfo> batched_retrieval_infos;
+  std::streamsize block_size = 4;
+  batched_retrieval_infos.push_back(
+      {.block_index = 0,
+       .source_begin_offset = 0,
+       .size_to_read = block_size,
+       .offset_to_write_to = 0});
+  batched_retrieval_infos.push_back(
+      {.block_index = 1,
+       .source_begin_offset = block_size,
+       .size_to_read = block_size,
+       .offset_to_write_to = block_size});
+  std::string expected_string("/isolinu");
+  HttpReaderMultirangeTest(batched_retrieval_infos, expected_string);
+}
+
+TEST_F(HttpTests, HttpReaderMultirangeNoncontiguous) {  // NOLINT
+  std::vector<BatchRetrivalInfo> batched_retrieval_infos;
+  std::streamsize block_size = 4;
+  batched_retrieval_infos.push_back(
+      {.block_index = 0,
+       .source_begin_offset = 0,
+       .size_to_read = block_size,
+       .offset_to_write_to = 0});
+  batched_retrieval_infos.push_back(
+      {.block_index = 1,
+       .source_begin_offset = block_size + 1,
+       .size_to_read = block_size,
+       .offset_to_write_to = block_size});
+  batched_retrieval_infos.push_back(
+      {.block_index = 1,
+       .source_begin_offset = block_size * 2 + 2,
+       .size_to_read = block_size,
+       .offset_to_write_to = block_size * 2});
+  std::string expected_string("/isoinuxadtx");
+  HttpReaderMultirangeTest(batched_retrieval_infos, expected_string);
 }
 
 }  // namespace kysync

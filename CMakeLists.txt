@@ -4,15 +4,22 @@ project(ksync)
 set(CMAKE_CXX_STANDARD 20)
 
 include(kydeps/KyDeps.cmake)
-KyDeps(DOWNLOAD NO_UPLOAD DEPENDS gflags glog GTest xxHash httplib protobuf zstd)
+KyDeps(NO_DOWNLOAD UPLOAD DEPENDS gflags glog GTest xxHash httplib protobuf zstd)
+
+set(HEADERS ${CMAKE_BINARY_DIR}/../src/.*)
+#set(HEADERS ${CMAKE_SOURCE_DIR}/.*/src/.*)
+string(REPLACE "\\" "." HEADERS "${HEADERS}")
+string(REPLACE "/" "." HEADERS "${HEADERS}")
+#message(${HEADERS})
 
 if (WIN32)
     add_compile_options(-EHsc)
     set(CMAKE_CXX_CLANG_TIDY
             "C:/Program Files/LLVM/bin/clang-tidy.exe";
-            -checks=-*,readability-identifier-naming;
-#            --list-checks;
-            #            --dump-config;
+            "--header-filter=${HEADERS}";
+            "--export-fixes=${CMAKE_BINARY_DIR}/clang-tidy.fixes";
+            # --list-checks;
+            # --dump-config;
             )
 endif ()
 
@@ -21,8 +28,8 @@ endif ()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     #    add_link_options(-static)
-    add_compile_options(--coverage)
-    add_link_options(--coverage)
+    #    add_compile_options(--coverage)
+    #    add_link_options(--coverage)
 endif ()
 
 include(zsync.cmake)
@@ -49,6 +56,7 @@ target_link_libraries(proto
 set_target_properties(proto PROPERTIES CXX_CLANG_TIDY "")
 
 add_library(main STATIC
+        src/tests/commands/gen_data_command.cc
         src/utilities/parallelize.cc
         src/utilities/streams.cc
         src/utilities/timer.cc

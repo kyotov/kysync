@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <ios>
 
 namespace kysync {
 
@@ -13,7 +14,7 @@ namespace kysync {
  * @param size
  * @return
  */
-uint32_t WeakChecksum(const void *buffer, size_t size);
+uint32_t WeakChecksum(const void *buffer, std::streamsize size);
 
 /**
  * call back function type used by rolling window checksum
@@ -23,7 +24,7 @@ uint32_t WeakChecksum(const void *buffer, size_t size);
  * - the checksum of the data in the window
  * NOTE: the window size is assumed to be known to the user...
  */
-using WeakChecksumCallback = std::function<void(size_t offset, uint32_t wcs)>;
+using WeakChecksumCallback = std::function<void(std::streamoff offset, uint32_t wcs)>;
 
 /**
  * computes a running window checksum ala rsync
@@ -49,7 +50,7 @@ using WeakChecksumCallback = std::function<void(size_t offset, uint32_t wcs)>;
  */
 uint32_t WeakChecksum(
     const void *buffer,
-    size_t size,
+    std::streamsize size,
     uint32_t running_checksum,
     const WeakChecksumCallback &callback);
 

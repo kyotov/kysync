@@ -16,7 +16,7 @@ public:
 
   ~TempPath();
 
-  std::filesystem::path GetPath() const;
+  [[nodiscard]] std::filesystem::path GetPath() const;
 };
 
 }  // namespace kysync

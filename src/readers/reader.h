@@ -17,11 +17,12 @@ class Reader : public MetricContainer {
 public:
   virtual ~Reader() = default;
 
-  [[nodiscard]] virtual size_t GetSize() const = 0;
+  [[nodiscard]] virtual std::streamsize GetSize() const = 0;
 
-  virtual size_t Read(void *buffer, size_t offset, size_t size);
+  virtual std::streamsize
+  Read(void *buffer, std::streamoff offset, std::streamsize size);
 
-  virtual size_t Read(
+  virtual std::streamsize Read(
       void *buffer,
       std::vector<BatchRetrivalInfo> &batch_retrieval_infos);
 

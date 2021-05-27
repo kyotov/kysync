@@ -9,14 +9,15 @@ namespace kysync {
 
 class MemoryReader final : public Reader {
   const void *data_;
-  size_t data_size_;
+  std::streamsize data_size_;
 
 public:
-  MemoryReader(const void *data, size_t data_size);
+  MemoryReader(const void *data, std::streamsize data_size);
 
-  [[nodiscard]] size_t GetSize() const override;
+  [[nodiscard]] std::streamsize GetSize() const override;
 
-  size_t Read(void *buffer, size_t offset, size_t size) override;
+  std::streamsize Read(void *buffer, std::streamoff offset, std::streamsize size)
+      override;
 };
 
 }  // namespace kysync

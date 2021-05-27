@@ -8,8 +8,6 @@
 namespace kysync {
 
 class Fixture : public ::testing::Test {
-  static bool glog_initialized_;
-
 protected:
   static void SetUpTestSuite();
 
@@ -21,7 +19,9 @@ protected:
       const std::string &name,
       const std::filesystem::path &default_value);
 
-  static uintmax_t GetEnv(const std::string &name, uintmax_t default_value);
+  static intmax_t GetEnv(const std::string &name, intmax_t default_value);
+
+  static int GetEnvInt(const std::string &name, int default_value);
 };
 
 }  // namespace kysync

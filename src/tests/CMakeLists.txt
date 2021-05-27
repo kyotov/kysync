@@ -8,6 +8,7 @@ add_library(test_main
         expectation_check_metrics_visitor.cc)
 target_link_libraries(test_main
         main
+        http_server
         GTest::gtest
         GTest::gtest_main)
 
@@ -19,14 +20,12 @@ target_link_libraries(tests
 add_executable(perf_tests
         perf_tests.cc)
 target_link_libraries(perf_tests
-        test_main
-        http_server)
+        test_main)
 
 add_executable(http_tests
         http_tests.cc)
 target_link_libraries(http_tests
-        test_main
-        http_server)
+        test_main)
 
 add_executable(gendata
         commands/gen_data_command.cc

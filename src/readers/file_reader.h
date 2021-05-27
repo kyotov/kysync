@@ -15,9 +15,10 @@ class FileReader final : public Reader {
 public:
   explicit FileReader(const std::filesystem::path &path);
 
-  [[nodiscard]] size_t GetSize() const override;
+  [[nodiscard]] std::streamsize GetSize() const override;
 
-  size_t Read(void *buffer, size_t offset, size_t size) override;
+  std::streamsize
+  Read(void *buffer, std::streamoff offset, std::streamsize size) override;
 };
 
 }  // namespace kysync

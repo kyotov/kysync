@@ -1,64 +1,47 @@
-Checks: '-*,readability-identifier-naming'
-#,-llvmlibc-*,-modernize-use-trailing-return-type,-fuchsia-default-arguments-calls,-fuchsia-default-arguments-declarations,-hicpp-signed-bitwise,-fuchsia-overloaded-operator'
+Checks: >
+  *,
+  -readability-magic-numbers,
+  -readability-implicit-bool-conversion,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -cppcoreguidelines-special-member-functions,
+  -hicpp-signed-bitwise,
+  -hicpp-special-member-functions,
+  -llvm-header-guard,
+  -modernize-use-trailing-return-type,
+  -llvmlibc-restrict-system-libc-headers,
+  -llvmlibc-callee-namespace,
+  -llvmlibc-implementation-in-namespace,
+  -fuchsia-overloaded-operator,
+  -fuchsia-default-arguments-calls,
+  -altera-struct-pack-align,
+#  google-*,
+#  readability-*,
+#  portability-*,
+#  performance-*,
+#  bugprone-*,
+#  misc-*,
+#  modernize-*,
+#  llvmlibc-*,
+
 
 CheckOptions:
-  - {key: readability-identifier-naming.StaticConstantCase, value: CamelCase}
-  - {key: readability-identifier-naming.StaticConstantPrefix, value: "k"}
-  - {key: readability-identifier-naming.EnumConstantCase, value: CamelCase}
-  - {key: readability-identifier-naming.EnumConstantPrefix, value: "k"}
-  - {key: readability-identifier-naming.LocalVariableCase, value: lower_case}
-  - {key: readability-identifier-naming.FunctionCase, value: CamelCase}
-  - {key: readability-identifier-naming.MemberCase, value: lower_case}
-  - {key: readability-identifier-naming.MemberSuffix, value: "_"}
-  - {key: readability-identifier-naming.PublicMemberCase, value: lower_case}
-  - {key: readability-identifier-naming.PublicMemberSuffix, value: ""}
-#  - {key: readability-identifier-naming.ConstantPrefix, value: "consider_removing_const_"}
+  - { key: readability-identifier-naming.LocalVariableCase, value: lower_case }
+  - { key: readability-identifier-naming.FunctionCase, value: CamelCase }
+  - { key: readability-identifier-naming.PublicMemberCase, value: lower_case }
+  - { key: readability-identifier-naming.PublicMemberSuffix, value: "" }
+  - { key: readability-identifier-naming.MemberCase, value: lower_case }
+  - { key: readability-identifier-naming.MemberSuffix, value: "_" }
+  - { key: readability-identifier-naming.StaticConstantCase, value: CamelCase }
+  - { key: readability-identifier-naming.StaticConstantPrefix, value: "k" }
+  - { key: readability-identifier-naming.EnumConstantCase, value: CamelCase }
+  - { key: readability-identifier-naming.EnumConstantPrefix, value: "k" }
 
 WarningsAsErrors: "*"
-InheritParentConfig: true
+InheritParentConfig: false
 
-#HeaderFilterRegex: "(google/cloud/|generator/).*\\.h$"
-
-#---
-#Checks: >
-#  *,
-#  -llvmlibc-*,
-#  -modernize-use-trailing-return-type,
-#  -fuchsia-default-arguments-calls,
-#  -fuchsia-default-arguments-declarations,
-#  -hicpp-signed-bitwise
-#  -altera-struct-pack-align
-#
-#WarningsAsErrors: "*"
-#HeaderFilterRegex: "(google/cloud/|generator/).*\\.h$"
-
-#CheckOptions:
-#  - { key: readability-identifier-naming.NamespaceCase,          value: lower_case }
-#  - { key: readability-identifier-naming.ClassCase,              value: CamelCase  }
-#  - { key: readability-identifier-naming.StructCase,             value: CamelCase  }
-#  - { key: readability-identifier-naming.TemplateParameterCase,  value: CamelCase  }
-#  - { key: readability-identifier-naming.FunctionCase,           value: aNy_CasE  }
-#  - { key: readability-identifier-naming.VariableCase,           value: lower_case }
-#  - { key: readability-identifier-naming.ClassMemberCase,        value: lower_case }
-#  - { key: readability-identifier-naming.ClassMemberSuffix,      value: _          }
-#  - { key: readability-identifier-naming.PrivateMemberSuffix,    value: _          }
-#  - { key: readability-identifier-naming.ProtectedMemberSuffix,  value: _          }
-#  - { key: readability-identifier-naming.EnumConstantCase,         value: CamelCase }
-#  - { key: readability-identifier-naming.EnumConstantPrefix,       value: k         }
-#  - { key: readability-identifier-naming.ConstexprVariableCase,    value: CamelCase }
-#  - { key: readability-identifier-naming.ConstexprVariablePrefix,  value: k         }
-#  - { key: readability-identifier-naming.GlobalConstantCase,       value: CamelCase }
-#  - { key: readability-identifier-naming.GlobalConstantPrefix,     value: k         }
-#  - { key: readability-identifier-naming.MemberConstantCase,       value: CamelCase }
-#  - { key: readability-identifier-naming.MemberConstantPrefix,     value: k         }
-#  - { key: readability-identifier-naming.StaticConstantCase,       value: CamelCase }
-#  - { key: readability-identifier-naming.StaticConstantPrefix,     value: k         }
-#  - { key: readability-implicit-bool-conversion.AllowIntegerConditions,  value: 1   }
-#  - { key: readability-implicit-bool-conversion.AllowPointerConditions,  value: 1   }
-
-# Configure clang-tidy for this project.
-
-# Here is an explanation for why some of the checks are disabled:
+# Here is an explanation for why some of the checks are might need to be disabled:
 #
 #  -google-readability-namespace-comments: the *_CLIENT_NS is a macro, and
 #      clang-tidy fails to match it against the initial value.
@@ -94,6 +77,3 @@ InheritParentConfig: true
 #  -bugprone-narrowing-conversions: too many false positives around
 #      `std::size_t`  vs. `*::difference_type`.
 #
-
-#HeaderFilterRegex: "(google/cloud/|generator/).*\\.h$"
-

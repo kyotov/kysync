@@ -12,15 +12,15 @@ namespace kysync {
  * Current implementation uses https://github.com/Cyan4973/xxHash
  */
 class StrongChecksum {
-public:
-  /* NOTE: I find this fascinating...
-   * - you can create instances with initializer list, e.g. {2, 2}
-   * - the initializers below are necessary for generating a default constructor
-   */
-  const uint64_t kHi = 0;
-  const uint64_t kLo = 0;
+  uint64_t hi_;
+  uint64_t lo_;
 
-  static StrongChecksum Compute(const void *buffer, size_t size);
+public:
+  StrongChecksum();
+
+  StrongChecksum(uint64_t hi, uint64_t lo);
+
+  static StrongChecksum Compute(const void *buffer, std::streamsize size);
 
   static StrongChecksum Compute(std::istream &input);
 
