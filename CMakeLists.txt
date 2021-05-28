@@ -4,20 +4,17 @@ project(ksync)
 set(CMAKE_CXX_STANDARD 20)
 
 include(kydeps/KyDeps.cmake)
-KyDeps(NO_DOWNLOAD UPLOAD DEPENDS gflags glog GTest xxHash httplib protobuf zstd)
-
-set(HEADERS ${CMAKE_BINARY_DIR}/../src/.*)
-#set(HEADERS ${CMAKE_SOURCE_DIR}/.*/src/.*)
-string(REPLACE "\\" "." HEADERS "${HEADERS}")
-string(REPLACE "/" "." HEADERS "${HEADERS}")
-#message(${HEADERS})
+KyDeps(NO_DOWNLOAD NO_UPLOAD DEPENDS gflags glog GTest xxHash httplib protobuf zstd)
 
 if (WIN32)
     add_compile_options(-EHsc)
+    set(HEADERS ${CMAKE_BINARY_DIR}/../src/.*)
+    string(REPLACE "\\" "." HEADERS "${HEADERS}")
+    string(REPLACE "/" "." HEADERS "${HEADERS}")
     set(CMAKE_CXX_CLANG_TIDY
-            "C:/Program Files/LLVM/bin/clang-tidy.exe";
-            "--header-filter=${HEADERS}";
-            "--export-fixes=${CMAKE_BINARY_DIR}/clang-tidy.fixes";
+            "C:/Program Files/LLVM/bin/clang-tidy.exe"
+            "--header-filter=${HEADERS}"
+            "--export-fixes=${CMAKE_BINARY_DIR}/clang-tidy.fixes"
             # --list-checks;
             # --dump-config;
             )

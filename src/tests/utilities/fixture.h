@@ -11,6 +11,7 @@ class Fixture : public ::testing::Test {
 protected:
   static void SetUpTestSuite();
 
+public:
   static std::string GetEnv(
       const std::string &name,
       const std::string &default_value);

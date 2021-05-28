@@ -367,8 +367,6 @@ TEST(Tests2, MetadataRoundtrip) {  // NOLINT
   auto pc = PrepareCommand(data_path, kysync_path, pzst_path, block);
   pc.Run();
 
-  LOG(ERROR) << "foo";
-
   auto sc = SyncCommand(
       "file://" + data_path.string(),
       "file://" + kysync_path.string(),

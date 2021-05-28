@@ -4,8 +4,3 @@ add_library(http_server
 target_link_libraries(http_server
         glog::glog
         httplib::httplib)
-
-add_executable(cli
-        cli.cc)
-target_link_libraries(cli
-        http_server)

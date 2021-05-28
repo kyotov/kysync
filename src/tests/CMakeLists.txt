@@ -33,5 +33,4 @@ add_executable(gendata
 target_link_libraries(gendata
         main)
 
-add_custom_target(create_log_dir ALL
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/log)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/log)
