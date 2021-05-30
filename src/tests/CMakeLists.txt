@@ -27,6 +27,13 @@ add_executable(http_tests
 target_link_libraries(http_tests
         test_main)
 
+add_executable(safe_cast_tests
+        safe_cast_tests.cc)
+target_link_libraries(safe_cast_tests
+        glog::glog
+        GTest::gtest
+        GTest::gtest_main)
+
 add_executable(gendata
         commands/gen_data_command.cc
         gendata_main.cc)

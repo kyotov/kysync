@@ -78,7 +78,7 @@ struct PerformanceTestProfile final {
 
   PerformanceTestProfile()
       : PerformanceTestProfile(
-            "default",
+            Fixture::GetEnv("TEST_TAG", std::string("default")),
             Fixture::GetEnv("TEST_DATA_SIZE", 1'000'000),
             Fixture::GetEnv("TEST_SEED_DATA_SIZE", -1),
             Fixture::GetEnv("TEST_FRAGMENT_SIZE", 123'456),
@@ -96,7 +96,7 @@ class PerformanceTestExecution {
   PerformanceTestProfile profile_;
   std::unique_ptr<TempPath> tmp_path_{};
   std::unique_ptr<HttpServer> server_{};
-  std::ofstream log_;
+  std::ofstream perf_log_;
 
   fs::path root_path_{};
   fs::path data_file_path_{};
@@ -107,28 +107,28 @@ class PerformanceTestExecution {
   fs::path log_directory_path_{};
 
   void DumpContext() {
-    log_ << std::endl                                  //
-         << PERFLOG(root_path_)                        //
-         << PERFLOG(data_file_path_)                   //
-         << PERFLOG(seed_data_file_path_)              //
-         << PERFLOG(metadata_file_path_)               //
-         << PERFLOG(compressed_file_path_)             //
-         << PERFLOG(output_file_path_)                 //
-         << PERFLOG(profile_.tag)                      //
-         << PERFLOG(profile_.data_size)                //
-         << PERFLOG(profile_.seed_data_size)           //
-         << PERFLOG(profile_.fragment_size)            //
-         << PERFLOG(profile_.block_size)               //
-         << PERFLOG(profile_.similarity)               //
-         << PERFLOG(profile_.threads)                  //
-         << PERFLOG(profile_.compression)              //
-         << PERFLOG(profile_.identity_reconstruction)  //
-         << PERFLOG(profile_.http)                     //
-         << PERFLOG(profile_.zsync);
+    perf_log_ << std::endl                                  //
+              << PERFLOG(root_path_)                        //
+              << PERFLOG(data_file_path_)                   //
+              << PERFLOG(seed_data_file_path_)              //
+              << PERFLOG(metadata_file_path_)               //
+              << PERFLOG(compressed_file_path_)             //
+              << PERFLOG(output_file_path_)                 //
+              << PERFLOG(profile_.tag)                      //
+              << PERFLOG(profile_.data_size)                //
+              << PERFLOG(profile_.seed_data_size)           //
+              << PERFLOG(profile_.fragment_size)            //
+              << PERFLOG(profile_.block_size)               //
+              << PERFLOG(profile_.similarity)               //
+              << PERFLOG(profile_.threads)                  //
+              << PERFLOG(profile_.compression)              //
+              << PERFLOG(profile_.identity_reconstruction)  //
+              << PERFLOG(profile_.http)                     //
+              << PERFLOG(profile_.zsync);
   }
 
 protected:
-  void MetricSnapshot(Command &command) {
+  void RunAndCollectMetrics(Command &command) {
     auto monitor = Monitor(command);
 
     if (server_ != nullptr) {
@@ -139,7 +139,7 @@ protected:
 
     const auto *command_name = typeid(command).name();
     monitor.MetricSnapshot([&](const std::string &key, auto value) {
-      log_ << command_name << ":" << key << "=" << value << std::endl;
+      perf_log_ << command_name << ":" << key << "=" << value << std::endl;
     });
   }
 
@@ -179,7 +179,7 @@ protected:
         profile_.seed_data_size,
         profile_.fragment_size,
         profile_.similarity);
-    MetricSnapshot(gen_data);
+    RunAndCollectMetrics(gen_data);
   }
 
   virtual void Prepare() = 0;
@@ -204,7 +204,7 @@ public:
     log_directory_path_ =
         Fixture::GetEnv("TEST_LOG_DIR", CMAKE_BINARY_DIR / "log");
 
-    log_.open(log_directory_path_ / "perf.log", std::ios::app);
+    perf_log_.open(log_directory_path_ / "perf.log", std::ios::app);
 
     if (profile_.http) {
       server_ = std::make_unique<HttpServer>(root_path_, 8000, true);
@@ -232,7 +232,7 @@ class KySyncPerformanceTestExecution final : public PerformanceTestExecution {
         GetMetadataFilePath(),
         GetCompressedFilePath(),
         GetProfile().block_size);
-    MetricSnapshot(prepare);
+    RunAndCollectMetrics(prepare);
   }
 
   void Sync() override {
@@ -244,7 +244,7 @@ class KySyncPerformanceTestExecution final : public PerformanceTestExecution {
         !GetProfile().compression,
         GetProfile().blocks_in_batch,
         GetProfile().threads);
-    MetricSnapshot(sync);
+    RunAndCollectMetrics(sync);
   }
 
 public:
@@ -264,7 +264,7 @@ class ZsyncPerformanceTestExecution final : public PerformanceTestExecution {
             << " -u data.bin";
     LOG(INFO) << command.str();
     auto prepare = SystemCommand(command.str());
-    MetricSnapshot(prepare);
+    RunAndCollectMetrics(prepare);
   }
 
   void Sync() override {
@@ -275,7 +275,7 @@ class ZsyncPerformanceTestExecution final : public PerformanceTestExecution {
             << " " << GetUri(GetMetadataFilePath());
     LOG(INFO) << command.str();
     auto sync = SystemCommand(command.str());
-    MetricSnapshot(sync);
+    RunAndCollectMetrics(sync);
   }
 
 public:
@@ -337,10 +337,6 @@ protected:
 
   static std::unique_ptr<PerformanceTestExecution> GetExecution(
       PerformanceTestProfile &profile) {
-    const auto *info = ::testing::UnitTest::GetInstance()->current_test_info();
-    if (info != nullptr) {
-      profile.tag = info->name();
-    }
     if (profile.zsync) {
       return std::make_unique<ZsyncPerformanceTestExecution>(profile);
     }
@@ -364,6 +360,7 @@ TEST_F(Performance, KySync_Http) {  // NOLINT
 TEST_F(Performance, Zsync_Http) {  // NOLINT
   auto profile = PerformanceTestProfile();
   profile.http = true;
+  // TODO(kyotov): make sure zsync asserts http is on
   profile.zsync = true;
   auto execution = GetExecution(profile);
   execution->Execute();
