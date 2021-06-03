@@ -3,7 +3,6 @@
 
 #include <glog/logging.h>
 
-#include <concepts>
 #include <limits>
 
 namespace kysync {
