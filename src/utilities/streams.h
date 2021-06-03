@@ -1,19 +1,36 @@
 #ifndef KSYNC_STREAMS_H
 #define KSYNC_STREAMS_H
 
+#include <glog/logging.h>
+
 #include <limits>
 #include <ostream>
 #include <vector>
 
 namespace kysync {
 
-size_t StreamWrite(std::ostream &stream, const void *data, size_t size);
+std::streamsize
+StreamWrite(std::ostream &stream, const void *data, std::streamsize size);
 
 template <typename T>
-size_t StreamWrite(
+std::streamsize StreamWrite(
     std::ostream &stream,
-    std::vector<T> data,
-    size_t max_size_to_write = std::numeric_limits<size_t>::max());
+    const std::vector<T> &data,
+    std::streamsize max_size_to_write) {
+  CHECK_GE(max_size_to_write, 0);
+
+  auto size = static_cast<std::streamsize>(data.size() * sizeof(T));
+  auto size_to_write = std::min(size, max_size_to_write);
+
+  return StreamWrite(stream, data.data(), size_to_write);
+}
+
+template <typename T>
+std::streamsize StreamWrite(
+    std::ostream &stream,
+    const std::vector<T> &data) {
+  return StreamWrite(stream, data, std::numeric_limits<std::streamsize>::max());
+}
 
 }  // namespace kysync
 

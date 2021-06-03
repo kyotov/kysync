@@ -15,13 +15,13 @@ namespace kysync {
 
 namespace fs = std::filesystem;
 
-using namespace httplib;
+void HttpServer::Logger(
+    const httplib::Request& req,
+    const httplib::Response& res) {
+  requests_++;
+  bytes_ += res.template get_header_value<uint64_t>("Content-Length");
 
-void HttpServer::Logger(const Request& req, const Response& res) {
-  requests++;
-  total_bytes += res.template get_header_value<uint64_t>("Content-Length");
-
-  if (kLogHeaders) {
+  if (log_headers_) {
     std::stringstream s;
     s << std::endl << "--- Request Headers ---" << std::endl;
     for (const auto& x : req.headers) {
@@ -37,28 +37,29 @@ void HttpServer::Logger(const Request& req, const Response& res) {
 }
 
 void HttpServer::Start() {
-  server->set_mount_point("/", kRoot.string().c_str());
+  server_->set_mount_point("/", root_.string().c_str());
 
-  server->set_logger([this](auto req, auto res) { Logger(req, res); });
+  server_->set_logger([this](auto req, auto res) { Logger(req, res); });
 
-  thread = std::thread([this]() {
-    CHECK(server->listen("localhost", kPort)) << "server started!";
+  thread_ = std::thread([this]() {
+    CHECK(server_->listen("localhost", port_)) << "server started!";
   });
 
-  // FIXME: this is garbage... we need to figure out how to make sure the server has started!!!
+  // FIXME: this is garbage... we need to figure out how to make sure the server
+  // has started!!!
   std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
 void HttpServer::Accept(MetricVisitor& visitor) {
-  VISIT_METRICS(requests);
-  VISIT_METRICS(total_bytes);
+  VISIT_METRICS(requests_);
+  VISIT_METRICS(bytes_);
 };
 
 HttpServer::HttpServer(fs::path root, int port, bool log_headers)
-    : kRoot(std::move(root)),
-      kPort(port),
-      kLogHeaders(log_headers),
-      server(std::make_unique<Server>()) {
+    : root_(std::move(root)),
+      port_(port),
+      log_headers_(log_headers),
+      server_(std::make_unique<httplib::Server>()) {
   Start();
 }
 
@@ -67,19 +68,19 @@ HttpServer::HttpServer(
     fs::path root,
     int port,
     bool log_headers)
-    : kRoot(std::move(root)),
-      kPort(port),
-      kLogHeaders(log_headers),
-      server(std::make_unique<SSLServer>(
+    : root_(std::move(root)),
+      port_(port),
+      log_headers_(log_headers),
+      server_(std::make_unique<httplib::SSLServer>(
           (cert_path / "cert.pem").string().c_str(),
           (cert_path / "key.pem").string().c_str())) {
   Start();
 }
 
 void HttpServer::Stop() {
-  if (server->is_running()) {
-    server->stop();
-    thread.join();
+  if (server_->is_running()) {
+    server_->stop();
+    thread_.join();
   }
 }
 

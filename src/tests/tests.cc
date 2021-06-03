@@ -11,9 +11,7 @@
 #include "../checksums/weak_checksum.h"
 #include "../commands/prepare_command.h"
 #include "../commands/sync_command.h"
-#include "../config.h"
 #include "../readers/file_reader.h"
-#include "../readers/http_reader.h"
 #include "../readers/memory_reader.h"
 #include "expectation_check_metrics_visitor.h"
 #include "utilities/fixture.h"
@@ -23,19 +21,46 @@ namespace kysync {
 
 namespace fs = std::filesystem;
 
-class Tests : public Fixture {};
+std::streamsize Size(const char *data) {
+  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+  return strlen(data);
+}
+
+std::streamsize Size(char *data) {
+  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+  return strlen(data);
+}
+
+std::streamsize Size(const fs::path &path) {
+  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+  return fs::file_size(path);
+}
+
+template <typename T>
+std::streamsize Size(const T &v) {
+  return v.size();
+}
+
+class Tests : public Fixture {
+protected:
+  static std::string GetTestDataPath() {
+    return GetEnv("TEST_DATA_DIR", (CMAKE_SOURCE_DIR / "test_data").string());
+  }
+};
 
 TEST_F(Tests, SimpleWeakChecksum) {  // NOLINT
   const auto *data = "0123456789";
-  auto wcs = WeakChecksum(data, strlen(data));
+  auto wcs = WeakChecksum(data, Size(data));
   EXPECT_EQ(wcs, 183829005);
 }
 
 TEST_F(Tests, RollingWeakChecksum) {  // NOLINT
-  char data[] = "012345678901234567890123456789";
-  ASSERT_EQ(strlen(data), 30);
+  std::string s = "012345678901234567890123456789";
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
+  char *data = s.data();
+  ASSERT_EQ(s.size(), 30);
 
-  auto size = strlen(data) / 3;
+  std::streamsize size = Size(data) / 3;
   memset(data, 0, size);
 
   std::atomic<int> count = 0;
@@ -61,7 +86,7 @@ TEST_F(Tests, RollingWeakChecksum) {  // NOLINT
 
 TEST_F(Tests, SimpleStringChecksum) {  // NOLINT
   const auto *data = "0123456789";
-  auto scs = StrongChecksum::Compute(data, strlen(data));
+  auto scs = StrongChecksum::Compute(data, Size(data));
   EXPECT_EQ(scs.ToString(), "e353667619ec664b49655fc9692165fb");
 }
 
@@ -72,15 +97,15 @@ TEST_F(Tests, StreamingStringChecksum) {  // NOLINT
   const auto *data = "0123456789";
 
   for (int i = 0; i < kCount; i++) {
-    s.write(data, strlen(data));
+    s.write(data, Size(data));
   }
 
   auto str = s.str();
-  ASSERT_EQ(str.length(), kCount * strlen(data));
+  ASSERT_EQ(str.length(), kCount * Size(data));
 
   const auto *buffer = str.c_str();
 
-  auto scs_1 = StrongChecksum::Compute(buffer, kCount * strlen(data));
+  auto scs_1 = StrongChecksum::Compute(buffer, kCount * Size(data));
 
   s.seekg(0);
   auto scs_2 = StrongChecksum::Compute(s);
@@ -88,27 +113,27 @@ TEST_F(Tests, StreamingStringChecksum) {  // NOLINT
   EXPECT_EQ(scs_1, scs_2);
 }
 
-void TestReader(Reader &reader, size_t expected_size) {
+void TestReader(Reader &reader, std::streamsize expected_size) {
   ASSERT_EQ(reader.GetSize(), expected_size);
 
-  char buffer[1024];
+  std::array<char, 1024> buffer{};
 
   {
-    auto count = reader.Read(buffer, 1, 3);
+    auto count = reader.Read(buffer.data(), 1, 3);
     buffer[count] = '\0';
-    EXPECT_STREQ(buffer, "123");
+    EXPECT_STREQ(buffer.data(), "123");
   }
 
   {
-    auto count = reader.Read(buffer, 8, 3);
+    auto count = reader.Read(buffer.data(), 8, 3);
     buffer[count] = '\0';
-    EXPECT_STREQ(buffer, "89");
+    EXPECT_STREQ(buffer.data(), "89");
   }
 
   {
-    auto count = reader.Read(buffer, 20, 5);
+    auto count = reader.Read(buffer.data(), 20, 5);
     buffer[count] = '\0';
-    EXPECT_STREQ(buffer, "");
+    EXPECT_STREQ(buffer.data(), "");
   }
 
   ExpectationCheckMetricVisitor(
@@ -118,24 +143,24 @@ void TestReader(Reader &reader, size_t expected_size) {
        {"//total_bytes_read_", 5}});
 }
 
-std::string CreateMemoryReaderUri(const void *address, size_t size) {
+std::string CreateMemoryReaderUri(const void *address, std::streamsize size) {
   std::stringstream result;
   result << "memory://" << address << ":" << std::hex << size;
   return result.str();
 }
 
 std::string CreateMemoryReaderUri(const std::string &data) {
-  return CreateMemoryReaderUri(data.data(), data.size());
+  return CreateMemoryReaderUri(data.data(), Size(data));
 }
 
 TEST_F(Tests, MemoryReaderSimple) {  // NOLINT
   const auto *data = "0123456789";
 
-  auto reader = MemoryReader(data, strlen(data));
-  TestReader(reader, strlen(data));
+  auto reader = MemoryReader(data, Size(data));
+  TestReader(reader, Size(data));
 
-  auto uri = CreateMemoryReaderUri(data, strlen(data));
-  TestReader(*Reader::Create(uri), strlen(data));
+  auto uri = CreateMemoryReaderUri(data, Size(data));
+  TestReader(*Reader::Create(uri), Size(data));
 }
 
 TEST_F(Tests, FileReaderSimple) {  // NOLINT
@@ -145,12 +170,12 @@ TEST_F(Tests, FileReaderSimple) {  // NOLINT
   auto path = tmp.GetPath() / "data.bin";
 
   std::ofstream f(path, std::ios::binary);
-  f.write(data, strlen(data));
+  f.write(data, Size(data));
   f.close();
 
   auto reader = FileReader(path);
-  TestReader(reader, fs::file_size(path));
-  TestReader(*Reader::Create("file://" + path.string()), strlen(data));
+  TestReader(reader, Size(path));
+  TestReader(*Reader::Create("file://" + path.string()), Size(data));
 }
 
 TEST_F(Tests, ReadersWithBadUri) {  // NOLINT
@@ -182,7 +207,7 @@ TEST_F(Tests, ReadersWithBadUri) {  // NOLINT
 
 void WriteFile(const fs::path &path, const std::string &content) {
   auto f = std::ofstream(path, std::ios::binary);
-  f.write(content.data(), content.size());
+  f.write(content.data(), Size(content));
 }
 
 std::string ReadFile(const fs::path &path) {
@@ -190,7 +215,7 @@ std::string ReadFile(const fs::path &path) {
   result.resize(fs::file_size(path));
 
   auto f = std::ifstream(path, std::ios::binary);
-  f.read(result.data(), result.size());
+  f.read(result.data(), Size(result));
 
   return result;
 }
@@ -219,10 +244,10 @@ public:
 
   static void ReadMetadata(SyncCommand &c) { c.ReadMetadata(); }
 
-  static std::vector<size_t> ExamineAnalisys(SyncCommand &c) {
-    std::vector<size_t> result;
+  static auto ExamineAnalisys(SyncCommand &c) {
+    std::vector<std::streamoff> result;
 
-    for (size_t i = 0; i < c.block_count_; i++) {
+    for (int i = 0; i < c.block_count_; i++) {
       auto wcs = c.weak_checksums_[i];
       auto data = c.analysis_[wcs];
       result.push_back(data.seed_offset);
@@ -235,30 +260,32 @@ public:
     return c.compression_level_;
   }
 
-  static size_t GetBlockSize(const PrepareCommand &c) { return c.block_size_; }
+  static std::streamsize GetBlockSize(const PrepareCommand &c) {
+    return c.block_size_;
+  }
 };
 
 std::stringstream CreateInputStream(const std::string &data) {
   std::stringstream result;
-  result.write(data.data(), data.size());
+  result.write(data.data(), Size(data));
   result.seekg(0);
   return result;
 }
 
-size_t GetExpectedCompressedSize(
+std::streamsize GetExpectedCompressedSize(
     const std::string &data,
     int compression_level,
-    size_t block_size) {
+    std::streamsize block_size) {
   auto compression_buffer_size = ZSTD_compressBound(block_size);
-  auto unique_compression_buffer =
-      std::make_unique<char[]>(compression_buffer_size);
-  size_t compressed_size = 0;
-  size_t size_read = 0;
+  auto compression_buffer = std::vector<char>(compression_buffer_size);
+  std::streamsize compressed_size = 0;
+  std::streamsize size_read = 0;
   while (size_read < data.size()) {
-    auto size_remaining = data.size() - size_read;
-    size_t size_to_read = std::min(block_size, size_remaining);
+    auto size_remaining = Size(data) - size_read;
+    std::streamsize size_to_read = std::min(block_size, size_remaining);
+    // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
     compressed_size += ZSTD_compress(
-        unique_compression_buffer.get(),
+        compression_buffer.data(),
         compression_buffer_size,
         data.data() + size_read,
         size_to_read,
@@ -340,8 +367,6 @@ TEST(Tests2, MetadataRoundtrip) {  // NOLINT
   auto pc = PrepareCommand(data_path, kysync_path, pzst_path, block);
   pc.Run();
 
-  LOG(ERROR) << "foo";
-
   auto sc = SyncCommand(
       "file://" + data_path.string(),
       "file://" + kysync_path.string(),
@@ -366,8 +391,9 @@ void EndToEndTest(
     const std::string &data,
     const std::string &seed_data,
     bool compression_disabled,
-    size_t block,
-    const std::vector<size_t> &expected_block_mapping) {
+    std::streamsize block_size,
+    const std::vector<std::streamoff>
+        &expected_block_mapping) {  // NOLINT(misc-unused-parameters)
   LOG(INFO) << "E2E for " << data.substr(0, 40);
 
   auto tmp = TempPath();
@@ -380,7 +406,7 @@ void EndToEndTest(
 
   WriteFile(data_path, data);
   WriteFile(seed_data_path, seed_data);
-  PrepareCommand(data_path, kysync_path, pzst_path, block).Run();
+  PrepareCommand(data_path, kysync_path, pzst_path, block_size).Run();
 
   SyncCommand(
       "file://" + (compression_disabled ? data_path : pzst_path).string(),
@@ -398,43 +424,34 @@ void EndToEndTest(
 void RunEndToEndTests(bool compression_disabled) {
   // FIXME: research if we can do parametrized testing...
   std::string data = "0123456789";
-  EndToEndTest(data, data, compression_disabled, 4, {0, 4, -1ULL /*8*/});
-  EndToEndTest(data, data, compression_disabled, 6, {0, -1ULL /*6*/});
+  EndToEndTest(data, data, compression_disabled, 4, {0, 4, -1 /*8*/});
+  EndToEndTest(data, data, compression_disabled, 6, {0, -1 /*6*/});
 
   EndToEndTest(
       "0123456789",
       "001234004567",
       compression_disabled,
       4,
-      {1, 8, -1ULL});
+      {1, 8, -1});
   EndToEndTest("123412341234", "00123400", compression_disabled, 4, {2, 2, 2});
-  EndToEndTest("12345678", "", compression_disabled, 4, {-1ULL, -1ULL});
+  EndToEndTest("12345678", "", compression_disabled, 4, {-1, -1});
   EndToEndTest(
       "abcdefjhijklmnopqrstuvwxyz",
       "_qrst_mnop_ijkl_abcd_efjh_uvwx_yz",
       compression_disabled,
       4,
-      {16, 21, 11, 6, 1, 26, -1ULL /*31*/});
+      {16, 21, 11, 6, 1, 26, -1 /*31*/});
 
-  if (kWarmupAfterMatch) {  // NOLINT(readability-simplify-boolean-expr)
-    EndToEndTest(
-        "1234234534564567567867897890",
-        "1234567890",
-        compression_disabled,
-        4,
-        {0, -1ULL, -1ULL, -1ULL, 4, -1ULL, -1ULL});
-  } else {
-    EndToEndTest(
-        "1234234534564567567867897890",
-        "1234567890",
-        compression_disabled,
-        4,
-        {0, 1, 2, 3, 4, 5, 6});
-  }
+  EndToEndTest(
+      "1234234534564567567867897890",
+      "1234567890",
+      compression_disabled,
+      4,
+      {0, -1, -1, -1, 4, -1, -1});
 
   std::string chunk = "1234";
   std::stringstream input;
-  std::vector<size_t> expected;
+  std::vector<std::streamoff> expected;
   for (auto i = 0; i < 1024; i++) {
     input << chunk;
     expected.push_back(0);
@@ -478,7 +495,8 @@ void SyncFile(
     const fs::path &seed_data_file_name,
     const fs::path &temp_path_name,
     const fs::path &expected_output_file_name,
-    std::map<std::string, uint64_t> &&expected_metrics) {
+    const std::map<std::string, uint64_t>
+        &expected_metrics) {  // NOLINT(misc-unused-parameters)
   std::string file_uri_prefix = "file://";
   fs::path output_file_name = temp_path_name / "syncd_output_file";
   auto sync_command = SyncCommand(
@@ -500,7 +518,7 @@ void SyncFile(
 void EndToEndFilesTest(
     const std::string &source_file_name,
     const std::string &seed_data_file_name,
-    size_t block_size,
+    std::streamsize block_size,
     const std::string &expected_metadata_file_name,
     const std::string &expected_compressed_file_name,
     const std::string &expected_output_file_name,
@@ -539,7 +557,7 @@ void EndToEndFilesTest(
       source_file_name,
       temp_path_name,
       expected_output_file_name,
-      std::move(expected_metrics));
+      expected_metrics);
 }
 
 void RunEndToEndFilesTestFor(
@@ -553,15 +571,6 @@ void RunEndToEndFilesTestFor(
       file_name + ".pzst",
       file_name,
       expected_compressed_size);
-}
-
-std::string GetTestDataPath() {
-  // NOTE: This expects that either the test data path is provided through
-  // the TEST_DATA_DIR environment variable or that the test data dir exists one
-  // level above the test's working directory
-  auto *dir_name = std::getenv("TEST_DATA_DIR");
-  return dir_name == nullptr ? (CMAKE_SOURCE_DIR / "test_data").string()
-                             : dir_name;
 }
 
 // Test summary:
@@ -611,7 +620,7 @@ TEST_F(Tests, SyncFileFromSeed) {  // NOLINT
       seed_file_name,
       tmp.GetPath(),
       sync_file_name,
-      std::move(expected_metrics));
+      expected_metrics);
 }
 
 // Test syncing from a non-compressed file
@@ -636,109 +645,15 @@ TEST_F(Tests, SyncNonCompressedFile) {  // NOLINT
       seed_file_name,
       tmp.GetPath(),
       sync_file_name,
-      std::move(expected_metrics));
+      expected_metrics);
 }
 
 // Basic test to ensure different temp paths are returned.
 // This does not do testing for race conditions.
 TEST(SyncCommand, GetTempPath) {  // NOLINT
-  TempPath sample_paths[2];
-  EXPECT_NE(sample_paths[0].GetPath(), sample_paths[1].GetPath());
-}
-
-// Note: This function and the following 2 tests are temporary and will be
-// removed after http_tests.cc have been pushed
-void HttpClientMultirangeTest(
-    httplib::Ranges ranges,
-    size_t expected_body_size) {
-  auto range_header = httplib::make_range_header(ranges);
-  httplib::Client http_client("http://mirror.math.princeton.edu");
-  std::string path("/pub/ubuntu-iso/20.04/ubuntu-20.04.2.0-desktop-amd64.list");
-  auto res = http_client.Get(path.c_str(), {range_header});
-  CHECK(res.error() == httplib::Error::Success);
-  CHECK_EQ(res->status, 206);
-  LOG(INFO) << "Got body: " << res->body;
-  EXPECT_EQ(res->body.size(), expected_body_size);
-}
-
-TEST(HttplibRetrieval, MultirangeContiguous) {
-  auto block_size = 4;
-  httplib::Ranges ranges;
-  ranges.push_back({0, block_size - 1});
-  ranges.push_back({block_size, block_size * 2 - 1});
-  std::string expected_string("/isolinu");
-  HttpClientMultirangeTest(ranges, expected_string.size());
-}
-
-TEST(HttplibRetrieval, MultirangeNoncontiguous) {
-  auto block_size = 4;
-  httplib::Ranges ranges;
-  ranges.push_back({0, block_size - 1});
-  ranges.push_back({block_size + 1, block_size * 2});
-  std::string expected_string("/isoinux");
-  HttpClientMultirangeTest(ranges, 222);
-}
-
-// Note: This function and the following 2 tests are temporary and will be
-// removed after http_tests.cc have been pushed
-void HttpReaderMultirangeTest(
-    std::vector<BatchRetrivalInfo> &batched_retrieval_infos,
-    std::string &expected_string) {
-  std::string uri(
-      "http://mirror.math.princeton.edu/pub/ubuntu-iso/20.04/"
-      "ubuntu-20.04.2.0-desktop-amd64.list");
-  auto reader = Reader::Create(uri);
-  size_t total_size = 0;
-  for (auto &retrieval_info : batched_retrieval_infos) {
-    total_size += retrieval_info.size_to_read;
-  }
-  auto buffer = std::make_unique<char[]>(total_size);
-  auto size_read = reader.get()->Read(buffer.get(), batched_retrieval_infos);
-  EXPECT_EQ(size_read, expected_string.size());
-  EXPECT_TRUE(
-      std::memcmp(
-          buffer.get(),
-          expected_string.c_str(),
-          expected_string.size()) == 0);
-}
-
-TEST(HttpReaderRetrieval, MultirangeContiguous) {
-  std::vector<BatchRetrivalInfo> batched_retrieval_infos;
-  size_t block_size = 4;
-  batched_retrieval_infos.push_back(
-      {.block_index = 0,
-       .source_begin_offset = 0,
-       .size_to_read = block_size,
-       .offset_to_write_to = 0});
-  batched_retrieval_infos.push_back(
-      {.block_index = 1,
-       .source_begin_offset = block_size,
-       .size_to_read = block_size,
-       .offset_to_write_to = block_size});
-  std::string expected_string("/isolinu");
-  HttpReaderMultirangeTest(batched_retrieval_infos, expected_string);
-}
-
-TEST(HttpReaderRetrieval, MultirangeNoncontiguous) {
-  std::vector<BatchRetrivalInfo> batched_retrieval_infos;
-  size_t block_size = 4;
-  batched_retrieval_infos.push_back(
-      {.block_index = 0,
-       .source_begin_offset = 0,
-       .size_to_read = block_size,
-       .offset_to_write_to = 0});
-  batched_retrieval_infos.push_back(
-      {.block_index = 1,
-       .source_begin_offset = block_size + 1,
-       .size_to_read = block_size,
-       .offset_to_write_to = block_size});
-  batched_retrieval_infos.push_back(
-      {.block_index = 1,
-       .source_begin_offset = block_size * 2 + 2,
-       .size_to_read = block_size,
-       .offset_to_write_to = block_size * 2});
-  std::string expected_string("/isoinuxadtx");
-  HttpReaderMultirangeTest(batched_retrieval_infos, expected_string);
+  TempPath p_1;
+  TempPath p_2;
+  EXPECT_NE(p_1.GetPath(), p_2.GetPath());
 }
 
 }  // namespace kysync

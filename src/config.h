@@ -1,9 +1,14 @@
-#ifndef KSYNC__SRC_CONFIG_H
-#define KSYNC__SRC_CONFIG_H
+#ifndef KSYNC_SRC_CONFIG_H
+#define KSYNC_SRC_CONFIG_H
 
-constexpr auto kVerify = false;
+namespace kysync {
 
-// TODO: document this!
-constexpr auto kWarmupAfterMatch = true;
+// std::streamsize and std::streamoff are different on MacOS / xcode 12
+// one is long, the other is long long
+// this throws off std::min, so we use our own
+// sad...
+constexpr intmax_t Min(intmax_t x, intmax_t y) { return x < y ? x : y; }
 
-#endif  // KSYNC__SRC_CONFIG_H
+}  // namespace kysync
+
+#endif  // KSYNC_SRC_CONFIG_H

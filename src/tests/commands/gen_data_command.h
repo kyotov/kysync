@@ -1,5 +1,5 @@
-#ifndef KSYNC_GEN_DATA_COMMAND_H
-#define KSYNC_GEN_DATA_COMMAND_H
+#ifndef KSYNC_SRC_TESTS_COMMANDS_GEN_DATA_COMMAND_H
+#define KSYNC_SRC_TESTS_COMMANDS_GEN_DATA_COMMAND_H
 
 #include <filesystem>
 #include <utility>
@@ -9,27 +9,27 @@
 namespace kysync {
 
 class GenDataCommand final : public Command {
-  const std::filesystem::path kPath;
-  const std::filesystem::path kData;
-  const std::filesystem::path kSeedData;
-  const size_t kDataSize;
-  const size_t kSeedDataSize;
-  const size_t kFragmentSize;
-  const size_t kDiffSize;
+  std::filesystem::path path_;
+  std::filesystem::path data_file_path_;
+  std::filesystem::path seed_data_file_path_;
+  std::streamsize data_size_;
+  std::streamsize seed_data_size_;
+  std::streamsize fragment_size_;
+  std::streamsize diff_size_;
 
-  void GenChunk(int id, size_t beg, size_t end);
+  void GenChunk(int id, std::streamoff beg, std::streamoff end);
 
 public:
   GenDataCommand(
       const std::filesystem::path &output_path,
-      uint64_t data_size,
-      uint64_t seed_data_size,
-      uint64_t fragment_size,
-      uint32_t similarity);
+      std::streamsize data_size,
+      std::streamsize seed_data_size,
+      std::streamsize fragment_size,
+      int similarity);
 
   int Run() override;
 };
 
 }  // namespace kysync
 
-#endif  // KSYNC_GEN_DATA_COMMAND_H
+#endif  // KSYNC_SRC_TESTS_COMMANDS_GEN_DATA_COMMAND_H

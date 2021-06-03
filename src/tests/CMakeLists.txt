@@ -8,6 +8,7 @@ add_library(test_main
         expectation_check_metrics_visitor.cc)
 target_link_libraries(test_main
         main
+        http_server
         GTest::gtest
         GTest::gtest_main)
 
@@ -19,14 +20,19 @@ target_link_libraries(tests
 add_executable(perf_tests
         perf_tests.cc)
 target_link_libraries(perf_tests
-        test_main
-        http_server)
+        test_main)
 
 add_executable(http_tests
         http_tests.cc)
 target_link_libraries(http_tests
-        test_main
-        http_server)
+        test_main)
+
+add_executable(safe_cast_tests
+        safe_cast_tests.cc)
+target_link_libraries(safe_cast_tests
+        glog::glog
+        GTest::gtest
+        GTest::gtest_main)
 
 add_executable(gendata
         commands/gen_data_command.cc
@@ -34,5 +40,4 @@ add_executable(gendata
 target_link_libraries(gendata
         main)
 
-add_custom_target(create_log_dir ALL
-        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/log)
+file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/log)

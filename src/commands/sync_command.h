@@ -1,5 +1,5 @@
-#ifndef KSYNC__SRC_COMMANDS_SYNC_COMMAND_H
-#define KSYNC__SRC_COMMANDS_SYNC_COMMAND_H
+#ifndef KSYNC_SRC_COMMANDS_SYNC_COMMAND_H
+#define KSYNC_SRC_COMMANDS_SYNC_COMMAND_H
 
 #include <bitset>
 #include <filesystem>
@@ -30,25 +30,25 @@ class SyncCommand final : public Command {
   Metric downloaded_bytes_{};
   Metric decompressed_bytes_{};
 
-  size_t size_{};
-  size_t header_size_{};
-  size_t block_{};
-  size_t block_count_{};
-  size_t max_compressed_size_{};
+  std::streamsize size_{};
+  std::streamsize header_size_{};
+  std::streamsize block_{};
+  std::streamsize block_count_{};
+  std::streamsize max_compressed_size_{};
 
   std::string hash_;
 
   std::vector<uint32_t> weak_checksums_;
   std::vector<StrongChecksum> strong_checksums_;
-  std::vector<size_t> compressed_sizes_;
-  std::vector<size_t> compressed_file_offsets_;
+  std::vector<std::streamsize> compressed_sizes_;
+  std::vector<std::streamoff> compressed_file_offsets_;
 
   struct WcsMapData {
-    size_t index{};
-    size_t seed_offset{-1ULL};
+    std::streamsize index{};
+    std::streamoff seed_offset{-1};
   };
 
-  static constexpr auto k4Gb = 0x100000000ULL;
+  static constexpr auto k4Gb = 0x100000000LL;
 
   std::unique_ptr<std::bitset<k4Gb>> set_;
   std::unordered_map<uint32_t, WcsMapData> analysis_;
@@ -56,44 +56,57 @@ class SyncCommand final : public Command {
   void ParseHeader(Reader &metadata_reader);
   void UpdateCompressedOffsetsAndMaxSize();
   void ReadMetadata();
-  void AnalyzeSeedChunk(int id, size_t start_offset, size_t end_offset);
+  void AnalyzeSeedChunk(
+      int id,
+      std::streamoff start_offset,
+      std::streamoff end_offset);
+
   void AnalyzeSeed();
-  void ReconstructSourceChunk(int id, size_t start_offset, size_t end_offset);
-  bool FoundMatchingSeedOffset(size_t block_index, size_t *matching_seed_offset)
-      const;
+
+  void ReconstructSourceChunk(
+      int id,
+      std::streamoff start_offset,
+      std::streamoff end_offset);
+
+  std::streamoff FindSeedOffset(int block_index) const;
   void ReconstructSource();
 
   template <typename T>
-  size_t ReadIntoContainer(
+  std::streamsize ReadIntoContainer(
       Reader &metadata_reader,
-      size_t offset,
+      std::streamoff offset,
       std::vector<T> &container);
 
   class ChunkReconstructor {
     SyncCommand &parent_impl_;
 
-    std::unique_ptr<char[]> buffer_;
-    std::unique_ptr<char[]> decompression_buffer_;
+    std::vector<char> buffer_;
+    std::vector<char> decompression_buffer_;
     std::unique_ptr<Reader> seed_reader_;
     std::unique_ptr<Reader> data_reader_;
     std::fstream output_;
     std::vector<BatchRetrivalInfo> batched_retrieval_infos_;
 
-    std::fstream GetOutputStream(size_t start_offset);
-    void WriteRetrievedBatch(size_t size_to_write);
-    void ValidateAndWrite(size_t block_index, const char *buffer, size_t count);
-    size_t Decompress(
-        size_t compressed_size,
+    std::fstream GetOutputStream(std::streamoff start_offset);
+    void WriteRetrievedBatch(std::streamsize size_to_write);
+
+    void ValidateAndWrite(
+        int block_index,
+        const char *buffer,
+        std::streamsize count);
+
+    std::streamsize Decompress(
+        std::streamsize compressed_size,
         const void *decompression_buffer,
         void *output_buffer) const;
 
   public:
     ChunkReconstructor(
         SyncCommand &parent,
-        size_t start_offset,
-        size_t end_offset);
-    void ReconstructFromSeed(size_t block_index, size_t seed_offset);
-    void EnqueueBlockRetrieval(size_t block_index, size_t begin_offset);
+        std::streamoff start_offset);
+
+    void ReconstructFromSeed(int block_index, std::streamoff seed_offset);
+    void EnqueueBlockRetrieval(int block_index, std::streamoff begin_offset);
     void FlushBatch(bool force);
   };
 
@@ -101,8 +114,8 @@ public:
   explicit SyncCommand(
       const std::string &data_uri,
       const std::string &metadata_uri,
-      const std::string &seed_uri,
-      const std::filesystem::path &output_path,
+      std::string seed_uri,
+      std::filesystem::path output_path,
       bool compression_disabled,
       int num_blocks_in_batch,
       int threads);
@@ -114,4 +127,4 @@ public:
 
 }  // namespace kysync
 
-#endif  // KSYNC__SRC_COMMANDS_SYNC_COMMAND_H
+#endif  // KSYNC_SRC_COMMANDS_SYNC_COMMAND_H

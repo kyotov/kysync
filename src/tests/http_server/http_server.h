@@ -4,26 +4,26 @@
 #include <filesystem>
 #include <thread>
 
-#include "../../metrics/metric_container.h"
 #include "../../metrics/metric.h"
+#include "../../metrics/metric_container.h"
 
 namespace httplib {
-  class Server;
-  class Request;
-  class Response;
-}
+class Server;
+class Request;
+class Response;
+}  // namespace httplib
 
 namespace kysync {
 
 class HttpServer final : public MetricContainer {
-  const std::filesystem::path kRoot;
-  const int kPort;
-  const bool kLogHeaders;
-  std::unique_ptr<httplib::Server> server;
-  std::thread thread;
+  std::filesystem::path root_;
+  int port_;
+  bool log_headers_;
+  std::unique_ptr<httplib::Server> server_;
+  std::thread thread_;
 
-  Metric requests{};
-  Metric total_bytes{};
+  Metric requests_{};
+  Metric bytes_{};
 
   void Logger(const httplib::Request& req, const httplib::Response& res);
   void Start();

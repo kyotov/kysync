@@ -19,7 +19,7 @@ PrepareCommand::PrepareCommand(
     fs::path input_file_path,
     fs::path output_ksync_file_path,
     fs::path output_compressed_file_path,
-    size_t block_size)
+    std::streamsize block_size)
     : input_file_path_(std::move(input_file_path)),
       output_ksync_file_path_(std::move(output_ksync_file_path)),
       output_compressed_file_path_(std::move(output_compressed_file_path)),
@@ -36,13 +36,12 @@ PrepareCommand::PrepareCommand(
 }
 
 int PrepareCommand::Run() {
-  auto unique_buffer = std::make_unique<char[]>(block_size_);
-  auto *buffer = unique_buffer.get();
+  auto v_buffer = std::vector<char>(block_size_);
+  auto *buffer = v_buffer.data();
 
   auto compression_buffer_size = ZSTD_compressBound(block_size_);
-  auto unique_compression_buffer =
-      std::make_unique<char[]>(compression_buffer_size);
-  auto *compression_buffer = unique_compression_buffer.get();
+  auto v_compression_buffer = std::vector<char>(compression_buffer_size);
+  auto *compression_buffer = v_compression_buffer.data();
 
   auto input = std::ifstream(input_file_path_, std::ios::binary);
   CHECK(input) << "error reading from " << input_file_path_;
@@ -50,7 +49,8 @@ int PrepareCommand::Run() {
   auto output = std::ofstream(output_compressed_file_path_, std::ios::binary);
   CHECK(output) << "unable to write to " << output_compressed_file_path_;
 
-  size_t data_size = fs::file_size(input_file_path_);
+  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+  std::streamsize data_size = fs::file_size(input_file_path_);
   StartNextPhase(data_size);
 
   StrongChecksumBuilder hash;
@@ -63,12 +63,14 @@ int PrepareCommand::Run() {
     weak_checksums_.push_back(WeakChecksum(buffer, block_size_));
     strong_checksums_.push_back(StrongChecksum::Compute(buffer, block_size_));
 
-    size_t compressed_size = ZSTD_compress(
-        compression_buffer,
-        compression_buffer_size,
-        buffer,
-        count,
-        compression_level_);
+    std::streamsize compressed_size =
+        ZSTD_compress(  // NOLINT(bugprone-narrowing-conversions,
+                        // cppcoreguidelines-narrowing-conversions)
+            compression_buffer,
+            compression_buffer_size,
+            buffer,
+            count,
+            compression_level_);
     CHECK(!ZSTD_isError(compressed_size)) << ZSTD_getErrorName(compressed_size);
     output.write(compression_buffer, compressed_size);
     compressed_sizes_.push_back(compressed_size);

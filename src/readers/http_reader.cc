@@ -25,7 +25,7 @@ static void ReadHttpLine(std::istream &input, std::string &buffer, int max) {
         }
         break;
       case State::kPossiblyTerminating:  // just after \r
-        if (c == '\n') {          // seen \r\n
+        if (c == '\n') {                 // seen \r\n
           state = State::kTerminated;
         } else if (c == '\r') {  // handle \r\r\n
           state = State::kPossiblyTerminating;
@@ -44,6 +44,7 @@ static void CheckPrefixAndAdvance(
     const std::string &prefix,
     std::string &buffer) {
   buffer.resize(prefix.size(), ' ');
+  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
   input.read(buffer.data(), prefix.size());
   CHECK_EQ(input.gcount(), prefix.size());
   CHECK(std::equal(prefix.begin(), prefix.end(), buffer.begin()));
@@ -54,12 +55,14 @@ static bool IsMultirangeResponse(httplib::Response &response) {
       .starts_with("multipart/byteranges");
 }
 
-using ChunkCallback = std::function<
-    void(size_t /*beg*/, size_t /*end*/, std::istream & /*data*/)>;
+using ChunkCallback = std::function<void(
+    std::streamoff /*beg*/,
+    std::streamoff /*end*/,
+    std::istream & /*data*/)>;
 
 static void ParseMultipartByterangesResponse(
     httplib::Response &response,
-    ChunkCallback chunk_callback) {
+    const ChunkCallback &chunk_callback) {
   auto content_type = response.get_header_value("Content-Type");
   LOG_ASSERT(IsMultirangeResponse(response));
   std::string boundary;
@@ -70,8 +73,8 @@ static void ParseMultipartByterangesResponse(
   auto buffer = std::string();
   auto body = std::stringstream(response.body);
 
-  size_t beg = 0;
-  size_t end = 0;
+  std::streamoff beg = 0;
+  std::streamoff end = 0;
 
   enum class State {  //
     kBoundary,
@@ -128,24 +131,27 @@ static void ParseMultipartByterangesResponse(
   }
 }
 
-size_t HttpReader::Read(void *buffer, httplib::Ranges ranges) {
-  auto range_header = httplib::make_range_header(ranges);
+std::streamsize HttpReader::Read(void *buffer, httplib::Ranges ranges) {
+  // TODO(kyotov): maybe make httplib contribution to pass ranges by const ref
+  auto range_header = httplib::make_range_header(std::move(ranges));
   auto res = client_->Get(path_.c_str(), {range_header});
 
   CHECK(res.error() == httplib::Error::Success) << path_;
   CHECK(res->status == 206 || res->status == 200) << path_;
 
-  size_t count = 0;
+  std::streamsize count = 0;
   if (IsMultirangeResponse(res.value())) {
     // Note this expects data to be provided in order of range request made
     ParseMultipartByterangesResponse(
         res.value(),
-        [&buffer, &count](size_t beg, size_t end, std::istream &s) {
+        [&buffer,
+         &count](std::streamoff beg, std::streamoff end, std::istream &s) {
           auto count_in_chunk = end - beg + 1;
           s.read(static_cast<char *>(buffer) + count, count_in_chunk);
           count += count_in_chunk;
         });
   } else {
+    // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
     count = res->body.size();
     memcpy(buffer, res->body.data(), count);
   }
@@ -167,23 +173,24 @@ HttpReader::HttpReader(const std::string &url) {
 
 HttpReader::~HttpReader() = default;
 
-size_t HttpReader::GetSize() const {
+std::streamsize HttpReader::GetSize() const {
   auto res = client_->Head(path_.c_str());
 
   CHECK(res->has_header("Content-Length"));
   auto size = res->get_header_value("Content-Length");
 
-  return std::stoull(size, nullptr, 10);
+  return std::stoll(size, nullptr, 10);
 }
 
-size_t HttpReader::Read(void *buffer, size_t offset, size_t size) {
+std::streamsize
+HttpReader::Read(void *buffer, std::streamoff offset, std::streamsize size) {
   auto beg_offset = offset;
   auto end_offset = offset + size - 1;
   auto count = Read(buffer, {{beg_offset, end_offset}});
   return Reader::Read(buffer, offset, count);
 }
 
-size_t HttpReader::Read(
+std::streamsize HttpReader::Read(
     void *buffer,
     std::vector<BatchRetrivalInfo> &batched_retrieval_infos) {
   httplib::Ranges ranges;

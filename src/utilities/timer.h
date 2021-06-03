@@ -10,7 +10,7 @@ using Milliseconds = std::chrono::milliseconds;
 
 Timestamp Now();
 
-size_t DeltaMs(Timestamp beg, Timestamp end);
+intmax_t DeltaMs(Timestamp beg, Timestamp end);
 
 }  // namespace kysync
 

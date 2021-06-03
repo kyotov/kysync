@@ -4,15 +4,19 @@ project(ksync)
 set(CMAKE_CXX_STANDARD 20)
 
 include(kydeps/KyDeps.cmake)
-KyDeps(DOWNLOAD NO_UPLOAD DEPENDS gflags glog GTest xxHash httplib protobuf zstd)
+KyDeps(NO_DOWNLOAD NO_UPLOAD DEPENDS gflags glog GTest xxHash httplib protobuf zstd)
 
 if (WIN32)
     add_compile_options(-EHsc)
+    set(HEADERS ${CMAKE_BINARY_DIR}/../src/.*)
+    string(REPLACE "\\" "." HEADERS "${HEADERS}")
+    string(REPLACE "/" "." HEADERS "${HEADERS}")
     set(CMAKE_CXX_CLANG_TIDY
-            "C:/Program Files/LLVM/bin/clang-tidy.exe";
-            -checks=-*,readability-identifier-naming;
-#            --list-checks;
-            #            --dump-config;
+            "C:/Program Files/LLVM/bin/clang-tidy.exe"
+            "--header-filter=${HEADERS}"
+            "--export-fixes=${CMAKE_BINARY_DIR}/clang-tidy.fixes"
+            # --list-checks;
+            # --dump-config;
             )
 endif ()
 
@@ -21,8 +25,8 @@ endif ()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     #    add_link_options(-static)
-    add_compile_options(--coverage)
-    add_link_options(--coverage)
+    #    add_compile_options(--coverage)
+    #    add_link_options(--coverage)
 endif ()
 
 include(zsync.cmake)
@@ -49,6 +53,7 @@ target_link_libraries(proto
 set_target_properties(proto PROPERTIES CXX_CLANG_TIDY "")
 
 add_library(main STATIC
+        src/tests/commands/gen_data_command.cc
         src/utilities/parallelize.cc
         src/utilities/streams.cc
         src/utilities/timer.cc
@@ -83,3 +88,4 @@ add_subdirectory(src/tests)
 add_test(NAME tests COMMAND tests)
 add_test(NAME performance_tests COMMAND perf_tests)
 add_test(NAME http_tests COMMAND http_tests)
+add_test(NAME safe_cast_tests COMMAND safe_cast_tests)

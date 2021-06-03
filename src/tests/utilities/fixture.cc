@@ -5,23 +5,23 @@
 
 namespace kysync {
 
-bool Fixture::glog_initialized_ = false;
-
 void Fixture::SetUpTestSuite() {
-  if (!glog_initialized_) {
+  static bool glog_initialized = false;
+  if (!glog_initialized) {
     FLAGS_log_dir = GetEnv("TEST_LOG_DIR", (CMAKE_BINARY_DIR / "log").string());
     google::InitGoogleLogging("tests");
 
     FLAGS_logtostderr = false;
     FLAGS_alsologtostderr = false;
 
-    glog_initialized_ = true;
+    glog_initialized = true;
   }
 }
 
 std::string Fixture::GetEnv(
     const std::string& name,
     const std::string& default_value) {
+  // NOLINTNEXTLINE(concurrency-mt-unsafe,clang-diagnostic-deprecated-declarations)
   auto* env = std::getenv(name.c_str());
   auto value = env == nullptr ? default_value : env;
   LOG(INFO) << name << "=" << value;
@@ -34,9 +34,16 @@ std::filesystem::path Fixture::GetEnv(
   return GetEnv(name, default_value.string());
 }
 
-uintmax_t Fixture::GetEnv(const std::string& name, uintmax_t default_value) {
+intmax_t Fixture::GetEnv(const std::string& name, intmax_t default_value) {
   auto str_value = GetEnv(name, std::to_string(default_value));
-  return std::stoull(str_value, nullptr, 10);
+  return std::stoll(str_value, nullptr, 10);
+}
+
+int Fixture::GetEnvInt(const std::string& name, int default_value) {
+  auto result = Fixture::GetEnv(name, default_value);
+  CHECK_LE(result, std::numeric_limits<int>::max());
+  CHECK_GE(result, std::numeric_limits<int>::min());
+  return static_cast<int>(result);
 }
 
 }  // namespace kysync

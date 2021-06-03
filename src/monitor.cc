@@ -34,16 +34,18 @@ void Monitor::Update() {
   auto total_ms = DeltaMs(ts_total_begin_, now);
   auto phase_ms = DeltaMs(ts_phase_begin_, now);
   auto percent = total_bytes != 0 ? 100 * processed_bytes / total_bytes : 0;
-  auto mb = processed_bytes / (1LL << 20);
-  auto mbps = phase_ms != 0 ? 1000.0 * mb / phase_ms : 0;
+  auto phase_ms_f = static_cast<double>(phase_ms);
+  auto total_ms_f = static_cast<double>(total_ms);
+  auto mb = 1.0 * static_cast<double>(processed_bytes) / (1 << 20);
+  auto mbps = phase_ms != 0 ? 1000.0 * mb / phase_ms_f : 0;
 
   std::stringstream ss;
   ss << "phase " << phase << std::fixed << std::setprecision(1)  //
      << " | " << std::setw(5) << mb << " MB"                     //
-     << " | " << std::setw(5) << phase_ms / 1e3 << "s"           //
+     << " | " << std::setw(5) << phase_ms_f / 1e3 << "s"           //
      << " | " << std::setw(7) << mbps << " MB/s"                 //
      << " | " << std::setw(3) << percent << "%"                  //
-     << " | " << std::setw(5) << total_ms / 1e3 << "s total";
+     << " | " << std::setw(5) << total_ms_f / 1e3 << "s total";
   std::cout << ss.str() << "\t\r";
   std::cout.flush();
 

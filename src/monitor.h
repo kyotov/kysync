@@ -35,7 +35,7 @@ class Monitor final : public MetricVisitor {
   void Update();
 
 public:
-  explicit Monitor(Command &);
+  explicit Monitor(Command &command);
 
   int Run();
 
@@ -43,7 +43,8 @@ public:
       const std::string &name,
       MetricContainer &metric_container);
 
-  using MetricCallback = std::function<void(std::string, MetricValueType)>;
+  using MetricCallback =
+      std::function<void(const std::string &, MetricValueType)>;
   void MetricSnapshot(const MetricCallback &callback);
 
   void Visit(const std::string &name, Metric &value) override;

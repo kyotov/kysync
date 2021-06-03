@@ -12,9 +12,13 @@ FileReader::FileReader(const std::filesystem::path &path)
   CHECK(data_) << "unable to open " << path << " for reading";
 }
 
-size_t FileReader::GetSize() const { return fs::file_size(path_); }
+std::streamsize FileReader::GetSize() const {
+  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+  return fs::file_size(path_);
+}
 
-size_t FileReader::Read(void *buffer, size_t offset, size_t size) {
+std::streamsize
+FileReader::Read(void *buffer, std::streamoff offset, std::streamsize size) {
   // the seekg was failing if the eof bit was set... :(
   // according to https://devdocs.io/cpp/io/basic_istream/seekg this should
   // not happen since C++11, which is supposed to clear the eof bit, but alas

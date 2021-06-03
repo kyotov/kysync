@@ -7,8 +7,13 @@
 namespace kysync {
 
 SystemCommand::SystemCommand(std::string command)
-    : kCommand(std::move(command)) {}
+    : command_(std::move(command)) {}
 
-int SystemCommand::Run() { return system(kCommand.c_str()); }
+int SystemCommand::Run() {
+  StartNextPhase(1);
+  auto result = system(command_.c_str());  // NOLINT(cert-env33-c, concurrency-mt-unsafe)
+  StartNextPhase(0);
+  return result;
+}
 
 }  // namespace kysync

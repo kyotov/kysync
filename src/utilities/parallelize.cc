@@ -5,11 +5,12 @@
 #include <future>
 
 int Parallelize(
-    size_t data_size,
-    size_t block_size,
-    size_t overlap_size,
+    std::streamsize data_size,
+    std::streamsize block_size,
+    std::streamsize overlap_size,
     int threads,
-    std::function<void(int /*id*/, size_t /*beg*/, size_t /*end*/)> f) {
+    std::function<
+        void(int /*id*/, std::streamoff /*beg*/, std::streamoff /*end*/)> f) {
   auto blocks = (data_size + block_size - 1) / block_size;
   auto chunk = (blocks + threads - 1) / threads;
 

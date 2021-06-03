@@ -6,6 +6,8 @@
 #include "metric.h"
 #include "metric_container.h"
 
+// NOTE: using #host -- impossible without macro
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define VISIT_METRICS(host) visitor.Visit(std::string(#host), host)
 
 namespace kysync {

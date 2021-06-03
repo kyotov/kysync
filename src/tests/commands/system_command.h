@@ -9,12 +9,12 @@
 namespace kysync {
 
 class SystemCommand final : public Command {
-  const std::string kCommand;
+  std::string command_;
 
 public:
   explicit SystemCommand(std::string command);
 
-  int Run();
+  int Run() override;
 };
 
 }  // namespace kysync

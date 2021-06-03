@@ -2,12 +2,14 @@
 #define KSYNC_PARALLELIZE_H
 
 #include <functional>
+#include <ios>
 
 int Parallelize(
-    size_t data_size,
-    size_t block_size,
-    size_t overlap_size,
+    std::streamsize data_size,
+    std::streamsize block_size,
+    std::streamsize overlap_size,
     int threads,
-    std::function<void(int /*id*/, size_t /*beg*/, size_t /*end*/)> f);
+    std::function<
+        void(int /*id*/, std::streamoff /*beg*/, std::streamoff /*end*/)> f);
 
 #endif  // KSYNC_PARALLELIZE_H
