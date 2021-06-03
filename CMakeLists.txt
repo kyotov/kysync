@@ -3,10 +3,11 @@ project(ksync)
 
 set(CMAKE_CXX_STANDARD 20)
 
-include(kydeps/KyDeps.cmake)
-KyDeps(NO_DOWNLOAD NO_UPLOAD DEPENDS gflags glog GTest xxHash httplib protobuf zstd)
+set(PACKAGES google/flags google/log google/protobuf google/test zstd httplib xxHash)
+include(kydeps/kydeps.cmake)
+kydeps("${PACKAGES}")
 
-if (WIN32)
+if (WIN32_)
     add_compile_options(-EHsc)
     set(HEADERS ${CMAKE_BINARY_DIR}/../src/.*)
     string(REPLACE "\\" "." HEADERS "${HEADERS}")

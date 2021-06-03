@@ -10,12 +10,7 @@ TEST(SafeCastTests, int) {  // NOLINT
   y++;
 
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto,hicpp-avoid-goto,cppcoreguidelines-pro-type-vararg,hicpp-vararg)
-  EXPECT_EXIT(
-      SafeCast<int>(y),
-      //::testing::ExitedWithCode(6),
-      ::testing::KilledBySignal(6),
-//      ::testing::ExitedWithCode(3),
-      "Assert failed: value <= max");
+  EXPECT_DEATH(SafeCast<int>(y), "Assert failed: value <= max");
 
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto,hicpp-avoid-goto)
   EXPECT_EQ(x, SafeCast<int>(y - 1));
@@ -27,11 +22,7 @@ TEST(SafeCastTests, int32) {  // NOLINT
   y++;
 
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto,hicpp-avoid-goto,cppcoreguidelines-pro-type-vararg,hicpp-vararg)
-  EXPECT_EXIT(
-      SafeCast<int32_t>(y),
-      ::testing::KilledBySignal(6),
-//      ::testing::ExitedWithCode(3),
-      "Assert failed: value <= max");
+  EXPECT_DEATH(SafeCast<int32_t>(y), "Assert failed: value <= max");
 
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto,hicpp-avoid-goto)
   EXPECT_EQ(x, SafeCast<int32_t>(y - 1));
@@ -43,11 +34,7 @@ TEST(SafeCastTests, int64) {  // NOLINT
   y++;
 
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto,hicpp-avoid-goto,cppcoreguidelines-pro-type-vararg,hicpp-vararg)
-  EXPECT_EXIT(
-      SafeCast<int64_t>(y),
-      ::testing::KilledBySignal(6),
-//      ::testing::ExitedWithCode(3),
-      "Assert failed: value <= max");
+  EXPECT_DEATH(SafeCast<int64_t>(y), "Assert failed: value <= max");
 
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto,hicpp-avoid-goto)
   EXPECT_EQ(x, SafeCast<int64_t>(y - 1));
@@ -59,11 +46,7 @@ TEST(SafeCastTests, mixed) {  // NOLINT
   y++;
 
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto,hicpp-avoid-goto,cppcoreguidelines-pro-type-vararg,hicpp-vararg)
-  EXPECT_EXIT(
-      SafeCast<int32_t>(y),
-      ::testing::KilledBySignal(6),
-//      ::testing::ExitedWithCode(6),
-      "Assert failed: value <= max");
+  EXPECT_DEATH(SafeCast<int32_t>(y), "Assert failed: value <= max");
 
   // NOLINTNEXTLINE(cppcoreguidelines-avoid-goto,hicpp-avoid-goto)
   EXPECT_EQ(x, SafeCast<int32_t>(y - 1));
