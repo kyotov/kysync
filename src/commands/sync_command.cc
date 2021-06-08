@@ -1,9 +1,6 @@
 #include "sync_command.h"
 
 #include <glog/logging.h>
-#include <google/protobuf/io/coded_stream.h>
-#include <google/protobuf/util/delimited_message_util.h>
-#include <src/commands/pb/header.pb.h>
 #include <zstd.h>
 
 #include <array>
@@ -17,26 +14,20 @@
 #include "../checksums/weak_checksum.h"
 #include "../config.h"
 #include "../utilities/parallelize.h"
+#include "pb/header_adapter.h"
 
 namespace kysync {
 
 void SyncCommand::ParseHeader(Reader &metadata_reader) {
   static constexpr std::streamsize kMaxHeaderSize = 1024;
-  std::array<uint8_t, kMaxHeaderSize> buffer{};
-
+  std::vector<uint8_t> buffer(kMaxHeaderSize);
   metadata_reader.Read(buffer.data(), 0, kMaxHeaderSize);
-  auto cs =
-      google::protobuf::io::CodedInputStream(buffer.data(), kMaxHeaderSize);
-  auto header = Header();
-  google::protobuf::util::ParseDelimitedFromCodedStream(&header, &cs, nullptr);
 
-  CHECK(header.version() == 2) << "unsupported version" << header.version();
-  size_ = static_cast<std::streamsize>(header.size());
-  block_ = static_cast<std::streamsize>(header.block_size());
+  int version = 0;
+  header_size_ =
+      HeaderAdapter::ReadHeader(buffer, version, size_, block_, hash_);
+  CHECK(version == 2) << "unsupported version" << version;
   block_count_ = (size_ + block_ - 1) / block_;
-  hash_ = header.hash();
-  LOG(INFO) << header.DebugString();
-  header_size_ = cs.CurrentPosition();
 }
 
 template <typename T>

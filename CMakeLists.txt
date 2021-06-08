@@ -7,13 +7,13 @@ set(PACKAGES google/flags google/log google/protobuf google/test zstd httplib xx
 include(kydeps/kydeps.cmake)
 kydeps("${PACKAGES}")
 
-if (WIN32_)
+if (WIN32)
     add_compile_options(-EHsc)
     set(HEADERS ${CMAKE_BINARY_DIR}/../src/.*)
     string(REPLACE "\\" "." HEADERS "${HEADERS}")
     string(REPLACE "/" "." HEADERS "${HEADERS}")
     set(CMAKE_CXX_CLANG_TIDY
-            "C:/Program Files/LLVM/bin/clang-tidy.exe"
+            "C:/kamen/clion/kydeps_new/cmake-build-release/install/llvm_b81466e899edbfd2171ec43fd7ea6f0674a824c8/bin/clang-tidy.exe"
             "--header-filter=${HEADERS}"
             "--export-fixes=${CMAKE_BINARY_DIR}/clang-tidy.fixes"
             # --list-checks;
@@ -45,9 +45,12 @@ protobuf_generate(
         OUT_VAR PROTO
         LANGUAGE cpp
         PROTOC_OUT_DIR ${PROTO_DIR})
+
 add_library(proto
+        src/commands/pb/header_adapter.cc
         ${PROTO})
 target_link_libraries(proto
+        glog::glog
         ${Protobuf_LIBRARIES}
         protobuf::libprotobuf-lite
         protobuf::libprotobuf)
