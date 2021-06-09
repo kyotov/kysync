@@ -6,23 +6,123 @@
 #include <cinttypes>
 #include <fstream>
 #include <utility>
+#include <vector>
 
 #include "../checksums/strong_checksum_builder.h"
 #include "../checksums/weak_checksum.h"
+#include "../config.h"
+#include "../utilities/parallelize.h"
 #include "../utilities/streams.h"
 #include "pb/header_adapter.h"
 
 namespace kysync {
 
+class ChunkPreparer final {
+  PrepareCommand &prepare_command_;
+
+  std::ifstream input_;
+  std::fstream output_;
+
+  std::streamoff start_offset_;
+  std::streamoff finish_offset_;
+
+  std::vector<char> buffer_;
+  std::vector<char> compressed_buffer_;
+
+  void Prepare();
+  void CompressBuffer(int block_index, std::streamsize size);
+
+public:
+  ChunkPreparer(
+      PrepareCommand &prepare_command,
+      std::streamoff start_offset,
+      std::streamoff finish_offset);
+};
+
+void ChunkPreparer::Prepare() {
+  input_.seekg(start_offset_);
+
+  auto block_size = static_cast<std::streamsize>(buffer_.size());
+
+  auto current_offset = start_offset_;
+  auto block_index = static_cast<int>(start_offset_ / block_size);
+
+  while (current_offset < finish_offset_) {
+    auto size_to_read = Min(block_size, finish_offset_ - current_offset);
+    memset(buffer_.data() + size_to_read, 0, buffer_.size() - size_to_read);
+
+    input_.read(buffer_.data(), size_to_read);
+    CHECK(input_);
+    CHECK(input_.gcount() == size_to_read);
+
+    // FIXME(kyotov): should this be `size_to_read` instead of `block_size`
+    prepare_command_.weak_checksums_[block_index] =
+        WeakChecksum(buffer_.data(), block_size);
+
+    prepare_command_.strong_checksums_[block_index] =
+        StrongChecksum::Compute(buffer_.data(), block_size);
+
+    CompressBuffer(block_index, size_to_read);
+
+    prepare_command_.AdvanceProgress(size_to_read);
+
+    current_offset += block_size;
+    block_index++;
+  }
+}
+
+void ChunkPreparer::CompressBuffer(int block_index, std::streamsize size) {
+  std::streamsize compressed_size =
+      ZSTD_compress(  // NOLINT(bugprone-narrowing-conversions,
+                      // cppcoreguidelines-narrowing-conversions)
+          compressed_buffer_.data(),
+          prepare_command_.max_compressed_block_size_,
+          buffer_.data(),
+          size,
+          prepare_command_.compression_level_);
+  CHECK(!ZSTD_isError(compressed_size)) << ZSTD_getErrorName(compressed_size);
+
+  output_.seekp(block_index * prepare_command_.max_compressed_block_size_);
+  output_.write(compressed_buffer_.data(), compressed_size);
+  CHECK(output_);
+
+  prepare_command_.compressed_sizes_[block_index] = compressed_size;
+  prepare_command_.compressed_bytes_ += compressed_size;
+}
+
+ChunkPreparer::ChunkPreparer(
+    PrepareCommand &prepare_command,
+    std::streamoff start_offset,
+    std::streamoff finish_offset)
+    : prepare_command_(prepare_command),
+      input_(prepare_command.input_file_path_, std::ios::binary),
+      output_(std::move(
+          GetOutputStream(prepare_command.output_compressed_file_path_, 0))),
+      start_offset_(start_offset),
+      finish_offset_(finish_offset),
+      buffer_(prepare_command.block_size_),
+      compressed_buffer_(prepare_command.max_compressed_block_size_) {
+  CHECK(start_offset_ % prepare_command_.block_size_ == 0);
+  CHECK(input_) << "error reading from " << prepare_command_.input_file_path_;
+  CHECK(output_) << "unable to write to "
+                 << prepare_command_.output_compressed_file_path_;
+
+  Prepare();
+}
+
 PrepareCommand::PrepareCommand(
     fs::path input_file_path,
     fs::path output_ksync_file_path,
     fs::path output_compressed_file_path,
-    std::streamsize block_size)
+    std::streamsize block_size,
+    int threads)
     : input_file_path_(std::move(input_file_path)),
       output_ksync_file_path_(std::move(output_ksync_file_path)),
       output_compressed_file_path_(std::move(output_compressed_file_path)),
-      block_size_(block_size)  //
+      block_size_(block_size),
+      max_compressed_block_size_(
+          static_cast<std::streamsize>(ZSTD_compressBound(block_size))),
+      threads_(threads)  //
 {
   if (output_ksync_file_path_.empty()) {
     output_ksync_file_path_ = input_file_path_;
@@ -35,47 +135,51 @@ PrepareCommand::PrepareCommand(
 }
 
 int PrepareCommand::Run() {
-  auto v_buffer = std::vector<char>(block_size_);
-  auto *buffer = v_buffer.data();
-
-  auto compression_buffer_size = ZSTD_compressBound(block_size_);
-  auto compression_buffer = std::vector<char>(compression_buffer_size);
-
-  auto input = std::ifstream(input_file_path_, std::ios::binary);
-  CHECK(input) << "error reading from " << input_file_path_;
-
-  auto output = std::ofstream(output_compressed_file_path_, std::ios::binary);
-  CHECK(output) << "unable to write to " << output_compressed_file_path_;
-
   // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
   std::streamsize data_size = fs::file_size(input_file_path_);
   StartNextPhase(data_size);
 
+  auto block_count = (data_size + block_size_ - 1) / block_size_;
+
+  weak_checksums_.resize(block_count);
+  strong_checksums_.resize(block_count);
+  compressed_sizes_.resize(block_count);
+
+  auto compressed_input = GetOutputStream(output_compressed_file_path_, 0);
+  auto compressed_output = GetOutputStream(output_compressed_file_path_, 0);
+  auto compressed_buffer = std::vector<char>(max_compressed_block_size_);
+
+  Parallelize(
+      data_size,
+      block_size_,
+      0,
+      threads_,
+      [this](int, auto start_offset, auto finish_offset) {
+        auto p = ChunkPreparer(*this, start_offset, finish_offset);
+      });
+
   StrongChecksumBuilder hash;
 
-  while (auto count = input.read(buffer, block_size_).gcount()) {
-    memset(buffer + count, 0, block_size_ - count);
+  auto input = std::ifstream(input_file_path_, std::ios::binary);
+  auto buffer = std::vector<char>(block_size_);
 
-    hash.Update(buffer, count);
+  StartNextPhase(data_size + 2 * compressed_bytes_);
 
-    weak_checksums_.push_back(WeakChecksum(buffer, block_size_));
-    strong_checksums_.push_back(StrongChecksum::Compute(buffer, block_size_));
+  for (int i = 0; i < compressed_sizes_.size(); i++) {
+    compressed_input.seekg(i * max_compressed_block_size_);
+    compressed_input.read(compressed_buffer.data(), compressed_sizes_[i]);
+    CHECK(compressed_input);
+    CHECK(compressed_input.gcount() == compressed_sizes_[i]);
+    compressed_output.write(compressed_buffer.data(), compressed_sizes_[i]);
+    CHECK(compressed_output);
 
-    std::streamsize compressed_size =
-        ZSTD_compress(  // NOLINT(bugprone-narrowing-conversions,
-                        // cppcoreguidelines-narrowing-conversions)
-            compression_buffer.data(),
-            compression_buffer_size,
-            buffer,
-            count,
-            compression_level_);
-    CHECK(!ZSTD_isError(compressed_size)) << ZSTD_getErrorName(compressed_size);
-    output.write(compression_buffer.data(), compressed_size);
-    compressed_sizes_.push_back(compressed_size);
-    compressed_bytes_ += compressed_size;
+    input.read(buffer.data(), block_size_);
+    hash.Update(buffer.data(), input.gcount());
 
-    AdvanceProgress(count);
+    AdvanceProgress(input.gcount() + 2 * compressed_sizes_[i]);
   }
+
+  fs::resize_file(output_compressed_file_path_, compressed_output.tellp());
 
   // produce the ksync metadata output
 

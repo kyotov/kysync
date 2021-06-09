@@ -231,7 +231,8 @@ class KySyncPerformanceTestExecution final : public PerformanceTestExecution {
         GetDataFilePath(),
         GetMetadataFilePath(),
         GetCompressedFilePath(),
-        GetProfile().block_size);
+        GetProfile().block_size,
+        GetProfile().threads);
     RunAndCollectMetrics(prepare);
   }
 

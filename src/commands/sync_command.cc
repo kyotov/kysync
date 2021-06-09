@@ -14,6 +14,7 @@
 #include "../checksums/weak_checksum.h"
 #include "../config.h"
 #include "../utilities/parallelize.h"
+#include "../utilities/streams.h"
 #include "pb/header_adapter.h"
 
 namespace kysync {
@@ -156,27 +157,6 @@ void SyncCommand::AnalyzeSeed() {
       [this](auto id, auto beg, auto end) { AnalyzeSeedChunk(id, beg, end); });
 }
 
-std::fstream SyncCommand::ChunkReconstructor::GetOutputStream(
-    std::streamoff start_offset) {
-  // NOTE: The fstream object is consciously initialized with both out and in
-  // modes although this function only writes to the file.
-  // Calling
-  //   std::ofstream output(outputPath, std::ios::binary)
-  // or calling
-  //   std::fstream output(outputPath, std::ios::binary | std::ios::out)
-  // causes the file to be truncated which can lead to race conditions if called
-  // in each thread. More information about the truncate behavior is available
-  // here:
-  // https://stackoverflow.com/questions/39256916/does-stdofstream-truncate-or-append-by-default#:~:text=It%20truncates%20by%20default
-  // Using ate or app does not resolve this.
-  std::fstream output(
-      parent_impl_.output_path_,
-      std::ios::binary | std::fstream::out | std::fstream::in);
-  output.exceptions(std::fstream::failbit | std::fstream::badbit);
-  output.seekp(start_offset);
-  return std::move(output);
-}
-
 std::streamoff SyncCommand::FindSeedOffset(int block_index) const {
   auto wcs = weak_checksums_[block_index];
   auto scs = strong_checksums_[block_index];
@@ -309,7 +289,7 @@ SyncCommand::ChunkReconstructor::ChunkReconstructor(
       parent_impl_.max_compressed_size_ * parent_impl_.blocks_per_batch_);
   seed_reader_ = Reader::Create(parent_impl_.seed_uri_);
   data_reader_ = Reader::Create(parent_impl_.data_uri_);
-  output_ = GetOutputStream(start_offset);
+  output_ = GetOutputStream(parent_impl_.output_path_, start_offset);
 }
 
 void SyncCommand::ChunkReconstructor::ReconstructFromSeed(

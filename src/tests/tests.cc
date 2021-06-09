@@ -310,7 +310,7 @@ TEST_F(Tests, SimplePrepareCommand) {  // NOLINT
   auto pzst_path = tmp.GetPath() / "data.bin.pzst";
 
   WriteFile(data_path, data);
-  auto c = PrepareCommand(data_path, kysync_path, pzst_path, block);
+  auto c = PrepareCommand(data_path, kysync_path, pzst_path, block, 1);
   c.Run();
 
   const auto &wcs = KySyncTest::ExamineWeakChecksums(c);
@@ -337,7 +337,7 @@ TEST_F(Tests, SimplePrepareCommand2) {  // NOLINT
   auto pzst_path = tmp.GetPath() / "data.bin.pzst";
 
   WriteFile(data_path, data);
-  auto c = PrepareCommand(data_path, kysync_path, pzst_path, block);
+  auto c = PrepareCommand(data_path, kysync_path, pzst_path, block, 1);
   c.Run();
 
   const auto &wcs = KySyncTest::ExamineWeakChecksums(c);
@@ -364,7 +364,7 @@ TEST(Tests2, MetadataRoundtrip) {  // NOLINT
   auto output_path = tmp.GetPath() / "output.bin";
 
   WriteFile(data_path, data);
-  auto pc = PrepareCommand(data_path, kysync_path, pzst_path, block);
+  auto pc = PrepareCommand(data_path, kysync_path, pzst_path, block, 1);
   pc.Run();
 
   auto sc = SyncCommand(
@@ -406,7 +406,7 @@ void EndToEndTest(
 
   WriteFile(data_path, data);
   WriteFile(seed_data_path, seed_data);
-  PrepareCommand(data_path, kysync_path, pzst_path, block_size).Run();
+  PrepareCommand(data_path, kysync_path, pzst_path, block_size, 1).Run();
 
   SyncCommand(
       "file://" + (compression_disabled ? data_path : pzst_path).string(),
@@ -534,7 +534,8 @@ void EndToEndFilesTest(
                          source_file_name,
                          metadata_file_name,
                          compressed_file_name,
-                         block_size)
+                         block_size,
+                         32)
                          .Run();
   CHECK(return_code == 0) << "Prepare command failed for " + source_file_name;
   EXPECT_TRUE(DoFilesMatch(expected_metadata_file_name, metadata_file_name))

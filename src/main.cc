@@ -43,7 +43,8 @@ int main(int argc, char **argv) {
             FLAGS_input_filename,
             FLAGS_output_ksync_filename,
             FLAGS_output_compressed_filename,
-            FLAGS_block_size);
+            FLAGS_block_size,
+            FLAGS_threads);
 
         return kysync::Monitor(command).Run();
       }

@@ -89,6 +89,7 @@ include(CTest)
 enable_testing()
 
 add_subdirectory(src/tests)
+add_subdirectory(src/commands)
 add_test(NAME tests COMMAND tests)
 add_test(NAME performance_tests COMMAND perf_tests)
 add_test(NAME http_tests COMMAND http_tests)

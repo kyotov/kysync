@@ -14,19 +14,26 @@ namespace kysync {
 namespace fs = std::filesystem;
 
 class KySyncTest;
+class ChunkPreparer;
 
 class PrepareCommand final : public Command {
   friend class KySyncTest;
+  // TODO(kyotov): discuss with ashish the cost-benefit of this friendship :)
+  friend class ChunkPreparer;
 
   fs::path input_file_path_;
   fs::path output_ksync_file_path_;
   fs::path output_compressed_file_path_;
+
   std::streamsize block_size_;
+  std::streamsize max_compressed_block_size_;
 
   std::vector<uint32_t> weak_checksums_;
   std::vector<StrongChecksum> strong_checksums_;
   std::vector<std::streamsize> compressed_sizes_;
+
   int compression_level_ = 1;
+  int threads_;
 
   Metric compressed_bytes_{};
 
@@ -35,7 +42,8 @@ public:
       fs::path input_file_path,
       fs::path output_ksync_file_path,
       fs::path output_compressed_file_path,
-      std::streamsize block_size);
+      std::streamsize block_size,
+      int threads);
 
   int Run() override;
 
