@@ -44,7 +44,7 @@ GenDataCommand::GenDataCommand(
   LOG(INFO) << "sizeof(RandomValueType): " << sizeof(RandomValueType);
 };
 
-std::vector<RandomValueType> GenVec(
+static std::vector<RandomValueType> GenVec(
     std::streamsize size,
     RandomEngine &random_engine) {
   auto result = std::vector<RandomValueType>();
@@ -85,7 +85,7 @@ void GenDataCommand::GenChunk(int id, std::streamoff beg, std::streamoff end) {
   }
 }
 
-void CreateFile(const fs::path &path, std::streamsize size) {
+static void CreateFile(const fs::path &path, std::streamsize size) {
   std::ofstream(path, std::ios::binary).close();
   std::error_code ec{};
   fs::resize_file(path, size, ec);
@@ -105,6 +105,7 @@ int GenDataCommand::Run() {
       data_size_,
       fragment_size_,
       0,
+      // FIXME(kyotov): this should not be hardcoded!
       32,
       [this](auto id, auto beg, auto end) { GenChunk(id, beg, end); });
 

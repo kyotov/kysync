@@ -1,8 +1,6 @@
 #include "prepare_command.h"
 
 #include <glog/logging.h>
-#include <google/protobuf/util/delimited_message_util.h>
-#include <src/commands/pb/header.pb.h>
 #include <zstd.h>
 
 #include <cinttypes>
@@ -12,6 +10,7 @@
 #include "../checksums/strong_checksum_builder.h"
 #include "../checksums/weak_checksum.h"
 #include "../utilities/streams.h"
+#include "pb/header_adapter.h"
 
 namespace kysync {
 
@@ -40,8 +39,7 @@ int PrepareCommand::Run() {
   auto *buffer = v_buffer.data();
 
   auto compression_buffer_size = ZSTD_compressBound(block_size_);
-  auto v_compression_buffer = std::vector<char>(compression_buffer_size);
-  auto *compression_buffer = v_compression_buffer.data();
+  auto compression_buffer = std::vector<char>(compression_buffer_size);
 
   auto input = std::ifstream(input_file_path_, std::ios::binary);
   CHECK(input) << "error reading from " << input_file_path_;
@@ -66,13 +64,13 @@ int PrepareCommand::Run() {
     std::streamsize compressed_size =
         ZSTD_compress(  // NOLINT(bugprone-narrowing-conversions,
                         // cppcoreguidelines-narrowing-conversions)
-            compression_buffer,
+            compression_buffer.data(),
             compression_buffer_size,
             buffer,
             count,
             compression_level_);
     CHECK(!ZSTD_isError(compressed_size)) << ZSTD_getErrorName(compressed_size);
-    output.write(compression_buffer, compressed_size);
+    output.write(compression_buffer.data(), compressed_size);
     compressed_sizes_.push_back(compressed_size);
     compressed_bytes_ += compressed_size;
 
@@ -86,13 +84,13 @@ int PrepareCommand::Run() {
 
   StartNextPhase(1);
 
-  auto header = Header();
-  header.set_version(2);
-  header.set_size(data_size);
-  header.set_block_size(block_size_);
-  header.set_hash(hash.Digest().ToString());
-  google::protobuf::util::SerializeDelimitedToOstream(header, &output_ksync);
-  AdvanceProgress(header.ByteSizeLong());
+  auto header_size = HeaderAdapter::WriteHeader(
+      output_ksync,
+      2,
+      data_size,
+      block_size_,
+      hash.Digest().ToString());
+  AdvanceProgress(header_size);
 
   AdvanceProgress(StreamWrite(output_ksync, weak_checksums_));
   AdvanceProgress(StreamWrite(output_ksync, strong_checksums_));

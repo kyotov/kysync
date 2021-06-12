@@ -16,6 +16,8 @@ Checks: >
   -fuchsia-overloaded-operator,
   -fuchsia-default-arguments-calls,
   -altera-struct-pack-align,
+  -altera-unroll-loops,
+  -altera-id-dependent-backward-branch,
 #  google-*,
 #  readability-*,
 #  portability-*,

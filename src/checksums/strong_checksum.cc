@@ -21,7 +21,8 @@ StrongChecksum StrongChecksum::Compute(
 }
 
 StrongChecksum StrongChecksum::Compute(std::istream &input) {
-  static constexpr std::streamsize kBufSize = 64 * 1024;
+  static constexpr auto kBufSize =
+      static_cast<const std::streamsize>(64 * 1024);
 
   auto *state = XXH3_createState();
 

@@ -15,7 +15,7 @@ void StrongChecksumBuilder::Update(const void* buffer, std::streamsize size) {
 StrongChecksum StrongChecksumBuilder::Digest() {
   auto digest = XXH3_128bits_digest(state_);
 
-  return StrongChecksum(digest.high64, digest.low64);
+  return {digest.high64, digest.low64};
 }
 
 }  // namespace kysync
