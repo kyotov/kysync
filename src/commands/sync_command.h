@@ -8,6 +8,7 @@
 
 #include "../checksums/strong_checksum.h"
 #include "../readers/reader.h"
+#include "../utilities/file_stream.h"
 #include "command.h"
 
 namespace kysync {
@@ -68,7 +69,8 @@ class SyncCommand final : public Command {
   void ReconstructSourceChunk(
       int id,
       std::streamoff start_offset,
-      std::streamoff end_offset);
+      std::streamoff end_offset,
+      const FileStream &output_file_stream);
 
   std::streamoff FindSeedOffset(int block_index) const;
   void ReconstructSource();
@@ -104,7 +106,8 @@ class SyncCommand final : public Command {
   public:
     ChunkReconstructor(
         SyncCommand &parent,
-        std::streamoff start_offset);
+        std::streamoff start_offset,
+        const FileStream &output_file_stream);
 
     void ReconstructFromSeed(int block_index, std::streamoff seed_offset);
     void EnqueueBlockRetrieval(int block_index, std::streamoff begin_offset);

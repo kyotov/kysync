@@ -11,6 +11,7 @@
 #include "../checksums/strong_checksum_builder.h"
 #include "../checksums/weak_checksum.h"
 #include "../config.h"
+#include "../utilities/file_stream.h"
 #include "../utilities/parallelize.h"
 #include "../utilities/streams.h"
 #include "pb/header_adapter.h"
@@ -36,7 +37,8 @@ public:
   ChunkPreparer(
       PrepareCommand &prepare_command,
       std::streamoff start_offset,
-      std::streamoff finish_offset);
+      std::streamoff finish_offset,
+      const FileStream &compressed_output_file_stream);
 };
 
 void ChunkPreparer::Prepare() {
@@ -93,11 +95,11 @@ void ChunkPreparer::CompressBuffer(int block_index, std::streamsize size) {
 ChunkPreparer::ChunkPreparer(
     PrepareCommand &prepare_command,
     std::streamoff start_offset,
-    std::streamoff finish_offset)
+    std::streamoff finish_offset,
+    const FileStream &compressed_output_file_stream)
     : prepare_command_(prepare_command),
       input_(prepare_command.input_file_path_, std::ios::binary),
-      output_(std::move(
-          GetOutputStream(prepare_command.output_compressed_file_path_, 0))),
+      output_(std::move(compressed_output_file_stream.GetStream())),
       start_offset_(start_offset),
       finish_offset_(finish_offset),
       buffer_(prepare_command.block_size_),
@@ -145,8 +147,7 @@ int PrepareCommand::Run() {
   strong_checksums_.resize(block_count);
   compressed_sizes_.resize(block_count);
 
-  auto compressed_input = GetOutputStream(output_compressed_file_path_, 0);
-  auto compressed_output = GetOutputStream(output_compressed_file_path_, 0);
+  auto compressed_output_file_stream = FileStream(output_compressed_file_path_);
   auto compressed_buffer = std::vector<char>(max_compressed_block_size_);
 
   Parallelize(
@@ -154,8 +155,15 @@ int PrepareCommand::Run() {
       block_size_,
       0,
       threads_,
-      [this](int, auto start_offset, auto finish_offset) {
-        auto p = ChunkPreparer(*this, start_offset, finish_offset);
+      [this, &compressed_output_file_stream](
+          int,
+          auto start_offset,
+          auto finish_offset) {
+        auto p = ChunkPreparer(
+            *this,
+            start_offset,
+            finish_offset,
+            compressed_output_file_stream);
       });
 
   StrongChecksumBuilder hash;
@@ -166,6 +174,9 @@ int PrepareCommand::Run() {
   // TODO(kyotov): this is going to improve with issue
   //  https://github.com/kyotov/ksync/issues/100
   StartNextPhase(data_size + 2 * compressed_bytes_);
+
+  auto compressed_input = compressed_output_file_stream.GetStream();
+  auto compressed_output = compressed_output_file_stream.GetStream();
 
   for (int i = 0; i < compressed_sizes_.size(); i++) {
     compressed_input.seekg(i * max_compressed_block_size_);

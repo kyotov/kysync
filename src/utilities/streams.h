@@ -11,10 +11,6 @@
 
 namespace kysync {
 
-std::fstream GetOutputStream(
-    const std::filesystem::path &path,
-    std::streamoff offset);
-
 std::streamsize
 StreamWrite(std::ostream &stream, const void *data, std::streamsize size);
 
