@@ -163,6 +163,8 @@ int PrepareCommand::Run() {
   auto input = std::ifstream(input_file_path_, std::ios::binary);
   auto buffer = std::vector<char>(block_size_);
 
+  // TODO(kyotov): this is going to improve with issue
+  //  https://github.com/kyotov/ksync/issues/100
   StartNextPhase(data_size + 2 * compressed_bytes_);
 
   for (int i = 0; i < compressed_sizes_.size(); i++) {

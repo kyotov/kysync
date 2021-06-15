@@ -2,7 +2,6 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/kydeps" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/build2/deps/src/gflags/doc" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/build3/deps/src/gflags" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/build3/deps/src/gflags/doc" vcs="Git" />
@@ -26,5 +25,6 @@
     <mapping directory="$PROJECT_DIR$/deps/Release/src/glog" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/deps/Release/src/googletest" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/deps/Release/src/xxhash" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/kydeps" vcs="Git" />
   </component>
 </project>
