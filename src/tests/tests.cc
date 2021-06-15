@@ -225,45 +225,19 @@ std::string ReadFile(const fs::path &path) {
 class KySyncTest {
 public:
   static const std::vector<uint32_t> &ExamineWeakChecksums(
-      const PrepareCommand &c) {
-    return c.weak_checksums_;
+      const KySyncCommand &c) {
+    return c.GetWeakChecksums();
   }
 
   static const std::vector<StrongChecksum> &ExamineStrongChecksums(
-      const PrepareCommand &c) {
-    return c.strong_checksums_;
-  }
-
-  static const std::vector<uint32_t> &ExamineWeakChecksums(
-      const SyncCommand &c) {
-    return c.weak_checksums_;
-  }
-
-  static const std::vector<StrongChecksum> &ExamineStrongChecksums(
-      const SyncCommand &c) {
-    return c.strong_checksums_;
+      const KySyncCommand &c) {
+    return c.GetStrongChecksums();
   }
 
   static void ReadMetadata(SyncCommand &c) { c.ReadMetadata(); }
 
   static auto ExamineAnalisys(SyncCommand &c) {
-    std::vector<std::streamoff> result;
-
-    for (int i = 0; i < c.block_count_; i++) {
-      auto wcs = c.weak_checksums_[i];
-      auto data = c.analysis_[wcs];
-      result.push_back(data.seed_offset);
-    }
-
-    return result;
-  }
-
-  static int GetCompressionLevel(const PrepareCommand &c) {
-    return c.compression_level_;
-  }
-
-  static std::streamsize GetBlockSize(const PrepareCommand &c) {
-    return c.block_size_;
+    return c.GetTestAnalysis();
   }
 };
 
@@ -312,16 +286,16 @@ TEST_F(Tests, SimplePrepareCommand) {  // NOLINT
   auto pzst_path = tmp.GetPath() / "data.bin.pzst";
 
   WriteFile(data_path, data);
-  auto c = PrepareCommand(data_path, kysync_path, pzst_path, block, 1);
-  c.Run();
+  auto c = PrepareCommand::Create(data_path, kysync_path, pzst_path, block, 1);
+  c->Run();
 
-  const auto &wcs = KySyncTest::ExamineWeakChecksums(c);
+  const auto &wcs = KySyncTest::ExamineWeakChecksums(*c);
   EXPECT_EQ(wcs.size(), block_count);
   EXPECT_EQ(WeakChecksum("0123", block), wcs[0]);
   EXPECT_EQ(WeakChecksum("4567", block), wcs[1]);
   EXPECT_EQ(WeakChecksum("89\0\0", block), wcs[2]);
 
-  const auto &scs = KySyncTest::ExamineStrongChecksums(c);
+  const auto &scs = KySyncTest::ExamineStrongChecksums(*c);
   EXPECT_EQ(wcs.size(), block_count);
   EXPECT_EQ(StrongChecksum::Compute("0123", block), scs[0]);
   EXPECT_EQ(StrongChecksum::Compute("4567", block), scs[1]);
@@ -339,16 +313,16 @@ TEST_F(Tests, SimplePrepareCommand2) {  // NOLINT
   auto pzst_path = tmp.GetPath() / "data.bin.pzst";
 
   WriteFile(data_path, data);
-  auto c = PrepareCommand(data_path, kysync_path, pzst_path, block, 1);
-  c.Run();
+  auto c = PrepareCommand::Create(data_path, kysync_path, pzst_path, block, 1);
+  c->Run();
 
-  const auto &wcs = KySyncTest::ExamineWeakChecksums(c);
+  const auto &wcs = KySyncTest::ExamineWeakChecksums(*c);
   EXPECT_EQ(wcs.size(), block_count);
   EXPECT_EQ(WeakChecksum("1234", block), wcs[0]);
   EXPECT_EQ(WeakChecksum("1234", block), wcs[1]);
   EXPECT_EQ(WeakChecksum("1234", block), wcs[2]);
 
-  const auto &scs = KySyncTest::ExamineStrongChecksums(c);
+  const auto &scs = KySyncTest::ExamineStrongChecksums(*c);
   EXPECT_EQ(wcs.size(), block_count);
   EXPECT_EQ(StrongChecksum::Compute("1234", block), scs[0]);
   EXPECT_EQ(StrongChecksum::Compute("1234", block), scs[1]);
@@ -366,10 +340,10 @@ TEST(Tests2, MetadataRoundtrip) {  // NOLINT
   auto output_path = tmp.GetPath() / "output.bin";
 
   WriteFile(data_path, data);
-  auto pc = PrepareCommand(data_path, kysync_path, pzst_path, block, 1);
-  pc.Run();
+  auto pc = PrepareCommand::Create(data_path, kysync_path, pzst_path, block, 1);
+  pc->Run();
 
-  auto sc = SyncCommand(
+  auto sc = SyncCommand::Create(
       "file://" + data_path.string(),
       "file://" + kysync_path.string(),
       "file://" + data_path.string(),
@@ -378,15 +352,15 @@ TEST(Tests2, MetadataRoundtrip) {  // NOLINT
       4,
       1);
 
-  KySyncTest::ReadMetadata(sc);
+  KySyncTest::ReadMetadata(*sc);
 
   // expect that the checksums had a successful round trip
   EXPECT_EQ(
-      KySyncTest::ExamineWeakChecksums(pc),
-      KySyncTest::ExamineWeakChecksums(sc));
+      KySyncTest::ExamineWeakChecksums(*pc),
+      KySyncTest::ExamineWeakChecksums(*sc));
   EXPECT_EQ(
-      KySyncTest::ExamineStrongChecksums(pc),
-      KySyncTest::ExamineStrongChecksums(sc));
+      KySyncTest::ExamineStrongChecksums(*pc),
+      KySyncTest::ExamineStrongChecksums(*sc));
 }
 
 void EndToEndTest(
@@ -408,9 +382,10 @@ void EndToEndTest(
 
   WriteFile(data_path, data);
   WriteFile(seed_data_path, seed_data);
-  PrepareCommand(data_path, kysync_path, pzst_path, block_size, 1).Run();
+  PrepareCommand::Create(data_path, kysync_path, pzst_path, block_size, 1)
+      ->Run();
 
-  SyncCommand(
+  SyncCommand::Create(
       "file://" + (compression_disabled ? data_path : pzst_path).string(),
       "file://" + kysync_path.string(),
       "file://" + data_path.string(),
@@ -418,7 +393,7 @@ void EndToEndTest(
       compression_disabled,
       4,
       1)
-      .Run();
+      ->Run();
 
   EXPECT_EQ(data, ReadFile(output_path));
 }
@@ -501,7 +476,7 @@ void SyncFile(
     int threads) {  // NOLINT(misc-unused-parameters)
   std::string file_uri_prefix = "file://";
   fs::path output_file_name = temp_path_name / "syncd_output_file";
-  auto sync_command = SyncCommand(
+  auto sync_command = SyncCommand::Create(
       file_uri_prefix + source_file_name.string(),
       file_uri_prefix + metadata_file_name.string(),
       file_uri_prefix + seed_data_file_name.string(),
@@ -509,7 +484,7 @@ void SyncFile(
       compression_disabled,
       4,
       threads);
-  auto return_code = sync_command.Run();
+  auto return_code = sync_command->Run();
   CHECK(return_code == 0) << "Sync command failed for " +
                                  source_file_name.string();
   EXPECT_TRUE(DoFilesMatch(expected_output_file_name, output_file_name))
@@ -533,13 +508,13 @@ void EndToEndFilesTest(
   auto temp_path_name = tmp.GetPath();
   auto metadata_file_name = temp_path_name / "i.ksync";
   auto compressed_file_name = temp_path_name / "i.pzst";
-  auto return_code = PrepareCommand(
+  auto return_code = PrepareCommand::Create(
                          source_file_name,
                          metadata_file_name,
                          compressed_file_name,
                          block_size,
                          threads)
-                         .Run();
+                         ->Run();
   CHECK(return_code == 0) << "Prepare command failed for " + source_file_name;
   EXPECT_TRUE(DoFilesMatch(expected_metadata_file_name, metadata_file_name))
       << "Generated metadata files does not match expectations";

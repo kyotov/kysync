@@ -20,6 +20,8 @@
 
 namespace kysync {
 
+namespace fs = std::filesystem;
+
 // NOTE: using #X so macro is necessary
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define PERFLOG(X) #X << "=" << (X) << std::endl
@@ -244,17 +246,17 @@ public:
 
 class KySyncPerformanceTestExecution final : public PerformanceTestExecution {
   void Prepare() override {
-    auto prepare = PrepareCommand(  //
+    auto prepare = PrepareCommand::Create(  //
         GetDataFilePath(),
         GetMetadataFilePath(),
         GetCompressedFilePath(),
         GetProfile().block_size,
         GetProfile().threads);
-    RunAndCollectMetrics(prepare);
+    RunAndCollectMetrics(*prepare);
   }
 
   void Sync() override {
-    auto sync = SyncCommand(  //
+    auto sync = SyncCommand::Create(  //
         GetUri(GetDataFilePath()),
         GetUri(GetMetadataFilePath()),
         "file://" + GetSeedDataFilePath().string(),  // seed is always local
@@ -262,7 +264,7 @@ class KySyncPerformanceTestExecution final : public PerformanceTestExecution {
         !GetProfile().compression,
         GetProfile().blocks_in_batch,
         GetProfile().threads);
-    RunAndCollectMetrics(sync);
+    RunAndCollectMetrics(*sync);
   }
 
 public:

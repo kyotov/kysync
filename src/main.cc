@@ -48,21 +48,21 @@ int main(int argc, char **argv) {
           LOG(INFO) << "compressed output defaulted to " << FLAGS_output_compressed_filename;
         }
 
-        auto command = kysync::PrepareCommand(
+        auto command = kysync::PrepareCommand::Create(
             FLAGS_input_filename,
             FLAGS_output_kysync_filename,
             FLAGS_output_compressed_filename,
             FLAGS_block_size,
             FLAGS_threads);
 
-        return kysync::Monitor(command).Run();
+        return kysync::Monitor(*command).Run();
       }
 
       if (FLAGS_command == "sync") {
         auto output = std::ofstream(FLAGS_output_filename, std::ios::binary);
         CHECK(output) << "unable to write to " << FLAGS_output_filename;
 
-        auto command = kysync::SyncCommand(
+        auto command = kysync::SyncCommand::Create(
             FLAGS_data_uri,
             FLAGS_metadata_uri,
             !FLAGS_seed_data_uri.empty() ? FLAGS_seed_data_uri
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
             FLAGS_num_blocks_in_batch,
             FLAGS_threads);
 
-        return kysync::Monitor(command).Run();
+        return kysync::Monitor(*command).Run();
       }
 
       CHECK(false) << "unhandled command";
