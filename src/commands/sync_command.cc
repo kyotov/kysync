@@ -26,7 +26,6 @@ class SyncCommandImpl final : public SyncCommand {
   std::string data_uri_;
   std::string metadata_uri_;
   std::string seed_uri_;
-  //  std::filesystem::path output_path_;
   bool compression_disabled_;
   int blocks_per_batch_;
   int threads_;
@@ -506,10 +505,9 @@ void SyncCommandImpl::ReconstructSource() {
 
   StrongChecksumBuilder output_hash;
 
-  auto read_for_hash_check =
-      output_path_file_stream_provider_.CreateFileStream();
-  while (read_for_hash_check) {
-    auto count = read_for_hash_check.read(buffer.data(), kBufferSize).gcount();
+  auto output = output_path_file_stream_provider_.CreateFileStream();
+  while (output) {
+    auto count = output.read(buffer.data(), kBufferSize).gcount();
     output_hash.Update(buffer.data(), count);
     AdvanceProgress(count);
   }

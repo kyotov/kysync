@@ -27,5 +27,7 @@
     <mapping directory="$PROJECT_DIR$/deps/Release/src/glog" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/deps/Release/src/googletest" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/deps/Release/src/xxhash" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/kydeps" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/kydeps/install" vcs="Git" />
   </component>
 </project>

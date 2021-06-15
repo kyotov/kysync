@@ -10,6 +10,8 @@ namespace kysync {
 
 class PrepareCommand : public KySyncCommand {
 public:
+  virtual ~PrepareCommand() = default;
+
   static std::unique_ptr<PrepareCommand> Create(
       std::filesystem::path input_file_path,
       std::filesystem::path output_ksync_file_path,

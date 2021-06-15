@@ -14,6 +14,8 @@ class SyncCommand : public KySyncCommand {
   virtual std::vector<std::streamoff> GetTestAnalysis() const = 0;
 
 public:
+  virtual ~SyncCommand() = default;
+
   static std::unique_ptr<SyncCommand> Create(
       const std::string &data_uri,
       const std::string &metadata_uri,
