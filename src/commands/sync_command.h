@@ -12,6 +12,8 @@
 
 namespace kysync {
 
+// TODO(kyotov): discuss -- the user only really needs the constructor...
+//  should this all be in the implementation with a abstract interface here?
 class SyncCommand final : public Command {
   friend class KySyncTest;
 
@@ -87,7 +89,6 @@ class SyncCommand final : public Command {
     std::fstream output_;
     std::vector<BatchRetrivalInfo> batched_retrieval_infos_;
 
-    std::fstream GetOutputStream(std::streamoff start_offset);
     void WriteRetrievedBatch(std::streamsize size_to_write);
 
     void ValidateAndWrite(

@@ -14,3 +14,7 @@ https://blog.kitware.com/static-checks-with-cmake-cdash-iwyu-clang-tidy-lwyu-cpp
 ### build on macos
 
 make SDKROOT=`xcrun --show-sdk-path`
+
+### follow up on 
+
+* https://crascit.com/2015/03/28/enabling-cxx11-in-cmake/

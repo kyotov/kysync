@@ -3,25 +3,26 @@ project(ksync)
 
 set(CMAKE_CXX_STANDARD 20)
 
-set(PACKAGES google/flags google/log google/protobuf google/test zstd httplib xxHash)
-include(kydeps/kydeps.cmake)
-kydeps("${PACKAGES}")
+include(kydeps/install/KyDeps.cmake)
 
-if (WIN32)
-    add_compile_options(-EHsc)
-    set(HEADERS ${CMAKE_BINARY_DIR}/../src/.*)
-    string(REPLACE "\\" "." HEADERS "${HEADERS}")
-    string(REPLACE "/" "." HEADERS "${HEADERS}")
+include(gflags)
+include(glog)
+include(protobuf)
+include(GTest)
+include(zstd)
+include(httplib)
+include(xxHash)
+include(llvm)
+
+if (USE_CLANG_TIDY)
+    string(REGEX REPLACE "[\\\\|/]" "[\\\\/]" HEADERS "${CMAKE_BINARY_DIR}/../.*")
     set(CMAKE_CXX_CLANG_TIDY
-            "C:/kamen/clion/kydeps_new/cmake-build-release/install/llvm_b81466e899edbfd2171ec43fd7ea6f0674a824c8/bin/clang-tidy.exe"
+            "${CLANG_TIDY}"
             "--header-filter=${HEADERS}"
-            "--export-fixes=${CMAKE_BINARY_DIR}/clang-tidy.fixes"
-            # --list-checks;
-            # --dump-config;
-            )
+            "--export-fixes=${CMAKE_BINARY_DIR}/clang-tidy.fixes")
 endif ()
 
-# TODO: figure out libraries
+# TODO(kyotov): figure out libraries
 #       https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -89,6 +90,7 @@ include(CTest)
 enable_testing()
 
 add_subdirectory(src/tests)
+add_subdirectory(src/commands)
 add_test(NAME tests COMMAND tests)
 add_test(NAME performance_tests COMMAND perf_tests)
 add_test(NAME http_tests COMMAND http_tests)

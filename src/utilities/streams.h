@@ -3,11 +3,17 @@
 
 #include <glog/logging.h>
 
+#include <filesystem>
+#include <fstream>
 #include <limits>
 #include <ostream>
 #include <vector>
 
 namespace kysync {
+
+std::fstream GetOutputStream(
+    const std::filesystem::path &path,
+    std::streamoff offset);
 
 std::streamsize
 StreamWrite(std::ostream &stream, const void *data, std::streamsize size);
@@ -26,9 +32,7 @@ std::streamsize StreamWrite(
 }
 
 template <typename T>
-std::streamsize StreamWrite(
-    std::ostream &stream,
-    const std::vector<T> &data) {
+std::streamsize StreamWrite(std::ostream &stream, const std::vector<T> &data) {
   return StreamWrite(stream, data, std::numeric_limits<std::streamsize>::max());
 }
 
