@@ -2,6 +2,13 @@
 <project version="4">
   <component name="PublishConfigData" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
+      <paths name="oldbam (38457ee0-c593-46e8-82d2-d6bb43a35230)">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="oldbam (8b5f35dd-0833-49f2-81f8-80f53bdecb00)">
         <serverdata>
           <mappings>
