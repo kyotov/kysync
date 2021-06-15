@@ -245,7 +245,7 @@ void SyncCommand::ChunkReconstructor::EnqueueBlockRetrieval(
     std::streamoff begin_offset) {
   std::streamoff offset_to_write_to = output_.tellp();
   auto remaining_size =
-      std::min(parent_impl_.block_, parent_impl_.size_ - begin_offset);
+      Min(parent_impl_.block_, parent_impl_.size_ - begin_offset);
   if (parent_impl_.compression_disabled_) {
     batched_retrieval_infos_.push_back(
         {.block_index = block_index,
