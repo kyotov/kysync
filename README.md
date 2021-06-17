@@ -17,39 +17,39 @@ The below experiments use 128 threads on:
 This is the Ubuntu 20.04.01 DVD reconstructing itself over an identical copy with 16kb chunks:
 
 ```
-> kysync.exe -command_ sync -data-uri="file://c:\Users\Kamen Yotov\Downloads\ubuntu-20.04.1-desktop-amd64.iso" -input-filename="C:\Users\Kamen Yotov\Downloads\ubuntu-20.04.1-desktop-amd64.iso" -output-filename=x.iso -threads=128
+> kysync.exe -observable_ sync -data-uri="file://c:\Users\Kamen Yotov\Downloads\ubuntu-20.04.1-desktop-amd64.iso" -input-filename="C:\Users\Kamen Yotov\Downloads\ubuntu-20.04.1-desktop-amd64.iso" -output-filename=x.iso -threads=128
 
 O0217 20:30:54.898490 16168 main.cpp:29] ksync v0.1                                                                     
-O0217 20:30:56.792490 16168 Monitor.cpp:71] phase_ 2 |  2533 MB |   1.4s |  1866.8 MB/s |  95% |   1.5s total            
-O0217 20:30:57.993489 16168 Monitor.cpp:71] phase_ 3 |  2458 MB |   1.1s |  2249.5 MB/s |  92% |   2.7s total            
-O0217 20:31:01.765489 16168 Monitor.cpp:88] phase_ 4 |  2656 MB |   3.8s |   704.1 MB/s | 100% |   6.5s total            
-O0217 20:31:01.765489 16168 Monitor.cpp:49] //progress_phase_=4                                                           
-O0217 20:31:01.765489 16168 Monitor.cpp:49] //progress_total_bytes_=2785017856                                             
-O0217 20:31:01.765489 16168 Monitor.cpp:49] //progress_current_bytes_=2785017856                                           
-O0217 20:31:01.765489 16168 Monitor.cpp:49] //weak_checksum_matches_=169864                                                
-O0217 20:31:01.765489 16168 Monitor.cpp:49] //weak_checksum_false_positive_=7                                               
-O0217 20:31:01.765489 16168 Monitor.cpp:49] //strong_checksum_matches_=169857                                              
-O0217 20:31:01.765489 16168 Monitor.cpp:49] //reused_bytes_=2784935936                                                    
-O0217 20:31:01.766489 16168 Monitor.cpp:49] //downloaded_bytes_=81920                                                     
+O0217 20:30:56.792490 16168 Observer.cpp:71] phase_ 2 |  2533 MB |   1.4s |  1866.8 MB/s |  95% |   1.5s total            
+O0217 20:30:57.993489 16168 Observer.cpp:71] phase_ 3 |  2458 MB |   1.1s |  2249.5 MB/s |  92% |   2.7s total            
+O0217 20:31:01.765489 16168 Observer.cpp:88] phase_ 4 |  2656 MB |   3.8s |   704.1 MB/s | 100% |   6.5s total            
+O0217 20:31:01.765489 16168 Observer.cpp:49] //progress_phase_=4                                                           
+O0217 20:31:01.765489 16168 Observer.cpp:49] //progress_total_bytes_=2785017856                                             
+O0217 20:31:01.765489 16168 Observer.cpp:49] //progress_current_bytes_=2785017856                                           
+O0217 20:31:01.765489 16168 Observer.cpp:49] //weak_checksum_matches_=169864                                                
+O0217 20:31:01.765489 16168 Observer.cpp:49] //weak_checksum_false_positive_=7                                               
+O0217 20:31:01.765489 16168 Observer.cpp:49] //strong_checksum_matches_=169857                                              
+O0217 20:31:01.765489 16168 Observer.cpp:49] //reused_bytes_=2784935936                                                    
+O0217 20:31:01.766489 16168 Observer.cpp:49] //downloaded_bytes_=81920                                                     
 ```
 
 This is the Ubuntu 20.04.01 DVD reconstructing itself over 20.10 DVD (6 months apart) with 16kb chunks:
 
 ```
-> kysync.exe -command_ sync -data-uri="file://c:\Users\Kamen Yotov\Downloads\ubuntu-20.04.1-desktop-amd64.iso" -input-filename="C:\Users\Kamen Yotov\Downloads\ubuntu-20.10-desktop-amd64.iso" -output-filename=x.iso -threads=128
+> kysync.exe -observable_ sync -data-uri="file://c:\Users\Kamen Yotov\Downloads\ubuntu-20.04.1-desktop-amd64.iso" -input-filename="C:\Users\Kamen Yotov\Downloads\ubuntu-20.10-desktop-amd64.iso" -output-filename=x.iso -threads=128
 
 O0217 20:30:18.109661  3920 main.cpp:29] ksync v0.1                                                                     
-O0217 20:30:25.272665  3920 Monitor.cpp:71] phase_ 2 |  2806 MB |   6.6s |   424.9 MB/s | 100% |   6.7s total            
-O0217 20:30:26.147660  3920 Monitor.cpp:71] phase_ 3 |  2408 MB |   0.8s |  3144.1 MB/s |  90% |   7.6s total            
-O0217 20:30:29.907661  3920 Monitor.cpp:88] phase_ 4 |  2656 MB |   3.8s |   706.4 MB/s | 100% |  11.5s total            
-O0217 20:30:29.907661  3920 Monitor.cpp:49] //progress_phase_=4                                                           
-O0217 20:30:29.907661  3920 Monitor.cpp:49] //progress_total_bytes_=2785017856                                             
-O0217 20:30:29.907661  3920 Monitor.cpp:49] //progress_current_bytes_=2785017856                                           
-O0217 20:30:29.907661  3920 Monitor.cpp:49] //weak_checksum_matches_=128225                                                
-O0217 20:30:29.908663  3920 Monitor.cpp:49] //weak_checksum_false_positive_=66015                                           
-O0217 20:30:29.908663  3920 Monitor.cpp:49] //strong_checksum_matches_=62210                                               
-O0217 20:30:29.908663  3920 Monitor.cpp:49] //reused_bytes_=1021247488                                                    
-O0217 20:30:29.908663  3920 Monitor.cpp:49] //downloaded_bytes_=1763770368                                                
+O0217 20:30:25.272665  3920 Observer.cpp:71] phase_ 2 |  2806 MB |   6.6s |   424.9 MB/s | 100% |   6.7s total            
+O0217 20:30:26.147660  3920 Observer.cpp:71] phase_ 3 |  2408 MB |   0.8s |  3144.1 MB/s |  90% |   7.6s total            
+O0217 20:30:29.907661  3920 Observer.cpp:88] phase_ 4 |  2656 MB |   3.8s |   706.4 MB/s | 100% |  11.5s total            
+O0217 20:30:29.907661  3920 Observer.cpp:49] //progress_phase_=4                                                           
+O0217 20:30:29.907661  3920 Observer.cpp:49] //progress_total_bytes_=2785017856                                             
+O0217 20:30:29.907661  3920 Observer.cpp:49] //progress_current_bytes_=2785017856                                           
+O0217 20:30:29.907661  3920 Observer.cpp:49] //weak_checksum_matches_=128225                                                
+O0217 20:30:29.908663  3920 Observer.cpp:49] //weak_checksum_false_positive_=66015                                           
+O0217 20:30:29.908663  3920 Observer.cpp:49] //strong_checksum_matches_=62210                                               
+O0217 20:30:29.908663  3920 Observer.cpp:49] //reused_bytes_=1021247488                                                    
+O0217 20:30:29.908663  3920 Observer.cpp:49] //downloaded_bytes_=1763770368                                                
 ```
 
 Note that about 1GB got reused and about 1.7GB got downloaded. For this experiment the download speed is not factored
@@ -101,3 +101,16 @@ Torsten Suel. http://cis.poly.edu/suel/papers/erasure.pdf
 Schröpl. http://www.schroepl.net/projekte/mod_gzip/
 
 [ModDeflate] mod_deflate. The Apache Software Foundation. http://httpd.apache.org/docs-2.0/mod/mod_deflate.html
+
+# TODO
+* (kyotov): figure out libraries
+    * https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160
+    
+* options
+    ```cmake
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    #    add_link_options(-static)
+    #    add_compile_options(--coverage)
+    #    add_link_options(--coverage)
+    endif ()
+    ```
