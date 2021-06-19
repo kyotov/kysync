@@ -11,6 +11,7 @@
 #include "commands/gen_data_command.h"
 #include "commands/system_command.h"
 #include "http_server/http_server.h"
+#include "http_server/nginx_server.h"
 #include "utilities/fixture.h"
 #include "utilities/temp_path.h"
 
@@ -95,7 +96,8 @@ struct PerformanceTestProfile final {
 class PerformanceTestExecution {
   PerformanceTestProfile profile_;
   std::unique_ptr<TempPath> tmp_path_{};
-  std::unique_ptr<HttpServer> server_{};
+//  std::unique_ptr<HttpServer> server_{};
+  std::unique_ptr<NginxServer> server_{};
   std::ofstream perf_log_;
 
   fs::path root_path_{};
@@ -207,7 +209,8 @@ public:
     perf_log_.open(log_directory_path_ / "perf.log", std::ios::app);
 
     if (profile_.http) {
-      server_ = std::make_unique<HttpServer>(root_path_, 8000, true);
+//      server_ = std::make_unique<HttpServer>(root_path_, 8000, true);
+      server_ = std::make_unique<NginxServer>(root_path_, 8000);
     }
   }
 
