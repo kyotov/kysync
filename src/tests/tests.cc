@@ -46,6 +46,8 @@ protected:
   static std::string GetTestDataPath() {
     return GetEnv("TEST_DATA_DIR", (CMAKE_SOURCE_DIR / "test_data").string());
   }
+
+  static constexpr int kThreads = 32;
 };
 
 TEST_F(Tests, SimpleWeakChecksum) {  // NOLINT
@@ -495,8 +497,8 @@ void SyncFile(
     const fs::path &seed_data_file_name,
     const fs::path &temp_path_name,
     const fs::path &expected_output_file_name,
-    const std::map<std::string, uint64_t>
-        &expected_metrics) {  // NOLINT(misc-unused-parameters)
+    const std::map<std::string, uint64_t> &expected_metrics,
+    int threads) {  // NOLINT(misc-unused-parameters)
   std::string file_uri_prefix = "file://";
   fs::path output_file_name = temp_path_name / "syncd_output_file";
   auto sync_command = SyncCommand(
@@ -506,7 +508,7 @@ void SyncFile(
       output_file_name,
       compression_disabled,
       4,
-      32);
+      threads);
   auto return_code = sync_command.Run();
   CHECK(return_code == 0) << "Sync command failed for " +
                                  source_file_name.string();
@@ -522,7 +524,8 @@ void EndToEndFilesTest(
     const std::string &expected_metadata_file_name,
     const std::string &expected_compressed_file_name,
     const std::string &expected_output_file_name,
-    uint64_t expected_compressed_size) {
+    uint64_t expected_compressed_size,
+    int threads) {
   LOG(INFO) << "E2E Files Test for " << source_file_name;
   LOG(INFO) << "Using seed file " << seed_data_file_name;
 
@@ -535,7 +538,7 @@ void EndToEndFilesTest(
                          metadata_file_name,
                          compressed_file_name,
                          block_size,
-                         32)
+                         threads)
                          .Run();
   CHECK(return_code == 0) << "Prepare command failed for " + source_file_name;
   EXPECT_TRUE(DoFilesMatch(expected_metadata_file_name, metadata_file_name))
@@ -558,20 +561,26 @@ void EndToEndFilesTest(
       source_file_name,
       temp_path_name,
       expected_output_file_name,
-      expected_metrics);
+      expected_metrics,
+      threads);
 }
 
 void RunEndToEndFilesTestFor(
     const std::string &file_name,
-    uint64_t expected_compressed_size) {
+    uint64_t expected_compressed_size,
+    int threads) {
+
+  static constexpr std::streamsize kBlockSize = 1024;
+
   EndToEndFilesTest(
       file_name,
       file_name,
-      1024,
+      kBlockSize,
       file_name + ".ksync",
       file_name + ".pzst",
       file_name,
-      expected_compressed_size);
+      expected_compressed_size,
+      threads);
 }
 
 // Test summary:
@@ -586,13 +595,14 @@ TEST_F(Tests, EndToEndFiles) {  // NOLINT
   std::string test_data_path = GetTestDataPath();
   LOG(INFO) << "Using test data path: " << test_data_path;
 
-  static constexpr uint64_t kExpectedCompressedSize = 42;
+  static constexpr std::streamsize kExpectedCompressedSize = 42;
+
   RunEndToEndFilesTestFor(
       test_data_path + "/test_file_small.txt",
-      kExpectedCompressedSize);
+      kExpectedCompressedSize, kThreads);
   RunEndToEndFilesTestFor(
       test_data_path + "/test_file.txt",
-      kExpectedCompressedSize);
+      kExpectedCompressedSize, kThreads);
 }
 
 // Test summary:
@@ -621,7 +631,8 @@ TEST_F(Tests, SyncFileFromSeed) {  // NOLINT
       seed_file_name,
       tmp.GetPath(),
       sync_file_name,
-      expected_metrics);
+      expected_metrics,
+      kThreads);
 }
 
 // Test syncing from a non-compressed file
@@ -646,7 +657,8 @@ TEST_F(Tests, SyncNonCompressedFile) {  // NOLINT
       seed_file_name,
       tmp.GetPath(),
       sync_file_name,
-      expected_metrics);
+      expected_metrics,
+      kThreads);
 }
 
 // Basic test to ensure different temp paths are returned.
