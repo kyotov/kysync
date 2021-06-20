@@ -6,12 +6,12 @@ http {
 
     access_log  logs/access.log  main;
 
-	server {
-	    sendfile  off;
-		listen ${PORT};
-		location / {
-			root .;
+    server {
+        sendfile  off;
+        listen ${PORT};
+        location / {
+            root .;
             expires off;
-		}
-	}
+        }
+    }
 }
