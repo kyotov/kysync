@@ -96,17 +96,17 @@ struct PerformanceTestProfile final {
 class PerformanceTestExecution {
   PerformanceTestProfile profile_;
   std::unique_ptr<TempPath> tmp_path_{};
-//  std::unique_ptr<HttpServer> server_{};
+  //  std::unique_ptr<HttpServer> server_{};
   std::unique_ptr<NginxServer> server_{};
   std::ofstream perf_log_;
 
-  fs::path root_path_{};
-  fs::path data_file_path_{};
-  fs::path seed_data_file_path_{};
-  fs::path metadata_file_path_{};
-  fs::path compressed_file_path_{};
-  fs::path output_file_path_{};
-  fs::path log_directory_path_{};
+  std::filesystem::path root_path_{};
+  std::filesystem::path data_file_path_{};
+  std::filesystem::path seed_data_file_path_{};
+  std::filesystem::path metadata_file_path_{};
+  std::filesystem::path compressed_file_path_{};
+  std::filesystem::path output_file_path_{};
+  std::filesystem::path log_directory_path_{};
 
   void DumpContext() {
     perf_log_ << std::endl                                  //
@@ -149,27 +149,27 @@ protected:
     return profile_;
   }
 
-  [[nodiscard]] const fs::path &GetDataFilePath() const {
+  [[nodiscard]] const std::filesystem::path &GetDataFilePath() const {
     return data_file_path_;
   }
 
-  [[nodiscard]] const fs::path &GetSeedDataFilePath() const {
+  [[nodiscard]] const std::filesystem::path &GetSeedDataFilePath() const {
     return seed_data_file_path_;
   }
 
-  [[nodiscard]] const fs::path &GetMetadataFilePath() const {
+  [[nodiscard]] const std::filesystem::path &GetMetadataFilePath() const {
     return metadata_file_path_;
   }
 
-  [[nodiscard]] const fs::path &GetCompressedFilePath() const {
+  [[nodiscard]] const std::filesystem::path &GetCompressedFilePath() const {
     return compressed_file_path_;
   }
 
-  [[nodiscard]] const fs::path &GetOutputFilePath() const {
+  [[nodiscard]] const std::filesystem::path &GetOutputFilePath() const {
     return output_file_path_;
   }
 
-  [[nodiscard]] std::string GetUri(const fs::path &path) const {
+  [[nodiscard]] std::string GetUri(const std::filesystem::path &path) const {
     return profile_.http ? "http://localhost:8000/" + path.filename().string()
                          : "file://" + path.string();
   }
@@ -209,9 +209,11 @@ public:
     perf_log_.open(log_directory_path_ / "perf.log", std::ios::app);
 
     if (profile_.http) {
-//      server_ = std::make_unique<HttpServer>(root_path_, 8000, true);
+      //      server_ = std::make_unique<HttpServer>(root_path_, 8000, true);
       server_ = std::make_unique<NginxServer>(root_path_, 8000);
     }
+
+    std::filesystem::current_path(root_path_);
   }
 
   virtual ~PerformanceTestExecution() = default;
@@ -222,6 +224,10 @@ public:
       GenData();
       Prepare();
       Sync();
+      if (profile_.http) {
+        server_.reset();
+      }
+      std::filesystem::current_path(CMAKE_BINARY_DIR);
     } else {
       LOG(WARNING) << "profile not supported!";
     }
@@ -259,7 +265,7 @@ public:
 };
 
 class ZsyncPerformanceTestExecution final : public PerformanceTestExecution {
-  fs::path zsync_bin_path_;
+  std::filesystem::path zsync_bin_path_;
 
   void Prepare() override {
     std::stringstream command;
@@ -291,7 +297,7 @@ public:
   }
 
   bool IsProfileSupported() override {
-    return fs::exists(zsync_bin_path_ / "zsync");
+    return ZSYNC_SUPPORTED;
   }
 };
 

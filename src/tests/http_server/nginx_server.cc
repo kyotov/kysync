@@ -7,18 +7,17 @@ namespace kysync {
 
 NginxServer::NginxServer(std::filesystem::path root, int port)
     : root_(std::move(root)),
-      port_(port) {
+      port_(port),
+      running_(false) {
   Start();
 }
 
-NginxServer::~NginxServer() {
-  Stop();
-}
+NginxServer::~NginxServer() { Stop(); }
 
 static void Execute(const std::string &command) {
   LOG(INFO) << command;
 
-  CHECK_EQ(0, system(command.c_str()));
+  CHECK_EQ(0, system(command.c_str())) << command;
 }
 
 void NginxServer::Start() {
@@ -48,11 +47,16 @@ void NginxServer::Start() {
   while (!std::filesystem::exists(root_ / "logs" / "nginx.pid")) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
+
+  running_ = true;
 }
 
 void NginxServer::Stop() {
-  Execute(NGINX_COMMAND.string() + " -s stop");
-  server_.join();
+  if (running_) {
+    running_ = false;
+    Execute(NGINX_COMMAND.string() + " -s stop");
+    server_.join();
+  }
 }
 
 void NginxServer::Accept(MetricVisitor &visitor) {}

@@ -17,6 +17,7 @@ public:
 private:
   std::filesystem::path root_;
   int port_;
+  bool running_;
   std::thread server_;
 
   void Start();
