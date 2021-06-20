@@ -55,6 +55,25 @@ O0217 20:30:29.908663  3920 Monitor.cpp:49] //downloaded_bytes_=1763770368
 Note that about 1GB got reused and about 1.7GB got downloaded. For this experiment the download speed is not factored
 in... just the computational overhead.
 
+# setup
+
+### get the code
+
+```shell
+git clone --recurse-submodules git@github.com:kyotov/ksync.git
+cd ksync
+rm -rf build 
+mkdir build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --config Debug
+```
+
+### test the code
+```shell
+ctest
+```
+
+
 # reference
 
 detailed info at http://zsync.moria.org.uk/papers
