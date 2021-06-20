@@ -216,7 +216,19 @@ public:
     std::filesystem::current_path(root_path_);
   }
 
-  virtual ~PerformanceTestExecution() = default;
+  virtual ~PerformanceTestExecution() {
+    // NOTE: we need to tear down the http server before we clean up the path,
+    //       because the server is running out of that path.
+    if (profile_.http) {
+      server_.reset();
+    }
+
+    // NOTE: move out of the temp folder as we are about to nuke it!
+    std::filesystem::current_path(CMAKE_BINARY_DIR);
+    // NOTE: this is not strictly speaking necessary but it is here to emphasize
+    //       that the order of cleanup is server first and tmp_path second.
+    tmp_path_.reset();
+  }
 
   void Execute() {
     if (IsProfileSupported()) {
@@ -224,10 +236,6 @@ public:
       GenData();
       Prepare();
       Sync();
-      if (profile_.http) {
-        server_.reset();
-      }
-      std::filesystem::current_path(CMAKE_BINARY_DIR);
     } else {
       LOG(WARNING) << "profile not supported!";
     }

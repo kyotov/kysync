@@ -2,6 +2,13 @@
 <project version="4">
   <component name="PublishConfigData" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
+      <paths name="WSL (1fe9d0fd-6ee7-47d2-9b19-10b2238e7e8c)">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="WSL (442c1b52-0313-42d9-9abf-530248b51864)">
         <serverdata>
           <mappings>
@@ -40,7 +47,7 @@
       <paths name="mac (c2ef5b35-0c6e-4f6f-8133-9f1f5590266d)">
         <serverdata>
           <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/tmp/ksync2" local="$PROJECT_DIR$" />
           </mappings>
         </serverdata>
       </paths>
@@ -49,6 +56,45 @@
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />
           </mappings>
+        </serverdata>
+      </paths>
+      <paths name="mac (f389f927-9270-47cf-a816-d8de141b7910)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/var/folders/rv/sgc8r2ln5d736102qcxk41dc0000gn/T/tmp.nhbiVZ0G" local="$PROJECT_DIR$" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/build/Release-mac" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-visual-studio" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/Debug" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-oldbam" />
+            <excludedPath local="true" path="$PROJECT_DIR$/build/Debug" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-mac" />
+            <excludedPath local="true" path="$PROJECT_DIR$/build" />
+            <excludedPath local="true" path="$PROJECT_DIR$/build/Debug-mac" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/RelWithDebInfo" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/Release" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+      <paths name="oldbam (02950800-1664-4c7a-84b8-c904aad7a382)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/tmp/tmp.6sjuo7Eyue" local="$PROJECT_DIR$" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-visual-studio" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/Debug" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-oldbam" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-mac" />
+            <excludedPath local="true" path="$PROJECT_DIR$/build" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/RelWithDebInfo" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/Release" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release-oldbam" />
+          </excludedPaths>
         </serverdata>
       </paths>
       <paths name="oldbam (37f9ab83-3ea1-4541-a878-8e27ccb8a670)">
@@ -61,8 +107,10 @@
             <excludedPath local="true" path="$PROJECT_DIR$/deps/Debug" />
             <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-oldbam" />
             <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-mac" />
+            <excludedPath local="true" path="$PROJECT_DIR$/build/Debug" />
             <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release" />
             <excludedPath local="true" path="$PROJECT_DIR$/deps/RelWithDebInfo" />
+            <excludedPath local="true" path="$PROJECT_DIR$/build/Release-oldbam" />
             <excludedPath local="true" path="$PROJECT_DIR$/deps/Release" />
             <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug" />
             <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release-oldbam" />
