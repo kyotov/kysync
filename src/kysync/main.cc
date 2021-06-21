@@ -27,6 +27,9 @@ DEFINE_int32(threads, 32, "number of threads");                     // NOLINT
 DEFINE_int32(num_blocks_in_batch, 4, "number of blocks in batch");  // NOLINT
 DEFINE_bool(use_compression, true, "use compression");              // NOLINT
 
+DECLARE_bool(help);      // NOLINT
+DECLARE_string(helpon);  // NOLINT
+
 int main(int argc, char **argv) {
   ky::NoExcept([&argc, &argv]() {
     google::InitGoogleLogging(argv[0]);
@@ -35,7 +38,8 @@ int main(int argc, char **argv) {
     FLAGS_logtostderr = true;
     FLAGS_colorlogtostderr = true;
 
-    LOG(INFO) << "ksync v0.1";
+    gflags::SetUsageMessage("--command=[prepare|sync] ...");
+    gflags::SetVersionString("v0.1");
 
     if (FLAGS_command == "prepare") {
       if (FLAGS_output_kysync_filename.empty()) {
@@ -76,7 +80,12 @@ int main(int argc, char **argv) {
       return ky::observability::Observer(*c).Run([&c]() { return c->Run(); });
     }
 
-    CHECK(false) << "unhandled command";
+    LOG(ERROR) << "expected `--command=prepare` or `--command=sync`";
+
+    FLAGS_help = false;
+    FLAGS_helpon = "main";
+    gflags::HandleCommandLineHelpFlags();
+
     return 1;
   });
 }

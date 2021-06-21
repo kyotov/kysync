@@ -32,8 +32,11 @@ void FileStreamProvider::Resize(std::streamsize size) const {
 }
 
 std::fstream FileStreamProvider::CreateFileStream() const {
-//  return std::fstream(path_, std::ios::binary | std::ios::in | std::ios::out);
-  return {path_, std::ios::binary | std::ios::in | std::ios::out};
+  // Note: the following is unable to use braced initializers because of the way
+  //       the MSVC library is implemented... the corresponding constructor is
+  //       explicit, and thus the braced initializer is not allowed.
+  // NOLINTNEXTLINE(modernize-return-braced-init-list)
+  return std::fstream(path_, std::ios::binary | std::ios::in | std::ios::out);
 }
 
 }  // namespace ky
