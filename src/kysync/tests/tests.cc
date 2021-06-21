@@ -470,8 +470,9 @@ void SyncFile(
     const fs::path &seed_data_file_name,
     const fs::path &temp_path_name,
     const fs::path &expected_output_file_name,
+    // NOLINTNEXTLINE(misc-unused-parameters)
     const std::map<std::string, uint64_t> &expected_metrics,
-    int threads) {  // NOLINT(misc-unused-parameters)
+    int threads) {
   std::string file_uri_prefix = "file://";
   fs::path output_file_name = temp_path_name / "syncd_output_file";
   auto sync_command = SyncCommand::Create(

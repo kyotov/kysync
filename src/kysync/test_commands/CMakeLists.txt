@@ -13,10 +13,10 @@ target_include_directories(kysync_test_commands
 add_executable(gendata
         gendata_main.cc)
 target_link_libraries(gendata
-        PRIVATE
-        ky_observability
-        ky_parallelize
-        kysync_streams
-        kysync_test_commands
-        gflags
-        glog::glog)
+        PRIVATE ky_common
+        PRIVATE ky_observability
+        PRIVATE ky_parallelize
+        PRIVATE kysync_streams
+        PRIVATE kysync_test_commands
+        PRIVATE gflags
+        PRIVATE glog::glog)

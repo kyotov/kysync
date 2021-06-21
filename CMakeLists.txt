@@ -19,7 +19,7 @@ include(xxHash)
 include(llvm)
 include(nginx)
 
-set(USE_CLANG_TIDY OFF)
+set(USE_CLANG_TIDY ON)
 
 if (USE_CLANG_TIDY)
     string(REGEX REPLACE "[\\\\|/]" "[\\\\/]" HEADERS "${CMAKE_BINARY_DIR}/../.*")
@@ -28,6 +28,8 @@ if (USE_CLANG_TIDY)
             "--header-filter=${HEADERS}"
             "--export-fixes=${CMAKE_BINARY_DIR}/clang-tidy.fixes")
 endif ()
+
+option(SKIP_ZSYNC "don't try to build zsync and run zsync perf test even on supported platforms" OFF)
 
 include(zsync.cmake)
 

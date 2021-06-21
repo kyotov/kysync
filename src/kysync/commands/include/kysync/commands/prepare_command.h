@@ -1,5 +1,5 @@
-#ifndef KSYNC_SRC_COMMANDS_INCLUDE_KYSYNC_COMMANDS_PREPARE_COMMAND_H
-#define KSYNC_SRC_COMMANDS_INCLUDE_KYSYNC_COMMANDS_PREPARE_COMMAND_H
+#ifndef KSYNC_SRC_KYSYNC_COMMANDS_INCLUDE_KYSYNC_COMMANDS_PREPARE_COMMAND_H
+#define KSYNC_SRC_KYSYNC_COMMANDS_INCLUDE_KYSYNC_COMMANDS_PREPARE_COMMAND_H
 
 #include <kysync/commands/kysync_command.h>
 
@@ -13,6 +13,8 @@ protected:
   PrepareCommand();
 
 public:
+  virtual ~PrepareCommand();
+
   static std::unique_ptr<PrepareCommand> Create(
       std::filesystem::path input_file_path,
       std::filesystem::path output_ksync_file_path,
@@ -23,4 +25,4 @@ public:
 
 }  // namespace kysync
 
-#endif  // KSYNC_SRC_COMMANDS_INCLUDE_KYSYNC_COMMANDS_PREPARE_COMMAND_H
+#endif  // KSYNC_SRC_KYSYNC_COMMANDS_INCLUDE_KYSYNC_COMMANDS_PREPARE_COMMAND_H

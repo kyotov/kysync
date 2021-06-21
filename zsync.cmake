@@ -2,7 +2,7 @@ include_guard(GLOBAL)
 
 include("ExternalProject")
 
-if (UNIX AND NOT APPLE)
+if (UNIX AND NOT APPLE AND NOT SKIP_ZSYNC)
     set(ZSYNC_SUPPORTED true)
 
     ExternalProject_Add(zsync

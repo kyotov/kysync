@@ -10,8 +10,8 @@ int Parallelize(
     std::streamsize block_size,
     std::streamsize overlap_size,
     int threads,
-    std::function<
-        void(int /*id*/, std::streamoff /*beg*/, std::streamoff /*end*/)> f) {
+    const std::function<
+        void(int /*id*/, std::streamoff /*beg*/, std::streamoff /*end*/)> &f) {
   auto blocks = (data_size + block_size - 1) / block_size;
   auto chunk = (blocks + threads - 1) / threads;
 
@@ -21,7 +21,7 @@ int Parallelize(
     chunk = blocks;
   }
 
-  VLOG(1)                                  //
+  VLOG(1)  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
       << "parallelize size=" << data_size  //
       << " block=" << block_size           //
       << " threads=" << threads;
@@ -31,6 +31,7 @@ int Parallelize(
   for (int id = 0; id < threads; id++) {
     auto beg = id * chunk * block_size;
     auto end = (id + 1) * chunk * block_size + overlap_size;
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
     VLOG(2) << "thread=" << id << " [" << beg << ", " << end << ")";
 
     fs.push_back(std::async(f, id, beg, std::min(end, data_size)));

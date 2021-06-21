@@ -22,6 +22,7 @@
 
 namespace kysync {
 
+// NOLINTNEXTLINE(fuchsia-multiple-inheritance,fuchsia-virtual-inheritance)
 class SyncCommandImpl final : virtual public ky::observability::Observable,
                               public SyncCommand {
   std::string data_uri_;

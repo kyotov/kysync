@@ -1,6 +1,7 @@
 #include <glog/logging.h>
 #include <gtest/gtest.h>
 #include <ky/metrics/metric_callback_visitor.h>
+#include <ky/noexcept.h>
 #include <ky/observability/observer.h>
 #include <ky/temp_path.h>
 #include <kysync/commands/prepare_command.h>
@@ -230,17 +231,20 @@ public:
   }
 
   virtual ~PerformanceTestExecution() {
-    // NOTE: we need to tear down the http server before we clean up the path,
-    //       because the server is running out of that path.
-    if (profile_.http) {
-      server_.reset();
-    }
+    ky::NoExcept([this]() {
+      // NOTE: we need to tear down the http server before we clean up the path,
+      //       because the server is running out of that path.
+      if (profile_.http) {
+        server_.reset();
+      }
 
-    // NOTE: move out of the temp folder as we are about to nuke it!
-    std::filesystem::current_path(CMAKE_BINARY_DIR);
-    // NOTE: this is not strictly speaking necessary but it is here to emphasize
-    //       that the order of cleanup is server first and tmp_path second.
-    tmp_path_.reset();
+      // NOTE: move out of the temp folder as we are about to nuke it!
+      std::filesystem::current_path(CMAKE_BINARY_DIR);
+      // NOTE: this is not strictly speaking necessary but it is here to
+      // emphasize
+      //       that the order of cleanup is server first and tmp_path second.
+      tmp_path_.reset();
+    });
   }
 
   void Execute() {

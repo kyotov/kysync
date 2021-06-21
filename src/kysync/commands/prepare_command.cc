@@ -22,6 +22,7 @@ namespace fs = std::filesystem;
 
 class KySyncTest;
 
+// NOLINTNEXTLINE(fuchsia-multiple-inheritance,fuchsia-virtual-inheritance)
 class PrepareCommandImpl final : virtual public ky::observability::Observable,
                                  public PrepareCommand {
   friend class KySyncTest;
@@ -44,8 +45,9 @@ class PrepareCommandImpl final : virtual public ky::observability::Observable,
 
   ky::metrics::Metric compressed_bytes_{};
 
-  const std::vector<uint32_t> &GetWeakChecksums() const override;
-  const std::vector<StrongChecksum> &GetStrongChecksums() const override;
+  [[nodiscard]] const std::vector<uint32_t> &GetWeakChecksums() const override;
+  [[nodiscard]] const std::vector<StrongChecksum> &GetStrongChecksums()
+      const override;
 
 public:
   PrepareCommandImpl(
@@ -55,7 +57,7 @@ public:
       std::streamsize block_size,
       int threads);
 
-  int Run();
+  int Run() override;
 
   void Accept(ky::metrics::MetricVisitor &visitor) override;
 
@@ -81,6 +83,8 @@ public:
         std::streamoff finish_offset);
   };
 };
+
+PrepareCommand::~PrepareCommand() = default;
 
 std::unique_ptr<PrepareCommand> PrepareCommand::Create(
     std::filesystem::path input_file_path,

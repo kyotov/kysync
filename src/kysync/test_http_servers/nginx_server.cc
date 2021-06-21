@@ -1,4 +1,5 @@
 #include <glog/logging.h>
+#include <ky/noexcept.h>
 #include <kysync/path_config.h>
 #include <kysync/test_http_servers/nginx_server.h>
 
@@ -11,11 +12,14 @@ NginxServer::NginxServer(std::filesystem::path root, int port)
   Start();
 }
 
-NginxServer::~NginxServer() { Stop(); }
+NginxServer::~NginxServer() {
+  ky::NoExcept([this]() { Stop(); });
+};
 
 static void Execute(const std::string &command) {
   LOG(INFO) << command;
 
+  // NOLINTNEXTLINE(cert-env33-c,concurrency-mt-unsafe)
   CHECK_EQ(0, system(command.c_str())) << command;
 }
 
@@ -30,7 +34,8 @@ void NginxServer::Start() {
   //       quoted on windows... e.g. `system("\"c:\\program files\\...\"")
   command << "echo -- && \"" << CMAKE_COMMAND.string() << "\"";
   command << " -D PORT=" << port_;
-  command << " -D CONF_TEMPLATE_PATH=" << NGINX_CONF_TEMPLATE_DIR / "nginx.conf.in";
+  command << " -D CONF_TEMPLATE_PATH="
+          << NGINX_CONF_TEMPLATE_DIR / "nginx.conf.in";
   command << " -D TARGET_DIR=" << root_ / "conf";
   command << " -P " << NGINX_CONF_TEMPLATE_DIR / "nginx_server_conf.cmake";
 
