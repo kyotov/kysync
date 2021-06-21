@@ -6,11 +6,11 @@
 #include <cinttypes>
 #include <fstream>
 #include <utility>
-#include <vector>
 
 #include "../checksums/strong_checksum_builder.h"
 #include "../checksums/weak_checksum.h"
 #include "../config.h"
+#include "../metrics/metric_visitor.h"
 #include "../utilities/file_stream_provider.h"
 #include "../utilities/parallelize.h"
 #include "../utilities/streams.h"
@@ -18,29 +18,93 @@
 
 namespace kysync {
 
-class ChunkPreparer final {
-  PrepareCommand &prepare_command_;
+namespace fs = std::filesystem;
 
-  std::ifstream input_;
-  std::fstream output_;
+class KySyncTest;
 
-  std::streamoff start_offset_;
-  std::streamoff finish_offset_;
+class PrepareCommandImpl final : public PrepareCommand {
+  friend class KySyncTest;
+  friend class ChunkPreparer;
 
-  std::vector<char> buffer_;
-  std::vector<char> compressed_buffer_;
+  fs::path input_file_path_;
+  fs::path output_ksync_file_path_;
 
-  void Prepare();
-  void CompressBuffer(int block_index, std::streamsize size);
+  FileStreamProvider output_compressed_file_stream_provider_;
+
+  std::streamsize block_size_;
+  std::streamsize max_compressed_block_size_;
+
+  std::vector<uint32_t> weak_checksums_;
+  std::vector<StrongChecksum> strong_checksums_;
+  std::vector<std::streamsize> compressed_sizes_;
+
+  int compression_level_ = 1;
+  int threads_;
+
+  Metric compressed_bytes_{};
+
+  const std::vector<uint32_t> &GetWeakChecksums() const override;
+  const std::vector<StrongChecksum> &GetStrongChecksums() const override;
 
 public:
-  ChunkPreparer(
-      PrepareCommand &prepare_command,
-      std::streamoff start_offset,
-      std::streamoff finish_offset);
+  PrepareCommandImpl(
+      fs::path input_file_path,
+      fs::path output_ksync_file_path,
+      fs::path output_compressed_file_path,
+      std::streamsize block_size,
+      int threads);
+
+  int Run() override;
+
+  void Accept(MetricVisitor &visitor) override;
+
+  class ChunkPreparer final {
+    PrepareCommandImpl &prepare_command_;
+
+    std::ifstream input_;
+    std::fstream output_;
+
+    std::streamoff start_offset_;
+    std::streamoff finish_offset_;
+
+    std::vector<char> buffer_;
+    std::vector<char> compressed_buffer_;
+
+    void Prepare();
+    void CompressBuffer(int block_index, std::streamsize size);
+
+  public:
+    ChunkPreparer(
+        PrepareCommandImpl &prepare_command,
+        std::streamoff start_offset,
+        std::streamoff finish_offset);
+  };
 };
 
-void ChunkPreparer::Prepare() {
+std::unique_ptr<PrepareCommand> PrepareCommand::Create(
+    std::filesystem::path input_file_path,
+    std::filesystem::path output_ksync_file_path,
+    std::filesystem::path output_compressed_file_path,
+    std::streamsize block_size,
+    int threads) {
+  return std::make_unique<PrepareCommandImpl>(
+      std::move(input_file_path),
+      std::move(output_ksync_file_path),
+      std::move(output_compressed_file_path),
+      block_size,
+      threads);
+}
+
+const std::vector<uint32_t> &PrepareCommandImpl::GetWeakChecksums() const {
+  return weak_checksums_;
+}
+
+const std::vector<StrongChecksum> &PrepareCommandImpl::GetStrongChecksums()
+    const {
+  return strong_checksums_;
+}
+
+void PrepareCommandImpl::ChunkPreparer::Prepare() {
   input_.seekg(start_offset_);
 
   auto block_size = static_cast<std::streamsize>(buffer_.size());
@@ -72,7 +136,9 @@ void ChunkPreparer::Prepare() {
   }
 }
 
-void ChunkPreparer::CompressBuffer(int block_index, std::streamsize size) {
+void PrepareCommandImpl::ChunkPreparer::CompressBuffer(
+    int block_index,
+    std::streamsize size) {
   std::streamsize compressed_size =
       ZSTD_compress(  // NOLINT(bugprone-narrowing-conversions,
                       // cppcoreguidelines-narrowing-conversions)
@@ -91,8 +157,8 @@ void ChunkPreparer::CompressBuffer(int block_index, std::streamsize size) {
   prepare_command_.compressed_bytes_ += compressed_size;
 }
 
-ChunkPreparer::ChunkPreparer(
-    PrepareCommand &prepare_command,
+PrepareCommandImpl::ChunkPreparer::ChunkPreparer(
+    PrepareCommandImpl &prepare_command,
     std::streamoff start_offset,
     std::streamoff finish_offset)
     : prepare_command_(prepare_command),
@@ -109,7 +175,7 @@ ChunkPreparer::ChunkPreparer(
   Prepare();
 }
 
-PrepareCommand::PrepareCommand(
+PrepareCommandImpl::PrepareCommandImpl(
     std::filesystem::path input_file_path,
     std::filesystem::path output_ksync_file_path,
     std::filesystem::path output_compressed_file_path,
@@ -124,7 +190,7 @@ PrepareCommand::PrepareCommand(
           static_cast<std::streamsize>(ZSTD_compressBound(block_size))),
       threads_(threads) {}
 
-int PrepareCommand::Run() {
+int PrepareCommandImpl::Run() {
   // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
   std::streamsize data_size = std::filesystem::file_size(input_file_path_);
   StartNextPhase(data_size);
@@ -155,8 +221,10 @@ int PrepareCommand::Run() {
   //  https://github.com/kyotov/ksync/issues/100
   StartNextPhase(data_size + 2 * compressed_bytes_);
 
-  auto compressed_input = output_compressed_file_stream_provider_.CreateFileStream();
-  auto compressed_output = output_compressed_file_stream_provider_.CreateFileStream();
+  auto compressed_input =
+      output_compressed_file_stream_provider_.CreateFileStream();
+  auto compressed_output =
+      output_compressed_file_stream_provider_.CreateFileStream();
 
   for (int i = 0; i < compressed_sizes_.size(); i++) {
     compressed_input.seekg(i * max_compressed_block_size_);
@@ -197,7 +265,7 @@ int PrepareCommand::Run() {
   return 0;
 }
 
-void PrepareCommand::Accept(MetricVisitor &visitor) {
+void PrepareCommandImpl::Accept(MetricVisitor &visitor) {
   Command::Accept(visitor);
   VISIT_METRICS(compressed_bytes_);
 }

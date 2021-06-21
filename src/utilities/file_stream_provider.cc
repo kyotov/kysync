@@ -32,10 +32,7 @@ void FileStreamProvider::Resize(std::streamsize size) const {
 }
 
 std::fstream FileStreamProvider::CreateFileStream() const {
-  auto s = std::fstream(path_, std::ios::binary | std::ios::in | std::ios::out);
-  // TODO(kyotov): discuss with @ashish why this is necessary?
-  s.exceptions(std::fstream::failbit | std::fstream::badbit);
-  return std::move(s);
+  return std::fstream(path_, std::ios::binary | std::ios::in | std::ios::out);
 }
 
 }  // namespace kysync
