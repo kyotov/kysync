@@ -137,7 +137,7 @@ std::streamsize HttpReader::Read(void *buffer, httplib::Ranges ranges) {
   auto res = client_->Get(path_.c_str(), {range_header});
 
   CHECK(res.error() == httplib::Error::Success) << path_;
-  CHECK(res->status == 206 || res->status == 200) << path_;
+  CHECK(res->status == 206 || res->status == 200) << path_ << " " << res->status;
 
   std::streamsize count = 0;
   if (IsMultirangeResponse(res.value())) {

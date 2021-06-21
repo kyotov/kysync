@@ -5,5 +5,9 @@
 
 static const std::filesystem::path CMAKE_SOURCE_DIR = R"(${CMAKE_SOURCE_DIR})";
 static const std::filesystem::path CMAKE_BINARY_DIR = R"(${CMAKE_BINARY_DIR})";
+static const std::filesystem::path CMAKE_COMMAND = R"(${CMAKE_COMMAND})";
+static const std::filesystem::path NGINX_COMMAND = R"(${NGINX})";
+static const bool ZSYNC_SUPPORTED = ${ZSYNC_SUPPORTED};
+
 
 #endif

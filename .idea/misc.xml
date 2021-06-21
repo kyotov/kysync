@@ -3,6 +3,11 @@
   <component name="CMakeWorkspace" PROJECT_DIR="$PROJECT_DIR$" />
   <component name="CidrRootsConfiguration">
     <excludeRoots>
+      <file path="$PROJECT_DIR$/build" />
+      <file path="$PROJECT_DIR$/cmake-build-debug-mac" />
+      <file path="$PROJECT_DIR$/cmake-build-debug-oldbam" />
+      <file path="$PROJECT_DIR$/cmake-build-debug-visual-studio" />
+      <file path="$PROJECT_DIR$/cmake-build-release" />
       <file path="$PROJECT_DIR$/deps/Debug" />
       <file path="$PROJECT_DIR$/deps/RelWithDebInfo" />
       <file path="$PROJECT_DIR$/deps/Release" />

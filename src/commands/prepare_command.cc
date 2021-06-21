@@ -111,9 +111,9 @@ ChunkPreparer::ChunkPreparer(
 }
 
 PrepareCommand::PrepareCommand(
-    fs::path input_file_path,
-    fs::path output_ksync_file_path,
-    fs::path output_compressed_file_path,
+    std::filesystem::path input_file_path,
+    std::filesystem::path output_ksync_file_path,
+    std::filesystem::path output_compressed_file_path,
     std::streamsize block_size,
     int threads)
     : input_file_path_(std::move(input_file_path)),
@@ -136,7 +136,7 @@ PrepareCommand::PrepareCommand(
 
 int PrepareCommand::Run() {
   // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
-  std::streamsize data_size = fs::file_size(input_file_path_);
+  std::streamsize data_size = std::filesystem::file_size(input_file_path_);
   StartNextPhase(data_size);
 
   auto block_count = (data_size + block_size_ - 1) / block_size_;
@@ -181,7 +181,9 @@ int PrepareCommand::Run() {
     AdvanceProgress(input.gcount() + 2 * compressed_sizes_[i]);
   }
 
-  fs::resize_file(output_compressed_file_path_, compressed_output.tellp());
+  std::filesystem::resize_file(
+      output_compressed_file_path_,
+      compressed_output.tellp());
 
   // produce the ksync metadata output
 

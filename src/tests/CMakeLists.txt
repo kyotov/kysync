@@ -20,6 +20,7 @@ target_link_libraries(tests
 add_executable(perf_tests
         perf_tests.cc)
 target_link_libraries(perf_tests
+        nginx_server
         test_main)
 
 add_executable(http_tests

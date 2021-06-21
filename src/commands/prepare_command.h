@@ -11,8 +11,6 @@
 
 namespace kysync {
 
-namespace fs = std::filesystem;
-
 class KySyncTest;
 class ChunkPreparer;
 
@@ -21,9 +19,9 @@ class PrepareCommand final : public Command {
   // TODO(kyotov): discuss with ashish the cost-benefit of this friendship :)
   friend class ChunkPreparer;
 
-  fs::path input_file_path_;
-  fs::path output_ksync_file_path_;
-  fs::path output_compressed_file_path_;
+  std::filesystem::path input_file_path_;
+  std::filesystem::path output_ksync_file_path_;
+  std::filesystem::path output_compressed_file_path_;
 
   std::streamsize block_size_;
   std::streamsize max_compressed_block_size_;
@@ -39,9 +37,9 @@ class PrepareCommand final : public Command {
 
 public:
   PrepareCommand(
-      fs::path input_file_path,
-      fs::path output_ksync_file_path,
-      fs::path output_compressed_file_path,
+      std::filesystem::path input_file_path,
+      std::filesystem::path output_ksync_file_path,
+      std::filesystem::path output_compressed_file_path,
       std::streamsize block_size,
       int threads);
 
