@@ -11,9 +11,9 @@ DEFINE_string(command, "", "prepare, sync, ...");  // NOLINT
 DEFINE_string(input_filename, "", "input file");   // NOLINT
 // TODO(kyotov): maybe output_path? it is used elsewhere...
 DEFINE_string(  // NOLINT
-    output_ksync_filename,
+    output_kysync_filename,
     "",
-    "output ksync file");
+    "output kysync file");
 DEFINE_string(  // NOLINT
     output_compressed_filename,
     "",
@@ -39,9 +39,18 @@ int main(int argc, char **argv) {
       LOG(INFO) << "ksync v0.1";
 
       if (FLAGS_command == "prepare") {
+        if (FLAGS_output_kysync_filename.empty()) {
+          FLAGS_output_kysync_filename = FLAGS_input_filename + ".kysync";
+          LOG(INFO) << "metadata filename defaulted to " << FLAGS_output_kysync_filename;
+        }
+        if (FLAGS_output_compressed_filename.empty()) {
+          FLAGS_output_compressed_filename = FLAGS_input_filename + ".pzst";
+          LOG(INFO) << "compressed output defaulted to " << FLAGS_output_compressed_filename;
+        }
+
         auto command = kysync::PrepareCommand(
             FLAGS_input_filename,
-            FLAGS_output_ksync_filename,
+            FLAGS_output_kysync_filename,
             FLAGS_output_compressed_filename,
             FLAGS_block_size,
             FLAGS_threads);

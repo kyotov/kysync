@@ -283,7 +283,7 @@ void SyncCommand::ChunkReconstructor::ValidateAndWrite(
 SyncCommand::ChunkReconstructor::ChunkReconstructor(
     SyncCommand &parent_instance,
     std::streamoff start_offset,
-    const FileStream &output_file_stream)
+    const FileStreamProvider &output_file_stream)
     : parent_impl_(parent_instance) {
   buffer_ =
       std::vector<char>(parent_impl_.block_ * parent_impl_.blocks_per_batch_);
@@ -292,7 +292,7 @@ SyncCommand::ChunkReconstructor::ChunkReconstructor(
       parent_impl_.max_compressed_size_ * parent_impl_.blocks_per_batch_);
   seed_reader_ = Reader::Create(parent_impl_.seed_uri_);
   data_reader_ = Reader::Create(parent_impl_.data_uri_);
-  output_ = output_file_stream.GetStream();
+  output_ = output_file_stream.CreateFileStream();
   output_.seekp(start_offset);
   CHECK(output_);
 }
@@ -310,7 +310,7 @@ void SyncCommand::ReconstructSourceChunk(
     int /*id*/,
     std::streamoff start_offset,
     std::streamoff end_offset,
-    const FileStream &output_file_stream) {
+    const FileStreamProvider &output_file_stream) {
   ChunkReconstructor chunk_reconstructor(
       *this,
       start_offset,
@@ -337,7 +337,7 @@ void SyncCommand::ReconstructSource() {
   StartNextPhase(data_size);
   LOG(INFO) << "reconstructing target...";
 
-  auto output_file_stream = FileStream(output_path_);
+  auto output_file_stream = FileStreamProvider(output_path_);
   output_file_stream.Resize(data_size);
 
   Parallelize(

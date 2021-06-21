@@ -1,4 +1,4 @@
-#include "file_stream.h"
+#include "file_stream_provider.h"
 
 #include <glog/logging.h>
 
@@ -18,20 +18,20 @@ namespace kysync {
 // https://stackoverflow.com/questions/39256916/does-stdofstream-truncate-or-append-by-default#:~:text=It%20truncates%20by%20default
 // Using ate or app does not resolve this.
 
-FileStream::FileStream(std::filesystem::path path) : path_(std::move(path)) {
+FileStreamProvider::FileStreamProvider(std::filesystem::path path) : path_(std::move(path)) {
   if (!std::filesystem::exists(path_)) {
     auto s = std::ofstream(path_);
     CHECK(s) << "cannot create " << path_;
   }
 }
 
-void FileStream::Resize(std::streamsize size) const {
+void FileStreamProvider::Resize(std::streamsize size) const {
   std::error_code ec;
   std::filesystem::resize_file(path_, size, ec);
   CHECK(!ec) << ec.message();
 }
 
-std::fstream FileStream::GetStream() const {
+std::fstream FileStreamProvider::CreateFileStream() const {
   auto s = std::fstream(path_, std::ios::binary | std::ios::in | std::ios::out);
   // TODO(kyotov): discuss with @ashish why this is necessary?
   s.exceptions(std::fstream::failbit | std::fstream::badbit);
