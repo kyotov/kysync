@@ -10,8 +10,8 @@ int Parallelize(
     std::streamsize block_size,
     std::streamsize overlap_size,
     int threads,
-    std::function<
-        void(int /*id*/, std::streamoff /*beg*/, std::streamoff /*end*/)> f);
+    const std::function<
+        void(int /*id*/, std::streamoff /*beg*/, std::streamoff /*end*/)> &f);
 
 }
 

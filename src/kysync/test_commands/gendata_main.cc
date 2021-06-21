@@ -1,5 +1,6 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <ky/noexcept.h>
 #include <ky/observability/observer.h>
 #include <kysync/test_commands/gen_data_command.h>
 
@@ -13,7 +14,7 @@ DEFINE_int64(fragment_size, 123'456, "fragment size");        // NOLINT
 DEFINE_int32(similarity, 90, "percentage similarity");        // NOLINT
 
 int main(int argc, char **argv) {
-  try {
+  ky::NoExcept([&argc, &argv]() {
     google::InitGoogleLogging(argv[0]);
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
@@ -30,13 +31,7 @@ int main(int argc, char **argv) {
       return ky::observability::Observer(c).Run([&c]() { return c.Run(); });
     }
 
-    if (FLAGS_command == "measure") {
-    }
-
     CHECK(false) << "unhandled command";
     return 1;
-  } catch (const std::exception &e) {
-    LOG(ERROR) << e.what();
-    return 2;
-  }
+  });
 }

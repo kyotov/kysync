@@ -15,6 +15,7 @@ add_library(kysync_nginx_server
         nginx_server.cc)
 target_link_libraries(kysync_nginx_server
         PUBLIC ky_metrics
+        PRIVATE ky_common
         PRIVATE glog::glog)
 target_include_directories(kysync_nginx_server
         PRIVATE "${CMAKE_BINARY_DIR}/include"

@@ -32,7 +32,8 @@ void FileStreamProvider::Resize(std::streamsize size) const {
 }
 
 std::fstream FileStreamProvider::CreateFileStream() const {
-  return std::fstream(path_, std::ios::binary | std::ios::in | std::ios::out);
+//  return std::fstream(path_, std::ios::binary | std::ios::in | std::ios::out);
+  return {path_, std::ios::binary | std::ios::in | std::ios::out};
 }
 
 }  // namespace ky

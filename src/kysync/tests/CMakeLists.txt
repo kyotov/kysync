@@ -3,6 +3,7 @@ add_library(test_common
         expectation_check_metrics_visitor.cc)
 target_link_libraries(test_common
         PUBLIC
+        ky_common
         ky_metrics
         ky_temp_path
         kysync_test_commands

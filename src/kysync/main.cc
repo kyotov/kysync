@@ -1,5 +1,6 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <ky/noexcept.h>
 #include <ky/observability/observer.h>
 #include <kysync/commands/prepare_command.h>
 #include <kysync/commands/sync_command.h>
@@ -27,64 +28,55 @@ DEFINE_int32(num_blocks_in_batch, 4, "number of blocks in batch");  // NOLINT
 DEFINE_bool(use_compression, true, "use compression");              // NOLINT
 
 int main(int argc, char **argv) {
-  try {
-    try {
-      google::InitGoogleLogging(argv[0]);
-      gflags::ParseCommandLineFlags(&argc, &argv, true);
+  ky::NoExcept([&argc, &argv]() {
+    google::InitGoogleLogging(argv[0]);
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-      FLAGS_logtostderr = true;
-      FLAGS_colorlogtostderr = true;
+    FLAGS_logtostderr = true;
+    FLAGS_colorlogtostderr = true;
 
-      LOG(INFO) << "ksync v0.1";
+    LOG(INFO) << "ksync v0.1";
 
-      if (FLAGS_command == "prepare") {
-        if (FLAGS_output_kysync_filename.empty()) {
-          FLAGS_output_kysync_filename = FLAGS_input_filename + ".kysync";
-          LOG(INFO) << "metadata filename defaulted to "
-                    << FLAGS_output_kysync_filename;
-        }
-        if (FLAGS_output_compressed_filename.empty()) {
-          FLAGS_output_compressed_filename = FLAGS_input_filename + ".pzst";
-          LOG(INFO) << "compressed output defaulted to "
-                    << FLAGS_output_compressed_filename;
-        }
-
-        auto c = kysync::PrepareCommand::Create(
-            FLAGS_input_filename,
-            FLAGS_output_kysync_filename,
-            FLAGS_output_compressed_filename,
-            FLAGS_block_size,
-            FLAGS_threads);
-
-        return ky::observability::Observer(*c).Run([&c]() { return c->Run(); });
+    if (FLAGS_command == "prepare") {
+      if (FLAGS_output_kysync_filename.empty()) {
+        FLAGS_output_kysync_filename = FLAGS_input_filename + ".kysync";
+        LOG(INFO) << "metadata filename defaulted to "
+                  << FLAGS_output_kysync_filename;
+      }
+      if (FLAGS_output_compressed_filename.empty()) {
+        FLAGS_output_compressed_filename = FLAGS_input_filename + ".pzst";
+        LOG(INFO) << "compressed output defaulted to "
+                  << FLAGS_output_compressed_filename;
       }
 
-      if (FLAGS_command == "sync") {
-        auto output = std::ofstream(FLAGS_output_filename, std::ios::binary);
-        CHECK(output) << "unable to write to " << FLAGS_output_filename;
+      auto c = kysync::PrepareCommand::Create(
+          FLAGS_input_filename,
+          FLAGS_output_kysync_filename,
+          FLAGS_output_compressed_filename,
+          FLAGS_block_size,
+          FLAGS_threads);
 
-        auto c = kysync::SyncCommand::Create(
-            FLAGS_data_uri,
-            FLAGS_metadata_uri,
-            !FLAGS_seed_data_uri.empty() ? FLAGS_seed_data_uri
-                                         : "file://" + FLAGS_input_filename,
-            FLAGS_output_filename,
-            !FLAGS_use_compression,
-            FLAGS_num_blocks_in_batch,
-            FLAGS_threads);
-
-        return ky::observability::Observer(*c).Run([&c]() { return c->Run(); });
-      }
-
-      CHECK(false) << "unhandled command";
-      return 1;
-    } catch (const std::exception &e) {
-      LOG(ERROR) << e.what();
-      return 2;
-    } catch (...) {
-      LOG(ERROR) << "unknown exception";
+      return ky::observability::Observer(*c).Run([&c]() { return c->Run(); });
     }
-  } catch (...) {
-    // silence bugprone-exception-escape
-  }
+
+    if (FLAGS_command == "sync") {
+      auto output = std::ofstream(FLAGS_output_filename, std::ios::binary);
+      CHECK(output) << "unable to write to " << FLAGS_output_filename;
+
+      auto c = kysync::SyncCommand::Create(
+          FLAGS_data_uri,
+          FLAGS_metadata_uri,
+          !FLAGS_seed_data_uri.empty() ? FLAGS_seed_data_uri
+                                       : "file://" + FLAGS_input_filename,
+          FLAGS_output_filename,
+          !FLAGS_use_compression,
+          FLAGS_num_blocks_in_batch,
+          FLAGS_threads);
+
+      return ky::observability::Observer(*c).Run([&c]() { return c->Run(); });
+    }
+
+    CHECK(false) << "unhandled command";
+    return 1;
+  });
 }

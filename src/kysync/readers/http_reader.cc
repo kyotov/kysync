@@ -114,8 +114,8 @@ static void ParseMultipartByterangesResponse(
             std::regex_constants::icase);
         auto m = std::smatch();
         if (std::regex_match(buffer, m, re)) {
-          beg = stoul(buffer.substr(m.position(1), m.length(1)), nullptr, 10);
-          end = stoul(buffer.substr(m.position(2), m.length(2)), nullptr, 10);
+          beg = stoll(buffer.substr(m.position(1), m.length(1)), nullptr, 10);
+          end = stoll(buffer.substr(m.position(2), m.length(2)), nullptr, 10);
         }
         break;  // continue with headers
       }

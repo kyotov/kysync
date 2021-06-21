@@ -16,7 +16,7 @@ namespace kysync {
 
 class HttpServer final : public ky::metrics::MetricContainer {
   std::filesystem::path root_;
-  int port_;
+  int port_{};
   bool log_headers_;
   std::unique_ptr<httplib::Server> server_;
   std::thread thread_;
@@ -35,7 +35,7 @@ public:
       std::filesystem::path root,
       bool log_headers);
 
-  int GetPort();
+  int GetPort() const;
 
   void Stop();
 

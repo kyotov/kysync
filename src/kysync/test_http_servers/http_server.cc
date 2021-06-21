@@ -16,7 +16,8 @@ void HttpServer::Logger(
     const httplib::Request& req,
     const httplib::Response& res) {
   requests_++;
-  bytes_ += res.template get_header_value<uint64_t>("Content-Length");
+  bytes_ += static_cast<ky::metrics::MetricValueType>(
+      res.template get_header_value<uint64_t>("Content-Length"));
 
   if (log_headers_) {
     std::stringstream s;
@@ -72,7 +73,7 @@ HttpServer::HttpServer(
   Start();
 }
 
-int HttpServer::GetPort() { return port_; }
+int HttpServer::GetPort() const { return port_; }
 
 void HttpServer::Stop() {
   if (server_->is_running()) {

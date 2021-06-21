@@ -10,6 +10,7 @@ add_subdirectory(tests)
 add_executable(kysync
         main.cc)
 target_link_libraries(kysync
+        PRIVATE ky_common
         PRIVATE ky_observability
         PRIVATE kysync_commands
         PRIVATE gflags

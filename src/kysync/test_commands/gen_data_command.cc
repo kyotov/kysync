@@ -66,7 +66,8 @@ void GenDataCommand::GenChunk(int id, std::streamoff beg, std::streamoff end) {
   auto random_value_size = static_cast<int>(sizeof(RandomValueType));
 
   for (std::streamoff i = beg; i < end; i += fragment_size_) {
-    std::streamoff diff_offset = random() % (fragment_size_ - diff_size_ + 1);
+    auto diff_offset = static_cast<std::streamoff>(
+        random() % (fragment_size_ - diff_size_ + 1));
 
     auto v_data = GenVec(fragment_size_, random);
 
