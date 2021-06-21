@@ -11,6 +11,7 @@
 #include "../checksums/strong_checksum_builder.h"
 #include "../checksums/weak_checksum.h"
 #include "../config.h"
+#include "../utilities/file_stream_provider.h"
 #include "../utilities/parallelize.h"
 #include "../utilities/streams.h"
 #include "pb/header_adapter.h"
@@ -96,16 +97,14 @@ ChunkPreparer::ChunkPreparer(
     std::streamoff finish_offset)
     : prepare_command_(prepare_command),
       input_(prepare_command.input_file_path_, std::ios::binary),
-      output_(std::move(
-          GetOutputStream(prepare_command.output_compressed_file_path_, 0))),
+      output_(std::move(prepare_command.output_compressed_file_stream_provider_
+                            .CreateFileStream())),
       start_offset_(start_offset),
       finish_offset_(finish_offset),
       buffer_(prepare_command.block_size_),
       compressed_buffer_(prepare_command.max_compressed_block_size_) {
   CHECK(start_offset_ % prepare_command_.block_size_ == 0);
   CHECK(input_) << "error reading from " << prepare_command_.input_file_path_;
-  CHECK(output_) << "unable to write to "
-                 << prepare_command_.output_compressed_file_path_;
 
   Prepare();
 }
@@ -118,21 +117,12 @@ PrepareCommand::PrepareCommand(
     int threads)
     : input_file_path_(std::move(input_file_path)),
       output_ksync_file_path_(std::move(output_ksync_file_path)),
-      output_compressed_file_path_(std::move(output_compressed_file_path)),
+      output_compressed_file_stream_provider_(
+          std::move(output_compressed_file_path)),
       block_size_(block_size),
       max_compressed_block_size_(
           static_cast<std::streamsize>(ZSTD_compressBound(block_size))),
-      threads_(threads)  //
-{
-  if (output_ksync_file_path_.empty()) {
-    output_ksync_file_path_ = input_file_path_;
-    output_ksync_file_path_.append(".kysync");
-  }
-  if (output_compressed_file_path_.empty()) {
-    output_compressed_file_path_ = input_file_path_;
-    output_compressed_file_path_.append(".pzst");
-  }
-}
+      threads_(threads) {}
 
 int PrepareCommand::Run() {
   // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
@@ -145,8 +135,6 @@ int PrepareCommand::Run() {
   strong_checksums_.resize(block_count);
   compressed_sizes_.resize(block_count);
 
-  auto compressed_input = GetOutputStream(output_compressed_file_path_, 0);
-  auto compressed_output = GetOutputStream(output_compressed_file_path_, 0);
   auto compressed_buffer = std::vector<char>(max_compressed_block_size_);
 
   Parallelize(
@@ -167,6 +155,9 @@ int PrepareCommand::Run() {
   //  https://github.com/kyotov/ksync/issues/100
   StartNextPhase(data_size + 2 * compressed_bytes_);
 
+  auto compressed_input = output_compressed_file_stream_provider_.CreateFileStream();
+  auto compressed_output = output_compressed_file_stream_provider_.CreateFileStream();
+
   for (int i = 0; i < compressed_sizes_.size(); i++) {
     compressed_input.seekg(i * max_compressed_block_size_);
     compressed_input.read(compressed_buffer.data(), compressed_sizes_[i]);
@@ -181,9 +172,7 @@ int PrepareCommand::Run() {
     AdvanceProgress(input.gcount() + 2 * compressed_sizes_[i]);
   }
 
-  std::filesystem::resize_file(
-      output_compressed_file_path_,
-      compressed_output.tellp());
+  output_compressed_file_stream_provider_.Resize(compressed_output.tellp());
 
   // produce the ksync metadata output
 

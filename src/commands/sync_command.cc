@@ -282,7 +282,8 @@ void SyncCommand::ChunkReconstructor::ValidateAndWrite(
 
 SyncCommand::ChunkReconstructor::ChunkReconstructor(
     SyncCommand &parent_instance,
-    std::streamoff start_offset)
+    std::streamoff start_offset,
+    const FileStreamProvider &output_file_stream)
     : parent_impl_(parent_instance) {
   buffer_ =
       std::vector<char>(parent_impl_.block_ * parent_impl_.blocks_per_batch_);
@@ -291,7 +292,9 @@ SyncCommand::ChunkReconstructor::ChunkReconstructor(
       parent_impl_.max_compressed_size_ * parent_impl_.blocks_per_batch_);
   seed_reader_ = Reader::Create(parent_impl_.seed_uri_);
   data_reader_ = Reader::Create(parent_impl_.data_uri_);
-  output_ = GetOutputStream(parent_impl_.output_path_, start_offset);
+  output_ = output_file_stream.CreateFileStream();
+  output_.seekp(start_offset);
+  CHECK(output_);
 }
 
 void SyncCommand::ChunkReconstructor::ReconstructFromSeed(
@@ -306,8 +309,12 @@ void SyncCommand::ChunkReconstructor::ReconstructFromSeed(
 void SyncCommand::ReconstructSourceChunk(
     int /*id*/,
     std::streamoff start_offset,
-    std::streamoff end_offset) {
-  ChunkReconstructor chunk_reconstructor(*this, start_offset);
+    std::streamoff end_offset,
+    const FileStreamProvider &output_file_stream) {
+  ChunkReconstructor chunk_reconstructor(
+      *this,
+      start_offset,
+      output_file_stream);
   LOG_ASSERT(start_offset % block_ == 0);
   for (auto offset = start_offset; offset < end_offset; offset += block_) {
     auto block_index = static_cast<int>(offset / block_);
@@ -330,17 +337,16 @@ void SyncCommand::ReconstructSource() {
   StartNextPhase(data_size);
   LOG(INFO) << "reconstructing target...";
 
-  std::ofstream output(output_path_, std::ios::binary);
-  CHECK(output);
-  std::filesystem::resize_file(output_path_, data_size);
+  auto output_file_stream = FileStreamProvider(output_path_);
+  output_file_stream.Resize(data_size);
 
   Parallelize(
       data_size,
       block_,
       0,
       threads_,
-      [this](auto id, auto beg, auto end) {
-        ReconstructSourceChunk(id, beg, end);
+      [this, &output_file_stream](auto id, auto beg, auto end) {
+        ReconstructSourceChunk(id, beg, end, output_file_stream);
       });
 
   StartNextPhase(data_size);

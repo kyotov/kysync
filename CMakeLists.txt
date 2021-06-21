@@ -61,6 +61,7 @@ set_target_properties(proto PROPERTIES CXX_CLANG_TIDY "")
 
 add_library(main STATIC
         src/tests/commands/gen_data_command.cc
+        src/utilities/file_stream_provider.cc
         src/utilities/parallelize.cc
         src/utilities/streams.cc
         src/utilities/timer.cc
