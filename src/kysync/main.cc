@@ -27,10 +27,8 @@ DEFINE_int32(threads, 32, "number of threads");                     // NOLINT
 DEFINE_int32(num_blocks_in_batch, 4, "number of blocks in batch");  // NOLINT
 DEFINE_bool(use_compression, true, "use compression");              // NOLINT
 
-DECLARE_bool(help);
-DECLARE_string(helpon);
-
-int handleHelpFlags(int argc);
+DECLARE_bool(help);      // NOLINT
+DECLARE_string(helpon);  // NOLINT
 
 int main(int argc, char **argv) {
   ky::NoExcept([&argc, &argv]() {
@@ -40,7 +38,7 @@ int main(int argc, char **argv) {
     FLAGS_logtostderr = true;
     FLAGS_colorlogtostderr = true;
 
-    gflags::SetUsageMessage("kysync");
+    gflags::SetUsageMessage("--command=[prepare|sync] ...");
     gflags::SetVersionString("v0.1");
 
     if (FLAGS_command == "prepare") {
@@ -82,21 +80,12 @@ int main(int argc, char **argv) {
       return ky::observability::Observer(*c).Run([&c]() { return c->Run(); });
     }
 
-    return handleHelpFlags(argc);
-  });
-}
+    LOG(ERROR) << "expected `--command=prepare` or `--command=sync`";
 
-int handleHelpFlags(int argc) {
-  if (argc > 1) {
-    LOG(ERROR) << "unhandled command";
-  }
+    FLAGS_help = false;
+    FLAGS_helpon = "main";
+    gflags::HandleCommandLineHelpFlags();
 
-  // Just print out ksync gflags
-  FLAGS_help = false;
-  FLAGS_helpon = "main";
-  gflags::HandleCommandLineHelpFlags();
-  if (argc > 1) {
     return 1;
-  }
-  return 0;
+  });
 }
