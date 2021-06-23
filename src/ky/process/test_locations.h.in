@@ -1,0 +1,9 @@
+#ifndef KSYNC_SRC_KY_PROCESS_TEST_LOCATIONS_H_IN_H
+#define KSYNC_SRC_KY_PROCESS_TEST_LOCATIONS_H_IN_H
+
+#include <filesystem>
+
+static const std::filesystem::path kTestChatBotExecutable =
+    R"($<TARGET_FILE:test_chat_bot>)";
+
+#endif  // KSYNC_SRC_KY_PROCESS_TEST_LOCATIONS_H_IN_H

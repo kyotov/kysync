@@ -9,7 +9,21 @@
           </mappings>
         </serverdata>
       </paths>
+      <paths name="WSL (3f168c11-5e71-46a5-9e41-5e31ec19b303)">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="WSL (442c1b52-0313-42d9-9abf-530248b51864)">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="WSL (71453de2-a6a8-4e4b-a4d9-1802ef3368cc)">
         <serverdata>
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />
@@ -23,7 +37,28 @@
           </mappings>
         </serverdata>
       </paths>
+      <paths name="WSL (98374246-4137-452f-bc32-d84ed4285ca8)">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="WSL (9e990ddd-7624-400c-b949-d992146017e3)">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="WSL (a3783c74-2b69-4dca-b3b0-a6e72d09cd3b)">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="mac (463ece71-6ff9-42de-b4b7-e9b288e5a3bd)">
         <serverdata>
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />
@@ -41,6 +76,41 @@
         <serverdata>
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="mac (7c785fd5-cbcc-483c-ace7-922ca93379e4)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/var/folders/rv/sgc8r2ln5d736102qcxk41dc0000gn/T/tmp.wg4Tyw1R" local="$PROJECT_DIR$" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release-oldbam" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-visual-studio" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/Debug" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-mac" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/Release" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-mac" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-oldbam" />
+            <excludedPath local="true" path="$PROJECT_DIR$/build" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/RelWithDebInfo" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-oldbam" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+      <paths name="mac (99681faf-32fe-47f7-9fbd-7a13a70f81f6)">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="mac (afc03b9c-2d21-4607-819d-76b25e5374fb)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/tmp/ksync2" local="$PROJECT_DIR$" />
           </mappings>
         </serverdata>
       </paths>
@@ -125,6 +195,20 @@
           </mappings>
         </serverdata>
       </paths>
+      <paths name="oldbam (3e1b474b-4f73-4043-8c98-37f51f2e32b0)">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="oldbam (421dfb06-a2ed-400c-b261-c7f4dca78748)">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="oldbam (732c89a2-5981-464d-8e5c-3fbabadfcf59)">
         <serverdata>
           <mappings>
@@ -162,11 +246,52 @@
           </mappings>
         </serverdata>
       </paths>
+      <paths name="oldbam (de6ff2be-e6da-48b0-b0c7-283701191590)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/tmp/tmp.ZXaAMzf6RE" local="$PROJECT_DIR$" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release-oldbam" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-visual-studio" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/Debug" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-oldbam" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-mac" />
+            <excludedPath local="true" path="$PROJECT_DIR$/build" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-oldbam" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/RelWithDebInfo" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/Release" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
       <paths name="oldbam (e6a760d5-cb1b-4b38-83e7-fb187653e111)">
         <serverdata>
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />
           </mappings>
+        </serverdata>
+      </paths>
+      <paths name="oldbam (ea26d23a-471e-4ebc-8710-8ff5f17436b7)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/tmp/tmp.3qz0Pbho9M" local="$PROJECT_DIR$" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release-oldbam" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-visual-studio" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/Debug" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-mac" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/Release" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-oldbam" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-mac" />
+            <excludedPath local="true" path="$PROJECT_DIR$/build" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-oldbam" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/RelWithDebInfo" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug" />
+          </excludedPaths>
         </serverdata>
       </paths>
       <paths name="oldbam (eb4a2a4c-27c7-477c-b515-e9621e6088c2)">
