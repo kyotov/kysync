@@ -19,7 +19,7 @@ include(xxHash)
 include(llvm)
 include(nginx)
 
-#set(USE_CLANG_TIDY ON)
+set(USE_CLANG_TIDY ON)
 
 if (USE_CLANG_TIDY)
     string(REGEX REPLACE "[\\\\|/]" "[\\\\/]" HEADERS "${CMAKE_BINARY_DIR}/../.*")
