@@ -1,5 +1,5 @@
-#ifndef KSYNC_SRC_COMMANDS_SYNC_COMMAND_H
-#define KSYNC_SRC_COMMANDS_SYNC_COMMAND_H
+#ifndef KSYNC_SRC_KYSYNC_COMMANDS_INCLUDE_KYSYNC_COMMANDS_SYNC_COMMAND_H
+#define KSYNC_SRC_KYSYNC_COMMANDS_INCLUDE_KYSYNC_COMMANDS_SYNC_COMMAND_H
 
 #include <ky/observability/observable.h>
 #include <kysync/checksums/strong_checksum.h>
@@ -23,8 +23,8 @@ public:
   virtual ~SyncCommand() = default;
 
   static std::unique_ptr<SyncCommand> Create(
-      const std::string &data_uri,
-      const std::string &metadata_uri,
+      std::string data_uri,
+      std::string metadata_uri,
       std::string seed_uri,
       std::filesystem::path output_path,
       bool compression_disabled,
@@ -34,4 +34,4 @@ public:
 
 }  // namespace kysync
 
-#endif  // KSYNC_SRC_COMMANDS_SYNC_COMMAND_H
+#endif  // KSYNC_SRC_KYSYNC_COMMANDS_INCLUDE_KYSYNC_COMMANDS_SYNC_COMMAND_H
