@@ -130,6 +130,7 @@ static void ParseMultipartByterangesResponse(
   }
 }
 
+// NOTE: This can likely be removed after validation of the callback version.
 std::streamsize HttpReader::Read(void *buffer, httplib::Ranges ranges) {
   // TODO(kyotov): maybe make httplib contribution to pass ranges by const ref
   auto range_header = httplib::make_range_header(std::move(ranges));
@@ -192,14 +193,61 @@ HttpReader::Read(void *buffer, std::streamoff offset, std::streamsize size) {
 
 std::streamsize HttpReader::Read(
     void *buffer,
-    std::vector<BatchRetrivalInfo> &batched_retrieval_infos) {
+    std::vector<BatchRetrivalInfo> &batched_retrieval_infos,
+    RetrievalCallback retrieval_callback) {
   httplib::Ranges ranges;
   for (auto &retrieval_info : batched_retrieval_infos) {
     auto end_offset =
         retrieval_info.source_begin_offset + retrieval_info.size_to_read - 1;
     ranges.push_back({retrieval_info.source_begin_offset, end_offset});
   }
-  auto count = Read(buffer, ranges);
+  auto range_header = httplib::make_range_header(std::move(ranges));
+  auto res = client_->Get(path_.c_str(), {range_header});
+  CHECK(res.error() == httplib::Error::Success) << path_;
+  CHECK(res->status == 206 || res->status == 200)
+      << path_ << " " << res->status;
+  std::streamsize count = 0;
+  auto retrieval_info_index = 0;
+  if (IsMultirangeResponse(res.value())) {
+    // Note this expects data to be provided in order of range request made
+    ParseMultipartByterangesResponse(
+        res.value(),
+        [&buffer,
+         &count,
+         &batched_retrieval_infos,
+         &res,
+         &retrieval_info_index,
+         &retrieval_callback](
+            std::streamoff beg,
+            std::streamoff end,
+            std::istream &s) {
+          auto count_in_chunk = end - beg + 1;
+          CHECK(retrieval_info_index < batched_retrieval_infos.size())
+              << "Expected to retrieve only " << batched_retrieval_infos.size()
+              << " batches. Retrieved more batches than expected.";
+          auto expected_size =
+              batched_retrieval_infos[retrieval_info_index].size_to_read;
+          CHECK(count_in_chunk == expected_size)
+              << "Expected to read " << expected_size << " but read " << count
+              << " bytes.";
+          retrieval_callback(
+              res.value().body.data() + s.tellg(),
+              batched_retrieval_infos[retrieval_info_index]);
+          s.seekg(s.tellg() + count_in_chunk);
+          retrieval_info_index++;
+          count += count_in_chunk;
+        });
+  } else {
+    // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+    count = res->body.size();
+    auto size_consumed = 0;
+    for (const auto &retreival_info : batched_retrieval_infos) {
+      retrieval_callback(res->body.data() + size_consumed, retreival_info);
+      size_consumed += retreival_info.size_to_read;
+    }
+    CHECK(count == size_consumed) << "Got non-multipart response that does not "
+                                     "add up to expected total size";
+  }
   return Reader::Read(nullptr, 0, count);
 }
 

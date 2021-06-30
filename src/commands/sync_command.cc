@@ -18,6 +18,9 @@
 #include <unordered_map>
 #include <utility>
 
+#include <boost/asio/post.hpp>
+#include <boost/asio/thread_pool.hpp>
+
 #include "pb/header_adapter.h"
 
 namespace kysync {
@@ -31,6 +34,7 @@ class SyncCommandImpl final : virtual public ky::observability::Observable,
   bool compression_disabled_;
   int blocks_per_batch_;
   int threads_;
+  boost::asio::thread_pool pool_;
 
   ky::FileStreamProvider output_path_file_stream_provider_;
 
@@ -53,6 +57,7 @@ class SyncCommandImpl final : virtual public ky::observability::Observable,
   std::vector<StrongChecksum> strong_checksums_;
   std::vector<std::streamsize> compressed_sizes_;
   std::vector<std::streamoff> compressed_file_offsets_;
+  std::vector<bool> reconstructed_from_seed_;
 
   struct WcsMapData {
     std::streamsize index{};
@@ -63,6 +68,7 @@ class SyncCommandImpl final : virtual public ky::observability::Observable,
 
   std::unique_ptr<std::bitset<k4Gb>> set_;
   std::unordered_map<uint32_t, WcsMapData> analysis_;
+  std::vector<std::streamoff> reconstruction_info_;
 
   void ParseHeader(Reader &metadata_reader);
   void UpdateCompressedOffsetsAndMaxSize();
@@ -73,13 +79,12 @@ class SyncCommandImpl final : virtual public ky::observability::Observable,
       std::streamoff end_offset);
 
   void AnalyzeSeed();
-
   void ReconstructSourceChunk(
       int id,
       std::streamoff start_offset,
       std::streamoff end_offset);
 
-  std::streamoff FindSeedOffset(int block_index) const;
+  void Validate(int block_index, std::streamsize count) const;
   void ReconstructSource();
 
   const std::vector<uint32_t> &GetWeakChecksums() const override;
@@ -102,7 +107,9 @@ class SyncCommandImpl final : virtual public ky::observability::Observable,
     std::fstream output_;
     std::vector<BatchRetrivalInfo> batched_retrieval_infos_;
 
-    void WriteRetrievedBatch(std::streamsize size_to_write);
+    void WriteRetrievedBatchMember(
+        const char *read_buffer,
+        const BatchRetrivalInfo &retrieval_info);
 
     void ValidateAndWrite(
         int block_index,
@@ -228,6 +235,8 @@ void SyncCommandImpl::ReadMetadata() {
   ReadIntoContainer(*metadata_reader, offset, compressed_sizes_);
 
   UpdateCompressedOffsetsAndMaxSize();
+  reconstructed_from_seed_.resize(block_count_, false);
+  reconstruction_info_.resize(block_count_, -1);
 
   for (auto index = 0; index < block_count_; index++) {
     (*set_)[weak_checksums_[index]] = true;
@@ -273,6 +282,11 @@ void SyncCommandImpl::AnalyzeSeedChunk(
           warmup = block_ - 1;
           strong_checksum_matches_++;
           data.seed_offset = seed_offset + offset;
+          // NOTE: If this is sufficient, we may be able to drop the wcs map
+          // TODO(ashish): Confirm whether that's correct and update if so.
+          reconstruction_info_[data.index] = data.seed_offset;
+          // NOTE: Reconstruct from seed always uses block size
+          // TODO(ashish): Confirm with kyotov that this is by design
         } else {
           weak_checksum_false_positive_++;
         }
@@ -313,16 +327,12 @@ void SyncCommandImpl::AnalyzeSeed() {
       [this](auto id, auto beg, auto end) { AnalyzeSeedChunk(id, beg, end); });
 }
 
-std::streamoff SyncCommandImpl::FindSeedOffset(int block_index) const {
-  auto wcs = weak_checksums_[block_index];
-  auto scs = strong_checksums_[block_index];
-  auto analysis_info = analysis_.find(wcs);
-  CHECK(analysis_info != analysis_.end());
-  auto analysis = analysis_info->second;
-  if (scs == strong_checksums_[analysis.index]) {
-    return analysis.seed_offset;
+void SyncCommandImpl::Validate(int block_index, std::streamsize count) const {
+  if (block_index < block_count_ - 1 || size_ % block_ == 0) {
+    CHECK_EQ(count, block_);
+  } else {
+    CHECK_EQ(count, size_ % block_);
   }
-  return -1;
 }
 
 std::streamsize SyncCommandImpl::ChunkReconstructor::Decompress(
@@ -349,38 +359,28 @@ std::streamsize SyncCommandImpl::ChunkReconstructor::Decompress(
   return decompressed_size;
 }
 
-void SyncCommandImpl::ChunkReconstructor::WriteRetrievedBatch(
-    std::streamsize size_to_write) {
-  std::streamsize size_consumed = 0;
-  std::streamsize size_written = 0;
-  for (auto &retrieval_info : batched_retrieval_infos_) {
-    auto batch_member_read_size =
-        std::min(size_to_write - size_consumed, retrieval_info.size_to_read);
-    output_.seekp(retrieval_info.offset_to_write_to);
-    std::streamsize batch_member_write_size = 0;
-    if (parent_impl_.compression_disabled_) {
-      batch_member_write_size = batch_member_read_size;
-    } else {
-      LOG_ASSERT(retrieval_info.size_to_read == batch_member_read_size)
-          << "Size to read expected to be exact for all blocks including the "
-             "last one";
-      batch_member_write_size =
-          Decompress(  // NOLINT(bugprone-narrowing-conversions)
-              batch_member_read_size,
-              decompression_buffer_.data() + size_consumed,
-              buffer_.data() + size_written);
-      parent_impl_.decompressed_bytes_ += batch_member_write_size;
-    }
-    ValidateAndWrite(
-        retrieval_info.block_index,
-        buffer_.data() + size_written,
-        batch_member_write_size);
-    size_consumed += batch_member_read_size;
-    size_written += batch_member_write_size;
+void SyncCommandImpl::ChunkReconstructor::WriteRetrievedBatchMember(
+    const char *read_buffer,
+    const BatchRetrivalInfo &retrieval_info) {
+  auto read_size = retrieval_info.size_to_read;
+  output_.seekp(retrieval_info.offset_to_write_to);
+  std::streamsize write_size = 0;
+  const char *buffer_to_write_from = nullptr;
+  if (parent_impl_.compression_disabled_) {
+    write_size = read_size;
+    buffer_to_write_from = read_buffer;
+  } else {
+    write_size = Decompress(  // NOLINT(bugprone-narrowing-conversions)
+        read_size,
+        read_buffer,
+        buffer_.data());
+    buffer_to_write_from = buffer_.data();
+    parent_impl_.decompressed_bytes_ += write_size;
   }
-  LOG_ASSERT(size_consumed == size_to_write)
-      << "Unexpected scneario where size_to_write from source was "
-      << size_to_write << " but could write " << size_consumed << " instead.";
+  ValidateAndWrite(
+      retrieval_info.block_index,
+      buffer_to_write_from,
+      write_size);
 }
 
 void SyncCommandImpl::ChunkReconstructor::FlushBatch(bool force) {
@@ -390,8 +390,12 @@ void SyncCommandImpl::ChunkReconstructor::FlushBatch(bool force) {
   }
   auto &read_buffer =
       parent_impl_.compression_disabled_ ? buffer_ : decompression_buffer_;
-  auto count = data_reader_->Read(read_buffer.data(), batched_retrieval_infos_);
-  WriteRetrievedBatch(count);
+  auto count = data_reader_->Read(
+      static_cast<void *>(read_buffer.data()),
+      batched_retrieval_infos_,
+      [this](const char *read_buffer, const BatchRetrivalInfo &retrieval_info) {
+        WriteRetrievedBatchMember(read_buffer, retrieval_info);
+      });
   batched_retrieval_infos_.clear();
   parent_impl_.downloaded_bytes_ += count;
 }
@@ -425,13 +429,7 @@ void SyncCommandImpl::ChunkReconstructor::ValidateAndWrite(
     int block_index,
     const char *buffer,
     std::streamsize count) {
-  if (block_index < parent_impl_.block_count_ - 1 ||
-      parent_impl_.size_ % parent_impl_.block_ == 0)
-  {
-    CHECK_EQ(count, parent_impl_.block_);
-  } else {
-    CHECK_EQ(count, parent_impl_.size_ % parent_impl_.block_);
-  }
+  parent_impl_.Validate(block_index, count);
   output_.write(buffer, count);
   parent_impl_.AdvanceProgress(count);
 }
@@ -440,11 +438,8 @@ SyncCommandImpl::ChunkReconstructor::ChunkReconstructor(
     SyncCommandImpl &parent_instance,
     std::streamoff start_offset)
     : parent_impl_(parent_instance) {
-  buffer_ =
-      std::vector<char>(parent_impl_.block_ * parent_impl_.blocks_per_batch_);
-  // FIXME(ashish): why is the decompression buffer so big?
-  decompression_buffer_ = std::vector<char>(
-      parent_impl_.max_compressed_size_ * parent_impl_.blocks_per_batch_);
+  buffer_ = std::vector<char>(parent_impl_.block_);
+  decompression_buffer_ = std::vector<char>(parent_impl_.max_compressed_size_);
   seed_reader_ = Reader::Create(parent_impl_.seed_uri_);
   data_reader_ = Reader::Create(parent_impl_.data_uri_);
   output_ = parent_impl_.output_path_file_stream_provider_.CreateFileStream();
@@ -469,9 +464,10 @@ void SyncCommandImpl::ReconstructSourceChunk(
   LOG_ASSERT(start_offset % block_ == 0);
   for (auto offset = start_offset; offset < end_offset; offset += block_) {
     auto block_index = static_cast<int>(offset / block_);
-    std::streamoff seed_offset = FindSeedOffset(block_index);
-    if (seed_offset != -1) {
-      chunk_reconstructor.ReconstructFromSeed(block_index, seed_offset);
+    if (reconstruction_info_[block_index] != -1) {
+      chunk_reconstructor.ReconstructFromSeed(
+          block_index,
+          reconstruction_info_[block_index]);
     } else {
       chunk_reconstructor.EnqueueBlockRetrieval(block_index, offset);
       chunk_reconstructor.FlushBatch(false);
@@ -488,8 +484,6 @@ void SyncCommandImpl::ReconstructSource() {
   StartNextPhase(data_size);
   LOG(INFO) << "reconstructing target...";
 
-  output_path_file_stream_provider_.Resize(data_size);
-
   ky::parallelize::Parallelize(
       data_size,
       block_,
@@ -498,6 +492,7 @@ void SyncCommandImpl::ReconstructSource() {
       [this](auto id, auto beg, auto end) {
         ReconstructSourceChunk(id, beg, end);
       });
+  pool_.join();
 
   StartNextPhase(data_size);
   LOG(INFO) << "verifying target...";
@@ -538,10 +533,12 @@ SyncCommandImpl::SyncCommandImpl(
       compression_disabled_(compression_disabled),
       blocks_per_batch_(num_blocks_in_batch),
       threads_(threads),
+      pool_(threads),
       set_(std::make_unique<std::bitset<k4Gb>>()) {}
 
 int SyncCommandImpl::Run() {
   ReadMetadata();
+  output_path_file_stream_provider_.Resize(size_);
   AnalyzeSeed();
   ReconstructSource();
   return 0;
