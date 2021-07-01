@@ -18,6 +18,7 @@ include(httplib)
 include(xxHash)
 include(llvm)
 include(nginx)
+include(Boost)
 
 #set(USE_CLANG_TIDY ON)
 
