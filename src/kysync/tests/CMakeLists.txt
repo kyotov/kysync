@@ -16,6 +16,15 @@ target_link_libraries(test_common
 target_include_directories(test_common
         PUBLIC $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>)
 
+add_executable(dependency_tests
+        dependency_tests.cc)
+target_link_libraries(dependency_tests
+        PRIVATE Boost::regex
+        PRIVATE glog::glog
+        PRIVATE GTest::gtest
+        PRIVATE GTest::gtest_main)
+gtest_discover_tests(dependency_tests)
+
 add_executable(basic_tests
         tests.cc)
 target_link_libraries(basic_tests
