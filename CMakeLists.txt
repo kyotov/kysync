@@ -34,4 +34,16 @@ option(SKIP_ZSYNC "don't try to build zsync and run zsync perf test even on supp
 
 include(zsync.cmake)
 
+function(target_interface_set_relative_path TARGET RELATIVE_PATH)
+    set(INTERFACE_DIR "${CMAKE_CURRENT_BINARY_DIR}/include/${RELATIVE_PATH}")
+
+    file(MAKE_DIRECTORY "${INTERFACE_DIR}")
+    file(REMOVE_RECURSE "${INTERFACE_DIR}")
+    file(CREATE_LINK "${CMAKE_CURRENT_LIST_DIR}/include" "${INTERFACE_DIR}" SYMBOLIC)
+
+    target_include_directories("${TARGET}"
+            PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>")
+endfunction()
+
+add_subdirectory(kylibs)
 add_subdirectory(src)

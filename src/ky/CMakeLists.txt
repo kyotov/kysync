@@ -1,7 +1,0 @@
-add_subdirectory(common)
-add_subdirectory(file_stream_provider)
-add_subdirectory(metrics)
-add_subdirectory(observability)
-add_subdirectory(parallelize)
-add_subdirectory(temp_path)
-add_subdirectory(timer)
