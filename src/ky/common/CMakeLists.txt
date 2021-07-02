@@ -8,10 +8,8 @@ target_include_directories(ky_common
 add_executable(safe_cast_tests
         safe_cast_tests.cc)
 target_link_libraries(safe_cast_tests
-        PRIVATE
-        ky_common
-        glog::glog
-        GTest::gtest
-        GTest::gtest_main)
+        PRIVATE ky_common
+        PRIVATE glog::glog
+        PRIVATE GTest::gtest
+        PRIVATE GTest::gtest_main)
 gtest_discover_tests(safe_cast_tests)
-
