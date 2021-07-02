@@ -124,8 +124,8 @@ class SyncCommandImpl final : virtual public ky::observability::Observable,
 
 public:
   explicit SyncCommandImpl(
-      const std::string &data_uri,
-      const std::string &metadata_uri,
+      std::string data_uri,
+      std::string metadata_uri,
       std::string seed_uri,
       std::filesystem::path output_path,
       bool compression_disabled,
@@ -138,16 +138,16 @@ public:
 };
 
 std::unique_ptr<SyncCommand> SyncCommand::Create(
-    const std::string &data_uri,
-    const std::string &metadata_uri,
+    std::string data_uri,
+    std::string metadata_uri,
     std::string seed_uri,
     std::filesystem::path output_path,
     bool compression_disabled,
     int num_blocks_in_batch,
     int threads) {
   return std::make_unique<SyncCommandImpl>(
-      data_uri,
-      metadata_uri,
+      std::move(data_uri),
+      std::move(metadata_uri),
       std::move(seed_uri),
       std::move(output_path),
       compression_disabled,
@@ -523,21 +523,16 @@ void SyncCommandImpl::ReconstructSource() {
 SyncCommand::SyncCommand() = default;
 
 SyncCommandImpl::SyncCommandImpl(
-    const std::string &data_uri,
-    const std::string &metadata_uri,
+    std::string data_uri,
+    std::string metadata_uri,
     std::string seed_uri,
     std::filesystem::path output_path,
     bool compression_disabled,
     int num_blocks_in_batch,
     int threads)
     : Observable("sync"),
-      data_uri_(
-          compression_disabled || data_uri.starts_with("memory://") ||
-                  data_uri.ends_with(".pzst")
-              ? data_uri
-              : data_uri + ".pzst"),
-      metadata_uri_(
-          !metadata_uri.empty() ? metadata_uri : data_uri + ".kysync"),
+      data_uri_(std::move(data_uri)),
+      metadata_uri_(std::move(metadata_uri)),
       seed_uri_(std::move(seed_uri)),
       output_path_file_stream_provider_(std::move(output_path)),
       compression_disabled_(compression_disabled),

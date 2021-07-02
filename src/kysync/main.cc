@@ -47,6 +47,7 @@ int main(int argc, char **argv) {
         LOG(INFO) << "metadata filename defaulted to "
                   << FLAGS_output_kysync_filename;
       }
+      
       if (FLAGS_output_compressed_filename.empty()) {
         FLAGS_output_compressed_filename = FLAGS_input_filename + ".pzst";
         LOG(INFO) << "compressed output defaulted to "
@@ -67,11 +68,25 @@ int main(int argc, char **argv) {
       auto output = std::ofstream(FLAGS_output_filename, std::ios::binary);
       CHECK(output) << "unable to write to " << FLAGS_output_filename;
 
+      if (FLAGS_metadata_uri.empty()) {
+        FLAGS_metadata_uri = FLAGS_data_uri + ".kysync";
+        LOG(INFO) << "metadata uri defaulted to " << FLAGS_metadata_uri;
+      }
+
+      if (FLAGS_use_compression && !FLAGS_data_uri.ends_with(".pzst")) {
+        FLAGS_data_uri += ".pzst";
+        LOG(INFO) << "data uri defaulted to " << FLAGS_data_uri;
+      }
+
+      if (FLAGS_seed_data_uri.empty()) {
+        FLAGS_seed_data_uri = "file://" + FLAGS_input_filename;
+        LOG(INFO) << "seed data uri defaulted to " << FLAGS_seed_data_uri;
+      }
+
       auto c = kysync::SyncCommand::Create(
           FLAGS_data_uri,
           FLAGS_metadata_uri,
-          !FLAGS_seed_data_uri.empty() ? FLAGS_seed_data_uri
-                                       : "file://" + FLAGS_input_filename,
+          FLAGS_seed_data_uri,
           FLAGS_output_filename,
           !FLAGS_use_compression,
           FLAGS_num_blocks_in_batch,
