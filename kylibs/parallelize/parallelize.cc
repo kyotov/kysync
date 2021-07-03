@@ -5,7 +5,7 @@
 
 namespace ky::parallelize {
 
-int Parallelize(
+void Parallelize(
     std::streamsize data_size,
     std::streamsize block_size,
     std::streamsize overlap_size,
@@ -27,7 +27,6 @@ int Parallelize(
       << " threads=" << threads;
 
   std::vector<std::future<void>> fs;
-  // boost::asio::thread_pool pool(threads);
   for (int id = 0; id < threads; id++) {
     auto beg = id * chunk * block_size;
     auto end = (id + 1) * chunk * block_size + overlap_size;
@@ -46,20 +45,13 @@ int Parallelize(
   // case, its destructor synchronizes with the return of fn. Therefore, the
   // return value shall not be disregarded for asynchronous behavior, even when
   // fn returns void.
-  // Based on this, there is reason to expect the future destructor to perform a 
+  // Based on this, there is reason to expect the future destructor to perform a
   // join until the corresponding async function completes.
   auto done = false;
-  while (!done) {
-    done = true;
-    for (auto &ff : fs) {
-      CHECK(ff.valid()) << "Future in invalid state";
-      ff.wait();
-    }
+  for (auto &ff : fs) {
+    CHECK(ff.valid()) << "Future in invalid state";
+    ff.wait();
   }
-
-  // TODO(ashish): Check with Kamen why this return pattern is used, and remove
-  // if not required.
-  return threads;
 }
 
 }  // namespace ky::parallelize
