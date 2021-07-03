@@ -18,9 +18,6 @@
 #include <unordered_map>
 #include <utility>
 
-#include <boost/asio/post.hpp>
-#include <boost/asio/thread_pool.hpp>
-
 #include "pb/header_adapter.h"
 
 namespace kysync {
@@ -34,7 +31,6 @@ class SyncCommandImpl final : virtual public ky::observability::Observable,
   bool compression_disabled_;
   int blocks_per_batch_;
   int threads_;
-  boost::asio::thread_pool pool_;
 
   ky::FileStreamProvider output_path_file_stream_provider_;
 
@@ -57,7 +53,6 @@ class SyncCommandImpl final : virtual public ky::observability::Observable,
   std::vector<StrongChecksum> strong_checksums_;
   std::vector<std::streamsize> compressed_sizes_;
   std::vector<std::streamoff> compressed_file_offsets_;
-  std::vector<bool> reconstructed_from_seed_;
 
   struct WcsMapData {
     std::streamsize index{};
@@ -68,7 +63,7 @@ class SyncCommandImpl final : virtual public ky::observability::Observable,
 
   std::unique_ptr<std::bitset<k4Gb>> set_;
   std::unordered_map<uint32_t, WcsMapData> analysis_;
-  std::vector<std::streamoff> reconstruction_info_;
+  std::vector<std::streamoff> seed_offsets_;
 
   void ParseHeader(Reader &metadata_reader);
   void UpdateCompressedOffsetsAndMaxSize();
@@ -235,8 +230,7 @@ void SyncCommandImpl::ReadMetadata() {
   ReadIntoContainer(*metadata_reader, offset, compressed_sizes_);
 
   UpdateCompressedOffsetsAndMaxSize();
-  reconstructed_from_seed_.resize(block_count_, false);
-  reconstruction_info_.resize(block_count_, -1);
+  seed_offsets_.resize(block_count_, -1);
 
   for (auto index = 0; index < block_count_; index++) {
     (*set_)[weak_checksums_[index]] = true;
@@ -284,7 +278,7 @@ void SyncCommandImpl::AnalyzeSeedChunk(
           data.seed_offset = seed_offset + offset;
           // NOTE: If this is sufficient, we may be able to drop the wcs map
           // TODO(ashish): Confirm whether that's correct and update if so.
-          reconstruction_info_[data.index] = data.seed_offset;
+          seed_offsets_[data.index] = data.seed_offset;
           // NOTE: Reconstruct from seed always uses block size
           // TODO(ashish): Confirm with kyotov that this is by design
         } else {
@@ -464,10 +458,10 @@ void SyncCommandImpl::ReconstructSourceChunk(
   LOG_ASSERT(start_offset % block_ == 0);
   for (auto offset = start_offset; offset < end_offset; offset += block_) {
     auto block_index = static_cast<int>(offset / block_);
-    if (reconstruction_info_[block_index] != -1) {
+    if (seed_offsets_[block_index] != -1) {
       chunk_reconstructor.ReconstructFromSeed(
           block_index,
-          reconstruction_info_[block_index]);
+          seed_offsets_[block_index]);
     } else {
       chunk_reconstructor.EnqueueBlockRetrieval(block_index, offset);
       chunk_reconstructor.FlushBatch(false);
@@ -492,7 +486,6 @@ void SyncCommandImpl::ReconstructSource() {
       [this](auto id, auto beg, auto end) {
         ReconstructSourceChunk(id, beg, end);
       });
-  pool_.join();
 
   StartNextPhase(data_size);
   LOG(INFO) << "verifying target...";
@@ -533,7 +526,6 @@ SyncCommandImpl::SyncCommandImpl(
       compression_disabled_(compression_disabled),
       blocks_per_batch_(num_blocks_in_batch),
       threads_(threads),
-      pool_(threads),
       set_(std::make_unique<std::bitset<k4Gb>>()) {}
 
 int SyncCommandImpl::Run() {

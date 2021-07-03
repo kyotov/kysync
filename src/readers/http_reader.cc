@@ -130,7 +130,6 @@ static void ParseMultipartByterangesResponse(
   }
 }
 
-// NOTE: This can likely be removed after validation of the callback version.
 std::streamsize HttpReader::Read(void *buffer, httplib::Ranges ranges) {
   // TODO(kyotov): maybe make httplib contribution to pass ranges by const ref
   auto range_header = httplib::make_range_header(std::move(ranges));

@@ -1,9 +1,6 @@
 #include <glog/logging.h>
 #include <ky/parallelize.h>
 
-// #include <boost/asio/post.hpp>
-// #include <boost/asio/thread_pool.hpp>
-
 #include <future>
 
 namespace ky::parallelize {
@@ -38,11 +35,7 @@ int Parallelize(
     VLOG(2) << "thread=" << id << " [" << beg << ", " << end << ")";
 
     fs.push_back(std::async(f, id, beg, std::min(end, data_size)));
-    // boost::asio::post(pool, [&f, id, beg, end, data_size]() {
-    //   f(id, beg, std::min(end, data_size));
-    // });
   }
-  // pool.join();
 
   // FIXME: research if this is needed at all... maybe the threads are jthreads
   //        and therefore we don't need this loop. once upon a time i think i
@@ -55,20 +48,16 @@ int Parallelize(
   // fn returns void.
   // Based on this, there is reason to expect the future destructor to perform a 
   // join until the corresponding async function completes.
-  std::chrono::milliseconds chill(100);
   auto done = false;
   while (!done) {
     done = true;
     for (auto &ff : fs) {
       CHECK(ff.valid()) << "Future in invalid state";
       ff.wait();
-      // if (ff.wait_for(chill) != std::future_status::ready) {
-      //   done = false;
-      // }
     }
   }
 
-  // TODO(ashish): Check with Kamen why this retrun pattern is used, and remove
+  // TODO(ashish): Check with Kamen why this return pattern is used, and remove
   // if not required.
   return threads;
 }
