@@ -193,7 +193,7 @@ HttpReader::Read(void *buffer, std::streamoff offset, std::streamsize size) {
 std::streamsize HttpReader::Read(
     void *buffer,
     std::vector<BatchRetrivalInfo> &batched_retrieval_infos,
-    RetrievalCallback retrieval_callback) {
+    const RetrievalCallback &retrieval_callback) {
   httplib::Ranges ranges;
   for (auto &retrieval_info : batched_retrieval_infos) {
     auto end_offset =

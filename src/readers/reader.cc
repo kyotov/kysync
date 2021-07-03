@@ -22,7 +22,7 @@ std::streamsize Reader::Read(
 std::streamsize Reader::Read(
     void *buffer,
     std::vector<BatchRetrivalInfo> &batch_retrieval_infos,
-    RetrievalCallback retrieval_callback) {
+    const RetrievalCallback &retrieval_callback) {
   std::streamsize total_size_read = 0;
   for (const auto &retrieval_info : batch_retrieval_infos) {
     auto size_read = Read(

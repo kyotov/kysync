@@ -36,7 +36,7 @@ public:
   std::streamsize Read(
       void *buffer,
       std::vector<BatchRetrivalInfo> &batched_retrieval_infos,
-      RetrievalCallback retrieval_callback) override;
+      const RetrievalCallback &retrieval_callback) override;
 };
 
 }  // namespace kysync
