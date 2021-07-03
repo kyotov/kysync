@@ -20,7 +20,7 @@ include(llvm)
 include(nginx)
 include(Boost)
 
-set(USE_CLANG_TIDY ON)
+set(USE_CLANG_TIDY OFF)
 
 if (USE_CLANG_TIDY)
     string(REGEX REPLACE "[\\\\|/]" "[\\\\/]" HEADERS "${CMAKE_BINARY_DIR}/../.*")
