@@ -1,7 +1,7 @@
 import os
 
 LOG_FILENAME = "build/log/perf.log"
-TESTS_RELATIVE_PATH = "./build/src/kysync/tests/perf_tests"
+TESTS_RELATIVE_PATH = "./build/src/tests/perf_tests"
 
 
 def clear_log_file(filename):
