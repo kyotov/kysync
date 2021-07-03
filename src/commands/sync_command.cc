@@ -341,7 +341,7 @@ std::streamsize SyncCommandImpl::ChunkReconstructor::Decompress(
       << "Original size unknown when decompressing.";
   CHECK(expected_size_after_decompression <= parent_impl_.block_)
       << "Expected decompressed size is greater than block size.";
-  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+  // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
   std::streamsize decompressed_size = ZSTD_decompress(
       output_buffer,
       parent_impl_.block_,

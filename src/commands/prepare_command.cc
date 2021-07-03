@@ -147,8 +147,7 @@ void PrepareCommandImpl::ChunkPreparer::CompressBuffer(
     int block_index,
     std::streamsize size) {
   std::streamsize compressed_size =
-      ZSTD_compress(  // NOLINT(bugprone-narrowing-conversions,
-                      // cppcoreguidelines-narrowing-conversions)
+      ZSTD_compress(  // NOLINT(cppcoreguidelines-narrowing-conversions)
           compressed_buffer_.data(),
           prepare_command_.max_compressed_block_size_,
           buffer_.data(),
@@ -199,7 +198,7 @@ PrepareCommandImpl::PrepareCommandImpl(
       threads_(threads) {}
 
 int PrepareCommandImpl::Run() {
-  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+  // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
   std::streamsize data_size = std::filesystem::file_size(input_file_path_);
   StartNextPhase(data_size);
 

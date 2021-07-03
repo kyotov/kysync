@@ -43,7 +43,7 @@ static void CheckPrefixAndAdvance(
     const std::string &prefix,
     std::string &buffer) {
   buffer.resize(prefix.size(), ' ');
-  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+  // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
   input.read(buffer.data(), prefix.size());
   CHECK_EQ(input.gcount(), prefix.size());
   CHECK(std::equal(prefix.begin(), prefix.end(), buffer.begin()));
@@ -151,7 +151,7 @@ std::streamsize HttpReader::Read(void *buffer, httplib::Ranges ranges) {
           count += count_in_chunk;
         });
   } else {
-    // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+    // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
     count = res->body.size();
     memcpy(buffer, res->body.data(), count);
   }
@@ -237,12 +237,12 @@ std::streamsize HttpReader::Read(
           count += count_in_chunk;
         });
   } else {
-    // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+    // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
     count = res->body.size();
     auto size_consumed = 0;
     for (const auto &retreival_info : batched_retrieval_infos) {
       retrieval_callback(res->body.data() + size_consumed, retreival_info);
-      // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+      // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
       size_consumed += retreival_info.size_to_read;
     }
     CHECK(count == size_consumed) << "Got non-multipart response that does not "

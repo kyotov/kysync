@@ -21,7 +21,7 @@ class HttpTests : public Fixture {};
 
 void WriteFile(const fs::path& path, const std::string& data) {
   std::ofstream f(path);
-  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+  // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
   f.write(data.c_str(), data.size());
 }
 
@@ -41,7 +41,7 @@ static void CheckPrefixAndAdvance(
     const std::string& prefix,
     std::string& buffer) {
   buffer.resize(prefix.size(), ' ');
-  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+  // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
   input.read(buffer.data(), prefix.size());
   CHECK_EQ(input.gcount(), prefix.size());
   CHECK(std::equal(prefix.begin(), prefix.end(), buffer.begin()));
@@ -261,6 +261,7 @@ void HttpReaderMultirangeTest(
             concat_buffer.data() + size_consumed,
             read_buffer,
             retrieval_info.size_to_read);
+        // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
         size_consumed += retrieval_info.size_to_read;
       });
   EXPECT_EQ(size_read, expected_string.size());

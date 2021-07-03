@@ -19,6 +19,7 @@ Checks: >
   -altera-id-dependent-backward-branch,
   -llvm-header-guard,
   -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
 #  google-*,
 #  readability-*,
 #  portability-*,
