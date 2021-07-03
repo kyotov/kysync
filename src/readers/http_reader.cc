@@ -242,6 +242,7 @@ std::streamsize HttpReader::Read(
     auto size_consumed = 0;
     for (const auto &retreival_info : batched_retrieval_infos) {
       retrieval_callback(res->body.data() + size_consumed, retreival_info);
+      // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
       size_consumed += retreival_info.size_to_read;
     }
     CHECK(count == size_consumed) << "Got non-multipart response that does not "
