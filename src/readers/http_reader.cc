@@ -54,14 +54,9 @@ static bool IsMultirangeResponse(httplib::Response &response) {
       .starts_with("multipart/byteranges");
 }
 
-using ChunkCallback = std::function<void(
-    std::streamoff /*beg*/,
-    std::streamoff /*end*/,
-    std::istream & /*data*/)>;
-
-static void ParseMultipartByterangesResponse(
+static std::streamsize ParseMultipartByterangesResponse(
     httplib::Response &response,
-    const ChunkCallback &chunk_callback) {
+    const Reader::ReadCallback &read_callback) {
   auto content_type = response.get_header_value("Content-Type");
   LOG_ASSERT(IsMultirangeResponse(response));
   std::string boundary;
@@ -82,6 +77,7 @@ static void ParseMultipartByterangesResponse(
     kTerminated
   };
 
+  auto count = 0;
   for (auto state = State::kBoundary; state != State::kTerminated;) {
     switch (state) {
       case State::kBoundary: {
@@ -120,7 +116,10 @@ static void ParseMultipartByterangesResponse(
         break;  // continue with headers
       }
       case State::kDataChunk: {
-        chunk_callback(beg, end, body);
+        read_callback(beg, end, response.body.data(), body.tellg());
+        auto count_in_chunk = end - beg + 1;
+        count += count_in_chunk;
+        body.seekg(body.tellg() + count_in_chunk);
         state = State::kBoundary;
         break;
       }
@@ -128,6 +127,7 @@ static void ParseMultipartByterangesResponse(
         break;
     }
   }
+  return count;
 }
 
 std::streamsize HttpReader::Read(void *buffer, httplib::Ranges ranges) {
@@ -145,9 +145,9 @@ std::streamsize HttpReader::Read(void *buffer, httplib::Ranges ranges) {
     ParseMultipartByterangesResponse(
         res.value(),
         [&buffer,
-         &count](std::streamoff beg, std::streamoff end, std::istream &s) {
+         &count](std::streamoff beg, std::streamoff end, const char *read_buffer, std::streamoff offset) {
           auto count_in_chunk = end - beg + 1;
-          s.read(static_cast<char *>(buffer) + count, count_in_chunk);
+          memcpy(buffer, read_buffer + offset, count_in_chunk);
           count += count_in_chunk;
         });
   } else {
@@ -191,9 +191,8 @@ HttpReader::Read(void *buffer, std::streamoff offset, std::streamsize size) {
 }
 
 std::streamsize HttpReader::Read(
-    void *buffer,
     std::vector<BatchRetrivalInfo> &batched_retrieval_infos,
-    const RetrievalCallback &retrieval_callback) {
+    const ReadCallback &read_callback) {
   httplib::Ranges ranges;
   for (auto &retrieval_info : batched_retrieval_infos) {
     auto end_offset =
@@ -209,44 +208,14 @@ std::streamsize HttpReader::Read(
   auto retrieval_info_index = 0;
   if (IsMultirangeResponse(res.value())) {
     // Note this expects data to be provided in order of range request made
-    ParseMultipartByterangesResponse(
+    count = ParseMultipartByterangesResponse(
         res.value(),
-        [&buffer,
-         &count,
-         &batched_retrieval_infos,
-         &res,
-         &retrieval_info_index,
-         &retrieval_callback](
-            std::streamoff beg,
-            std::streamoff end,
-            std::istream &s) {
-          auto count_in_chunk = end - beg + 1;
-          CHECK(retrieval_info_index < batched_retrieval_infos.size())
-              << "Expected to retrieve only " << batched_retrieval_infos.size()
-              << " batches. Retrieved more batches than expected.";
-          auto expected_size =
-              batched_retrieval_infos[retrieval_info_index].size_to_read;
-          CHECK(count_in_chunk == expected_size)
-              << "Expected to read " << expected_size << " but read " << count
-              << " bytes.";
-          retrieval_callback(
-              res.value().body.data() + s.tellg(),
-              batched_retrieval_infos[retrieval_info_index]);
-          s.seekg(s.tellg() + count_in_chunk);
-          retrieval_info_index++;
-          count += count_in_chunk;
-        });
+        read_callback);
   } else {
     // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
     count = res->body.size();
     auto size_consumed = 0;
-    for (const auto &retreival_info : batched_retrieval_infos) {
-      retrieval_callback(res->body.data() + size_consumed, retreival_info);
-      // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
-      size_consumed += retreival_info.size_to_read;
-    }
-    CHECK(count == size_consumed) << "Got non-multipart response that does not "
-                                     "add up to expected total size";
+      read_callback(0, res->body.size() - 1, res->body.data(), 0);
   }
   return Reader::Read(nullptr, 0, count);
 }

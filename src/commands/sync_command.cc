@@ -263,12 +263,14 @@ void SyncCommandImpl::AnalyzeSeedChunk(
        * https://github.com/kyotov/ksync/blob/2d98f83cd1516066416e8319fbfa995e3f49f3dd/commands/SyncCommand.cpp#L128-L132
        */
       if (--warmup < 0 && seed_offset + offset + block_size_ <= seed_size &&
-          (*set_)[wcs]) {
+          (*set_)[wcs])
+      {
         weak_checksum_matches_++;
         auto &data = analysis_[wcs];
 
         auto source_digest = strong_checksums_[data.index];
-        auto seed_digest = StrongChecksum::Compute(buffer + offset, block_size_);
+        auto seed_digest =
+            StrongChecksum::Compute(buffer + offset, block_size_);
 
         // there was a verification here in previous versions...
         // restore if needed for debugging by running blame on this line.
@@ -318,7 +320,8 @@ void SyncCommandImpl::AnalyzeSeed() {
       [this](auto id, auto beg, auto end) { AnalyzeSeedChunk(id, beg, end); });
 }
 
-void SyncCommandImpl::ValidateBlockSize(int block_index, std::streamsize count) const {
+void SyncCommandImpl::ValidateBlockSize(int block_index, std::streamsize count)
+    const {
   if (block_index < block_count_ - 1 || size_ % block_size_ == 0) {
     CHECK_EQ(count, block_size_);
   } else {
@@ -368,10 +371,7 @@ void SyncCommandImpl::ChunkReconstructor::WriteRetrievedBatchMember(
     buffer_to_write = buffer_.data();
     parent_impl_.decompressed_bytes_ += write_size;
   }
-  ValidateAndWrite(
-      retrieval_info.block_index,
-      buffer_to_write,
-      write_size);
+  ValidateAndWrite(retrieval_info.block_index, buffer_to_write, write_size);
 }
 
 void SyncCommandImpl::ChunkReconstructor::FlushBatch(bool force) {
@@ -379,13 +379,24 @@ void SyncCommandImpl::ChunkReconstructor::FlushBatch(bool force) {
   if (batched_retrieval_infos_.size() < threshold) {
     return;
   }
-  auto &read_buffer =
-      parent_impl_.compression_disabled_ ? buffer_ : decompression_buffer_;
+  auto retrieval_info_index = 0;
   auto count = data_reader_->Read(
-      read_buffer.data(),
       batched_retrieval_infos_,
-      [this](const char *read_buffer, const BatchRetrivalInfo &retrieval_info) {
-        WriteRetrievedBatchMember(read_buffer, retrieval_info);
+      [this, &retrieval_info_index](
+          std::streamoff begin_offset,
+          std::streamoff end_offset,
+          const char *read_buffer,
+          std::streamoff read_offset) {
+        const auto &retrieval_info =
+            batched_retrieval_infos_[retrieval_info_index];
+        // CHECK(begin_offset == retrieval_info.source_begin_offset)
+        //     << "Got begin offset " << begin_offset << " but expected "
+        //     << retrieval_info.source_begin_offset;
+        // CHECK(
+        //     end_offset == retrieval_info.source_begin_offset +
+        //                       retrieval_info.size_to_read - 1);
+        WriteRetrievedBatchMember(read_buffer + read_offset, retrieval_info);
+        retrieval_info_index++;
       });
   batched_retrieval_infos_.clear();
   parent_impl_.downloaded_bytes_ += count;

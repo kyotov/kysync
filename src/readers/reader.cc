@@ -20,16 +20,25 @@ std::streamsize Reader::Read(
 }
 
 std::streamsize Reader::Read(
-    void *buffer,
     std::vector<BatchRetrivalInfo> &batch_retrieval_infos,
-    const RetrievalCallback &retrieval_callback) {
+    const ReadCallback &read_callback) {
   std::streamsize total_size_read = 0;
+  std::vector<char> buffer;
   for (const auto &retrieval_info : batch_retrieval_infos) {
+    if (retrieval_info.size_to_read > buffer.size()) {
+      buffer.resize(retrieval_info.size_to_read);
+    }
     auto size_read = Read(
-        static_cast<char *>(buffer),
+        buffer.data(),
         retrieval_info.source_begin_offset,
         retrieval_info.size_to_read);
-    retrieval_callback(static_cast<char *>(buffer), retrieval_info);
+    auto end_offset =
+        retrieval_info.source_begin_offset + retrieval_info.size_to_read - 1;
+    read_callback(
+        retrieval_info.source_begin_offset,
+        end_offset,
+        buffer.data(),
+        0);
     total_size_read += size_read;
   }
   return total_size_read;

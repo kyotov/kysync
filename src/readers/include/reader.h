@@ -10,7 +10,6 @@
 
 namespace kysync {
 
-
 class Reader : public ky::metrics::MetricContainer {
   ky::metrics::Metric total_reads_{};
   ky::metrics::Metric total_bytes_read_{};
@@ -23,14 +22,15 @@ public:
   virtual std::streamsize
   Read(void *buffer, std::streamoff offset, std::streamsize size);
 
-using RetrievalCallback = std::function<void(
-    const char * /*read_buffer*/,
-    const BatchRetrivalInfo & /*retrieval_info*/)>;
+  using ReadCallback = std::function<void(
+      std::streamoff /*beg*/,
+      std::streamoff /*end*/,
+      const char * /*buffer*/,
+      std::streamoff /*read_offset*/)>;
 
   virtual std::streamsize Read(
-      void *buffer,
       std::vector<BatchRetrivalInfo> &batch_retrieval_infos,
-      const RetrievalCallback &retrieval_callback);
+      const ReadCallback &read_callback);
 
   void Accept(ky::metrics::MetricVisitor &visitor) override;
 

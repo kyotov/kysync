@@ -71,14 +71,14 @@ static void ReadLine(std::istream& input, std::string& buffer, int max) {
   }
 }
 
-using ChunkCallback = std::function<void(
+using ReadCallback = std::function<void(
     std::streamoff /*beg*/,
     std::streamoff /*end*/,
     std::istream& /*data*/)>;
 
 static void ParseMultipartByterangesResponse(
     const httplib::Response& response,
-    const ChunkCallback& chunk_callback) {
+    const ReadCallback& chunk_callback) {
   auto content_type = response.get_header_value("Content-Type");
   CHECK(content_type.starts_with("multipart/byteranges"));
 
@@ -248,21 +248,22 @@ void HttpReaderMultirangeTest(
   for (auto& retrieval_info : batched_retrieval_infos) {
     total_size += retrieval_info.size_to_read;
   }
-  auto buffer = std::vector<char>(total_size);
   auto concat_buffer = std::vector<char>(total_size);
   auto size_consumed = 0;
   auto size_read = reader->Read(
-      buffer.data(),
       batched_retrieval_infos,
-      [&buffer, &concat_buffer, &size_consumed](
-          const char* read_buffer,
-          const BatchRetrivalInfo& retrieval_info) {
+      [&concat_buffer, &size_consumed](
+          std::streamoff begin_offset,
+          std::streamoff end_offset,
+          const char * read_buffer,
+          std::streamoff read_offset) {
+        auto size = end_offset - begin_offset + 1;
         memcpy(
             concat_buffer.data() + size_consumed,
-            read_buffer,
-            retrieval_info.size_to_read);
+            read_buffer + read_offset,
+            size);
         // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
-        size_consumed += retrieval_info.size_to_read;
+        size_consumed += size;
       });
   EXPECT_EQ(size_read, expected_string.size());
   EXPECT_TRUE(
