@@ -201,10 +201,10 @@ std::streamsize HttpReader::Read(
   } else {
     // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
     count = res->body.size();
-    LOG_ASSERT(batched_retrieval_infos.size() >= 1);
-    // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
+    LOG_ASSERT(!batched_retrieval_infos.empty());
     read_callback(
         batched_retrieval_infos[0].source_begin_offset,
+        // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
         batched_retrieval_infos[0].source_begin_offset + res->body.size() - 1,
         res->body.data(),
         0);

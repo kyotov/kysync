@@ -395,6 +395,7 @@ void SyncCommandImpl::ChunkReconstructor::FlushBatch(bool force) {
           WriteRetrievedBatchMember(
               read_buffer + read_offset + size_read,
               retrieval_info);
+          // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)              
           size_read += retrieval_info.size_to_read;
           retrieval_info_index++;
         }
