@@ -201,9 +201,13 @@ std::streamsize HttpReader::Read(
   } else {
     // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
     count = res->body.size();
-    auto size_consumed = 0;
-    // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)    
-    read_callback(0, res->body.size() - 1, res->body.data(), 0);
+    LOG_ASSERT(batched_retrieval_infos.size() >= 1);
+    // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
+    read_callback(
+        batched_retrieval_infos[0].source_begin_offset,
+        batched_retrieval_infos[0].source_begin_offset + res->body.size() - 1,
+        res->body.data(),
+        0);
   }
   return Reader::Read(nullptr, 0, count);
 }

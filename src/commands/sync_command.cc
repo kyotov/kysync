@@ -382,14 +382,22 @@ void SyncCommandImpl::ChunkReconstructor::FlushBatch(bool force) {
   auto count = data_reader_->Read(
       batched_retrieval_infos_,
       [this, &retrieval_info_index](
-          std::streamoff /*begin_offset*/,
-          std::streamoff /*end_offset*/,
+          std::streamoff begin_offset,
+          std::streamoff end_offset,
           const char *read_buffer,
           std::streamoff read_offset) {
-        const auto &retrieval_info =
-            batched_retrieval_infos_[retrieval_info_index];
-        WriteRetrievedBatchMember(read_buffer + read_offset, retrieval_info);
-        retrieval_info_index++;
+        const auto size_to_read = end_offset - begin_offset + 1;
+        auto size_read = 0;
+        while (size_read < size_to_read) {
+          const auto &retrieval_info =
+              batched_retrieval_infos_[retrieval_info_index];
+          CHECK(begin_offset + size_read == retrieval_info.source_begin_offset);
+          WriteRetrievedBatchMember(
+              read_buffer + read_offset + size_read,
+              retrieval_info);
+          size_read += retrieval_info.size_to_read;
+          retrieval_info_index++;
+        }
       });
   batched_retrieval_infos_.clear();
   parent_impl_.downloaded_bytes_ += count;
