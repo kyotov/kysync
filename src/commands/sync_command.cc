@@ -97,7 +97,6 @@ class SyncCommandImpl final : virtual public ky::observability::Observable,
     SyncCommandImpl &parent_impl_;
 
     std::vector<char> buffer_;
-    std::vector<char> decompression_buffer_;
     std::unique_ptr<Reader> seed_reader_;
     std::unique_ptr<Reader> data_reader_;
     std::fstream output_;
@@ -389,12 +388,6 @@ void SyncCommandImpl::ChunkReconstructor::FlushBatch(bool force) {
           std::streamoff read_offset) {
         const auto &retrieval_info =
             batched_retrieval_infos_[retrieval_info_index];
-        // CHECK(begin_offset == retrieval_info.source_begin_offset)
-        //     << "Got begin offset " << begin_offset << " but expected "
-        //     << retrieval_info.source_begin_offset;
-        // CHECK(
-        //     end_offset == retrieval_info.source_begin_offset +
-        //                       retrieval_info.size_to_read - 1);
         WriteRetrievedBatchMember(read_buffer + read_offset, retrieval_info);
         retrieval_info_index++;
       });
@@ -441,7 +434,6 @@ SyncCommandImpl::ChunkReconstructor::ChunkReconstructor(
     std::streamoff start_offset)
     : parent_impl_(parent_instance) {
   buffer_ = std::vector<char>(parent_impl_.block_size_);
-  decompression_buffer_ = std::vector<char>(parent_impl_.max_compressed_size_);
   seed_reader_ = Reader::Create(parent_impl_.seed_uri_);
   data_reader_ = Reader::Create(parent_impl_.data_uri_);
   output_ = parent_impl_.output_path_file_stream_provider_.CreateFileStream();
