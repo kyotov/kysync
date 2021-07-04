@@ -21,7 +21,7 @@ class HttpTests : public Fixture {};
 
 void WriteFile(const fs::path& path, const std::string& data) {
   std::ofstream f(path);
-  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+  // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
   f.write(data.c_str(), data.size());
 }
 
@@ -41,7 +41,7 @@ static void CheckPrefixAndAdvance(
     const std::string& prefix,
     std::string& buffer) {
   buffer.resize(prefix.size(), ' ');
-  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+  // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
   input.read(buffer.data(), prefix.size());
   CHECK_EQ(input.gcount(), prefix.size());
   CHECK(std::equal(prefix.begin(), prefix.end(), buffer.begin()));
@@ -249,11 +249,25 @@ void HttpReaderMultirangeTest(
     total_size += retrieval_info.size_to_read;
   }
   auto buffer = std::vector<char>(total_size);
-  auto size_read = reader->Read(buffer.data(), batched_retrieval_infos);
+  auto concat_buffer = std::vector<char>(total_size);
+  auto size_consumed = 0;
+  auto size_read = reader->Read(
+      buffer.data(),
+      batched_retrieval_infos,
+      [&buffer, &concat_buffer, &size_consumed](
+          const char* read_buffer,
+          const BatchRetrivalInfo& retrieval_info) {
+        memcpy(
+            concat_buffer.data() + size_consumed,
+            read_buffer,
+            retrieval_info.size_to_read);
+        // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
+        size_consumed += retrieval_info.size_to_read;
+      });
   EXPECT_EQ(size_read, expected_string.size());
   EXPECT_TRUE(
       std::memcmp(
-          buffer.data(),
+          concat_buffer.data(),
           expected_string.c_str(),
           expected_string.size()) == 0);
 }

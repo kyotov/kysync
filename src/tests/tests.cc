@@ -14,6 +14,9 @@
 #include <filesystem>
 #include <fstream>
 
+#include <boost/asio/post.hpp>
+#include <boost/asio/thread_pool.hpp>
+
 #include "expectation_check_metrics_visitor.h"
 #include "fixture.h"
 
@@ -22,17 +25,17 @@ namespace kysync {
 namespace fs = std::filesystem;
 
 std::streamsize Size(const char *data) {
-  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+  // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
   return strlen(data);
 }
 
 std::streamsize Size(char *data) {
-  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+  // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
   return strlen(data);
 }
 
 std::streamsize Size(const fs::path &path) {
-  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+  // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
   return fs::file_size(path);
 }
 
@@ -257,7 +260,7 @@ std::streamsize GetExpectedCompressedSize(
   while (size_read < data.size()) {
     auto size_remaining = Size(data) - size_read;
     std::streamsize size_to_read = std::min(block_size, size_remaining);
-    // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+    // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
     compressed_size += ZSTD_compress(
         compression_buffer.data(),
         compression_buffer_size,
@@ -642,6 +645,20 @@ TEST(SyncCommand, GetTempPath) {  // NOLINT
   auto p_1 = ky::TempPath();
   auto p_2 = ky::TempPath();
   EXPECT_NE(p_1.GetPath(), p_2.GetPath());
+}
+
+TEST(SyncCommand, ThreadPool) {  // NOLINT
+  int num_threads = 4;
+  boost::asio::thread_pool pool(num_threads);
+  std::atomic<int> value(0);
+  for (int i = 0; i < num_threads * 2; i++) {
+    boost::asio::post(pool, [&value]() { 
+      LOG(INFO) << "Incrementing value";
+      value += 1;
+    } );
+  }
+  pool.join();
+  EXPECT_EQ(value, num_threads * 2);
 }
 
 }  // namespace kysync

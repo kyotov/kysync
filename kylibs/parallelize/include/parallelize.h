@@ -5,7 +5,7 @@
 
 namespace ky::parallelize {
 
-int Parallelize(
+void Parallelize(
     std::streamsize data_size,
     std::streamsize block_size,
     std::streamsize overlap_size,

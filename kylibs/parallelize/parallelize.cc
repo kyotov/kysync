@@ -5,7 +5,7 @@
 
 namespace ky::parallelize {
 
-int Parallelize(
+void Parallelize(
     std::streamsize data_size,
     std::streamsize block_size,
     std::streamsize overlap_size,
@@ -27,7 +27,6 @@ int Parallelize(
       << " threads=" << threads;
 
   std::vector<std::future<void>> fs;
-
   for (int id = 0; id < threads; id++) {
     auto beg = id * chunk * block_size;
     auto end = (id + 1) * chunk * block_size + overlap_size;
@@ -40,18 +39,19 @@ int Parallelize(
   // FIXME: research if this is needed at all... maybe the threads are jthreads
   //        and therefore we don't need this loop. once upon a time i think i
   //        tripped on it and needed it... consider removing it.
-  std::chrono::milliseconds chill(100);
+  // NOTE: https://www.cplusplus.com/reference/future/async/ states:
+  // When launch::async is selected, the future returned is linked to the end of
+  // the thread created, even if its shared state is never accessed: in this
+  // case, its destructor synchronizes with the return of fn. Therefore, the
+  // return value shall not be disregarded for asynchronous behavior, even when
+  // fn returns void.
+  // Based on this, there is reason to expect the future destructor to perform a
+  // join until the corresponding async function completes.
   auto done = false;
-  while (!done) {
-    done = true;
-    for (auto &ff : fs) {
-      if (ff.wait_for(chill) != std::future_status::ready) {
-        done = false;
-      }
-    }
+  for (auto &ff : fs) {
+    CHECK(ff.valid()) << "Future in invalid state";
+    ff.wait();
   }
-
-  return threads;
 }
 
 }  // namespace ky::parallelize

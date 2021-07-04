@@ -4,10 +4,12 @@
 #include <ky/metrics/metrics.h>
 #include <kysync/readers/batch_retrieval_info.h>
 
+#include <functional>
 #include <memory>
 #include <vector>
 
 namespace kysync {
+
 
 class Reader : public ky::metrics::MetricContainer {
   ky::metrics::Metric total_reads_{};
@@ -21,9 +23,14 @@ public:
   virtual std::streamsize
   Read(void *buffer, std::streamoff offset, std::streamsize size);
 
+using RetrievalCallback = std::function<void(
+    const char * /*read_buffer*/,
+    const BatchRetrivalInfo & /*retrieval_info*/)>;
+
   virtual std::streamsize Read(
       void *buffer,
-      std::vector<BatchRetrivalInfo> &batch_retrieval_infos);
+      std::vector<BatchRetrivalInfo> &batch_retrieval_infos,
+      const RetrievalCallback &retrieval_callback);
 
   void Accept(ky::metrics::MetricVisitor &visitor) override;
 

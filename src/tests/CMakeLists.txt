@@ -32,7 +32,8 @@ target_link_libraries(basic_tests
         PRIVATE kysync_readers
         PRIVATE kysync_checksums
         PRIVATE httplib::httplib
-        PRIVATE zstd::libzstd_static)
+        PRIVATE zstd::libzstd_static
+        PRIVATE Boost::headers)
 gtest_discover_tests(basic_tests)
 
 add_executable(perf_tests

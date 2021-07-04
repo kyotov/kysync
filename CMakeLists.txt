@@ -20,7 +20,7 @@ include(llvm)
 include(nginx)
 include(Boost)
 
-#set(USE_CLANG_TIDY ON)
+option(USE_CLANG_TIDY "run clang-tidy on the project" OFF)
 
 if (USE_CLANG_TIDY)
     string(REGEX REPLACE "[\\\\|/]" "[\\\\/]" HEADERS "${CMAKE_BINARY_DIR}/../.*")

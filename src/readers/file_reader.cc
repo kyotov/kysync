@@ -12,7 +12,7 @@ FileReader::FileReader(const std::filesystem::path &path)
 }
 
 std::streamsize FileReader::GetSize() const {
-  // NOLINTNEXTLINE(bugprone-narrowing-conversions,cppcoreguidelines-narrowing-conversions)
+  // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
   return fs::file_size(path_);
 }
 
