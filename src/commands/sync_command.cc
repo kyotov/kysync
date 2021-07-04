@@ -382,8 +382,8 @@ void SyncCommandImpl::ChunkReconstructor::FlushBatch(bool force) {
   auto count = data_reader_->Read(
       batched_retrieval_infos_,
       [this, &retrieval_info_index](
-          std::streamoff begin_offset,
-          std::streamoff end_offset,
+          std::streamoff /*begin_offset*/,
+          std::streamoff /*end_offset*/,
           const char *read_buffer,
           std::streamoff read_offset) {
         const auto &retrieval_info =

@@ -118,6 +118,7 @@ static std::streamsize ParseMultipartByterangesResponse(
       case State::kDataChunk: {
         read_callback(beg, end, response.body.data(), body.tellg());
         auto count_in_chunk = end - beg + 1;
+        // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
         count += count_in_chunk;
         body.seekg(body.tellg() + count_in_chunk);
         state = State::kBoundary;
@@ -157,11 +158,11 @@ std::streamsize HttpReader::GetSize() const {
 std::streamsize
 HttpReader::Read(void *buffer, std::streamoff offset, std::streamsize size) {
   std::vector<BatchRetrivalInfo> batched_retrieval_info;
-  batched_retrieval_info.push_back({
-      .block_index = 0,
-      .source_begin_offset = offset,
-      .size_to_read = size,
-      .offset_to_write_to = 0});
+  batched_retrieval_info.push_back(
+      {.block_index = 0,
+       .source_begin_offset = offset,
+       .size_to_read = size,
+       .offset_to_write_to = 0});
   auto count = Read(
       batched_retrieval_info,
       [buffer](
@@ -201,6 +202,7 @@ std::streamsize HttpReader::Read(
     // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
     count = res->body.size();
     auto size_consumed = 0;
+    // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)    
     read_callback(0, res->body.size() - 1, res->body.data(), 0);
   }
   return Reader::Read(nullptr, 0, count);
