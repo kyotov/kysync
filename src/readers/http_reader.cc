@@ -130,34 +130,6 @@ static std::streamsize ParseMultipartByterangesResponse(
   return count;
 }
 
-std::streamsize HttpReader::Read(void *buffer, httplib::Ranges ranges) {
-  // TODO(kyotov): maybe make httplib contribution to pass ranges by const ref
-  auto range_header = httplib::make_range_header(std::move(ranges));
-  auto res = client_->Get(path_.c_str(), {range_header});
-
-  CHECK(res.error() == httplib::Error::Success) << path_;
-  CHECK(res->status == 206 || res->status == 200)
-      << path_ << " " << res->status;
-
-  std::streamsize count = 0;
-  if (IsMultirangeResponse(res.value())) {
-    // Note this expects data to be provided in order of range request made
-    ParseMultipartByterangesResponse(
-        res.value(),
-        [&buffer,
-         &count](std::streamoff beg, std::streamoff end, const char *read_buffer, std::streamoff offset) {
-          auto count_in_chunk = end - beg + 1;
-          memcpy(buffer, read_buffer + offset, count_in_chunk);
-          count += count_in_chunk;
-        });
-  } else {
-    // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
-    count = res->body.size();
-    memcpy(buffer, res->body.data(), count);
-  }
-  return count;
-}
-
 HttpReader::HttpReader(const std::string &url) {
   auto pos = url.find("//");
   CHECK_NE(pos, url.npos);
@@ -184,10 +156,25 @@ std::streamsize HttpReader::GetSize() const {
 
 std::streamsize
 HttpReader::Read(void *buffer, std::streamoff offset, std::streamsize size) {
-  auto beg_offset = offset;
-  auto end_offset = offset + size - 1;
-  auto count = Read(buffer, {{beg_offset, end_offset}});
-  return Reader::Read(buffer, offset, count);
+  std::vector<BatchRetrivalInfo> batched_retrieval_info;
+  batched_retrieval_info.push_back({
+      .block_index = 0,
+      .source_begin_offset = offset,
+      .size_to_read = size,
+      .offset_to_write_to = 0});
+  auto count = Read(
+      batched_retrieval_info,
+      [buffer](
+          std::streamoff begin_offset,
+          std::streamoff end_offset,
+          const char *read_buffer,
+          std::streamoff read_offset) {
+        memcpy(
+            buffer,
+            read_buffer + read_offset,
+            end_offset - begin_offset + 1);
+      });
+  return count;
 }
 
 std::streamsize HttpReader::Read(
@@ -199,6 +186,7 @@ std::streamsize HttpReader::Read(
         retrieval_info.source_begin_offset + retrieval_info.size_to_read - 1;
     ranges.push_back({retrieval_info.source_begin_offset, end_offset});
   }
+  // TODO(kyotov): maybe make httplib contribution to pass ranges by const ref
   auto range_header = httplib::make_range_header(std::move(ranges));
   auto res = client_->Get(path_.c_str(), {range_header});
   CHECK(res.error() == httplib::Error::Success) << path_;
@@ -208,14 +196,12 @@ std::streamsize HttpReader::Read(
   auto retrieval_info_index = 0;
   if (IsMultirangeResponse(res.value())) {
     // Note this expects data to be provided in order of range request made
-    count = ParseMultipartByterangesResponse(
-        res.value(),
-        read_callback);
+    count = ParseMultipartByterangesResponse(res.value(), read_callback);
   } else {
     // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
     count = res->body.size();
     auto size_consumed = 0;
-      read_callback(0, res->body.size() - 1, res->body.data(), 0);
+    read_callback(0, res->body.size() - 1, res->body.data(), 0);
   }
   return Reader::Read(nullptr, 0, count);
 }
