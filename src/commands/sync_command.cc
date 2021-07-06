@@ -394,6 +394,7 @@ void SyncCommandImpl::ChunkReconstructor::ReadCallbackForBatchMember(
     size_read += retrieval_info.size_to_read;
     retrieval_info_index++;
   }
+  CHECK(size_read == size_to_read);
 }
 
 void SyncCommandImpl::ChunkReconstructor::FlushBatch(bool force) {
