@@ -71,14 +71,14 @@ static void ReadLine(std::istream& input, std::string& buffer, int max) {
   }
 }
 
-using ReadCallback = std::function<void(
+using ChunkCallback = std::function<void(
     std::streamoff /*beg*/,
     std::streamoff /*end*/,
     std::istream& /*data*/)>;
 
 static void ParseMultipartByterangesResponse(
     const httplib::Response& response,
-    const ReadCallback& chunk_callback) {
+    const ChunkCallback& chunk_callback) {
   auto content_type = response.get_header_value("Content-Type");
   CHECK(content_type.starts_with("multipart/byteranges"));
 
