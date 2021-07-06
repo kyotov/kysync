@@ -24,7 +24,7 @@ public:
 
   using ReadCallback = std::function<void(
       std::streamoff /*begin_offset*/,
-      std::streamoff /*end_offset*/,
+      std::streamoff /*end_offset (inclusive) */,
       const char * /*buffer*/)>;
 
   virtual std::streamsize Read(
