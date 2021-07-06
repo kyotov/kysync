@@ -23,10 +23,9 @@ public:
   Read(void *buffer, std::streamoff offset, std::streamsize size);
 
   using ReadCallback = std::function<void(
-      std::streamoff /*beg*/,
-      std::streamoff /*end*/,
-      const char * /*buffer*/,
-      std::streamoff /*read_offset*/)>;
+      std::streamoff /*begin_offset*/,
+      std::streamoff /*end_offset*/,
+      const char * /*buffer*/)>;
 
   virtual std::streamsize Read(
       std::vector<BatchRetrivalInfo> &batch_retrieval_infos,

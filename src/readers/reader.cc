@@ -37,8 +37,7 @@ std::streamsize Reader::Read(
     read_callback(
         retrieval_info.source_begin_offset,
         end_offset,
-        buffer.data(),
-        0);
+        buffer.data());
     total_size_read += size_read;
   }
   return total_size_read;

@@ -384,8 +384,7 @@ void SyncCommandImpl::ChunkReconstructor::FlushBatch(bool force) {
       [this, &retrieval_info_index](
           std::streamoff begin_offset,
           std::streamoff end_offset,
-          const char *read_buffer,
-          std::streamoff read_offset) {
+          const char *read_buffer) {
         const auto size_to_read = end_offset - begin_offset + 1;
         auto size_read = 0;
         while (size_read < size_to_read) {
@@ -393,7 +392,7 @@ void SyncCommandImpl::ChunkReconstructor::FlushBatch(bool force) {
               batched_retrieval_infos_[retrieval_info_index];
           CHECK(begin_offset + size_read == retrieval_info.source_begin_offset);
           WriteRetrievedBatchMember(
-              read_buffer + read_offset + size_read,
+              read_buffer + size_read,
               retrieval_info);
           // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)              
           size_read += retrieval_info.size_to_read;

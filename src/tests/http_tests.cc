@@ -255,12 +255,11 @@ void HttpReaderMultirangeTest(
       [&concat_buffer, &size_consumed](
           std::streamoff begin_offset,
           std::streamoff end_offset,
-          const char * read_buffer,
-          std::streamoff read_offset) {
+          const char *read_buffer) {
         auto size = end_offset - begin_offset + 1;
         memcpy(
             concat_buffer.data() + size_consumed,
-            read_buffer + read_offset,
+            read_buffer,
             size);
         // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
         size_consumed += size;
