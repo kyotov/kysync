@@ -102,6 +102,12 @@ class SyncCommandImpl final : virtual public ky::observability::Observable,
     std::fstream output_;
     std::vector<BatchRetrivalInfo> batched_retrieval_infos_;
 
+    void ReadCallbackForBatchMember(
+        int &retrieval_info_index,
+        std::streamoff begin_offset,
+        std::streamoff end_offset,
+        const char *read_buffer);
+
     void WriteRetrievedBatchMember(
         const char *read_buffer,
         const BatchRetrivalInfo &retrieval_info);
@@ -373,6 +379,23 @@ void SyncCommandImpl::ChunkReconstructor::WriteRetrievedBatchMember(
   ValidateAndWrite(retrieval_info.block_index, buffer_to_write, write_size);
 }
 
+void SyncCommandImpl::ChunkReconstructor::ReadCallbackForBatchMember(
+    int &retrieval_info_index,
+    std::streamoff begin_offset,
+    std::streamoff end_offset,
+    const char *read_buffer) {
+  const auto size_to_read = end_offset - begin_offset + 1;
+  auto size_read = 0;
+  while (size_read < size_to_read) {
+    const auto &retrieval_info = batched_retrieval_infos_[retrieval_info_index];
+    CHECK(begin_offset + size_read == retrieval_info.source_begin_offset);
+    WriteRetrievedBatchMember(read_buffer + size_read, retrieval_info);
+    // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
+    size_read += retrieval_info.size_to_read;
+    retrieval_info_index++;
+  }
+}
+
 void SyncCommandImpl::ChunkReconstructor::FlushBatch(bool force) {
   auto threshold = force ? 1 : parent_impl_.blocks_per_batch_;
   if (batched_retrieval_infos_.size() < threshold) {
@@ -385,19 +408,11 @@ void SyncCommandImpl::ChunkReconstructor::FlushBatch(bool force) {
           std::streamoff begin_offset,
           std::streamoff end_offset,
           const char *read_buffer) {
-        const auto size_to_read = end_offset - begin_offset + 1;
-        auto size_read = 0;
-        while (size_read < size_to_read) {
-          const auto &retrieval_info =
-              batched_retrieval_infos_[retrieval_info_index];
-          CHECK(begin_offset + size_read == retrieval_info.source_begin_offset);
-          WriteRetrievedBatchMember(
-              read_buffer + size_read,
-              retrieval_info);
-          // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)              
-          size_read += retrieval_info.size_to_read;
-          retrieval_info_index++;
-        }
+        ReadCallbackForBatchMember(
+            retrieval_info_index,
+            begin_offset,
+            end_offset,
+            read_buffer);
       });
   batched_retrieval_infos_.clear();
   parent_impl_.downloaded_bytes_ += count;
