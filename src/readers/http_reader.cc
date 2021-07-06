@@ -119,8 +119,8 @@ static std::streamsize ParseMultipartByterangesResponse(
         read_callback(beg, end, response.body.data() + body.tellg());
         auto chunk_size = end - beg + 1;
         // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
-        count += count_in_chunk;
-        body.seekg(body.tellg() + count_in_chunk);
+        count += chunk_size;
+        body.seekg(body.tellg() + chunk_size);
         state = State::kBoundary;
         break;
       }
