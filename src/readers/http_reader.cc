@@ -117,7 +117,7 @@ static std::streamsize ParseMultipartByterangesResponse(
       }
       case State::kDataChunk: {
         read_callback(beg, end, response.body.data() + body.tellg());
-        auto count_in_chunk = end - beg + 1;
+        auto chunk_size = end - beg + 1;
         // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
         count += count_in_chunk;
         body.seekg(body.tellg() + count_in_chunk);
