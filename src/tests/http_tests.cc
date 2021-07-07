@@ -248,21 +248,21 @@ void HttpReaderMultirangeTest(
   for (auto& retrieval_info : batched_retrieval_infos) {
     total_size += retrieval_info.size_to_read;
   }
-  auto buffer = std::vector<char>(total_size);
   auto concat_buffer = std::vector<char>(total_size);
   auto size_consumed = 0;
   auto size_read = reader->Read(
-      buffer.data(),
       batched_retrieval_infos,
-      [&buffer, &concat_buffer, &size_consumed](
-          const char* read_buffer,
-          const BatchRetrivalInfo& retrieval_info) {
+      [&concat_buffer, &size_consumed](
+          std::streamoff begin_offset,
+          std::streamoff end_offset,
+          const char *read_buffer) {
+        auto size = end_offset - begin_offset + 1;
         memcpy(
             concat_buffer.data() + size_consumed,
             read_buffer,
-            retrieval_info.size_to_read);
+            size);
         // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
-        size_consumed += retrieval_info.size_to_read;
+        size_consumed += size;
       });
   EXPECT_EQ(size_read, expected_string.size());
   EXPECT_TRUE(

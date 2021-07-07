@@ -164,9 +164,9 @@ def filter_for_comparison(df, similarity, size):
 
 
 def get_tag_prefix(df1, df2):
-    tags1 = df1["tag"].unique()
+    tags1 = df1['tag'].unique()
     assert len(tags1) == 1
-    tags2 = df2["tag"].unique()
+    tags2 = df2['tag'].unique()
     assert len(tags2) == 1
     if (tags1[0] == tags2[0]):
         return ('ksync', 'zsync')

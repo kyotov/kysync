@@ -97,11 +97,16 @@ class SyncCommandImpl final : virtual public ky::observability::Observable,
     SyncCommandImpl &parent_impl_;
 
     std::vector<char> buffer_;
-    std::vector<char> decompression_buffer_;
     std::unique_ptr<Reader> seed_reader_;
     std::unique_ptr<Reader> data_reader_;
     std::fstream output_;
     std::vector<BatchRetrivalInfo> batched_retrieval_infos_;
+
+    void ReadCallbackForBatchMember(
+        int &retrieval_info_index,
+        std::streamoff begin_offset,
+        std::streamoff end_offset,
+        const char *read_buffer);
 
     void WriteRetrievedBatchMember(
         const char *read_buffer,
@@ -263,12 +268,14 @@ void SyncCommandImpl::AnalyzeSeedChunk(
        * https://github.com/kyotov/ksync/blob/2d98f83cd1516066416e8319fbfa995e3f49f3dd/commands/SyncCommand.cpp#L128-L132
        */
       if (--warmup < 0 && seed_offset + offset + block_size_ <= seed_size &&
-          (*set_)[wcs]) {
+          (*set_)[wcs])
+      {
         weak_checksum_matches_++;
         auto &data = analysis_[wcs];
 
         auto source_digest = strong_checksums_[data.index];
-        auto seed_digest = StrongChecksum::Compute(buffer + offset, block_size_);
+        auto seed_digest =
+            StrongChecksum::Compute(buffer + offset, block_size_);
 
         // there was a verification here in previous versions...
         // restore if needed for debugging by running blame on this line.
@@ -318,7 +325,8 @@ void SyncCommandImpl::AnalyzeSeed() {
       [this](auto id, auto beg, auto end) { AnalyzeSeedChunk(id, beg, end); });
 }
 
-void SyncCommandImpl::ValidateBlockSize(int block_index, std::streamsize count) const {
+void SyncCommandImpl::ValidateBlockSize(int block_index, std::streamsize count)
+    const {
   if (block_index < block_count_ - 1 || size_ % block_size_ == 0) {
     CHECK_EQ(count, block_size_);
   } else {
@@ -368,10 +376,25 @@ void SyncCommandImpl::ChunkReconstructor::WriteRetrievedBatchMember(
     buffer_to_write = buffer_.data();
     parent_impl_.decompressed_bytes_ += write_size;
   }
-  ValidateAndWrite(
-      retrieval_info.block_index,
-      buffer_to_write,
-      write_size);
+  ValidateAndWrite(retrieval_info.block_index, buffer_to_write, write_size);
+}
+
+void SyncCommandImpl::ChunkReconstructor::ReadCallbackForBatchMember(
+    int &retrieval_info_index,
+    std::streamoff begin_offset,
+    std::streamoff end_offset,
+    const char *read_buffer) {
+  const auto size_to_read = end_offset - begin_offset + 1;
+  auto size_read = 0;
+  while (size_read < size_to_read) {
+    const auto &retrieval_info = batched_retrieval_infos_[retrieval_info_index];
+    CHECK(begin_offset + size_read == retrieval_info.source_begin_offset);
+    WriteRetrievedBatchMember(read_buffer + size_read, retrieval_info);
+    // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
+    size_read += retrieval_info.size_to_read;
+    retrieval_info_index++;
+  }
+  CHECK(size_read == size_to_read);
 }
 
 void SyncCommandImpl::ChunkReconstructor::FlushBatch(bool force) {
@@ -379,13 +402,18 @@ void SyncCommandImpl::ChunkReconstructor::FlushBatch(bool force) {
   if (batched_retrieval_infos_.size() < threshold) {
     return;
   }
-  auto &read_buffer =
-      parent_impl_.compression_disabled_ ? buffer_ : decompression_buffer_;
+  auto retrieval_info_index = 0;
   auto count = data_reader_->Read(
-      read_buffer.data(),
       batched_retrieval_infos_,
-      [this](const char *read_buffer, const BatchRetrivalInfo &retrieval_info) {
-        WriteRetrievedBatchMember(read_buffer, retrieval_info);
+      [this, &retrieval_info_index](
+          std::streamoff begin_offset,
+          std::streamoff end_offset,
+          const char *read_buffer) {
+        ReadCallbackForBatchMember(
+            retrieval_info_index,
+            begin_offset,
+            end_offset,
+            read_buffer);
       });
   batched_retrieval_infos_.clear();
   parent_impl_.downloaded_bytes_ += count;
@@ -430,7 +458,6 @@ SyncCommandImpl::ChunkReconstructor::ChunkReconstructor(
     std::streamoff start_offset)
     : parent_impl_(parent_instance) {
   buffer_ = std::vector<char>(parent_impl_.block_size_);
-  decompression_buffer_ = std::vector<char>(parent_impl_.max_compressed_size_);
   seed_reader_ = Reader::Create(parent_impl_.seed_uri_);
   data_reader_ = Reader::Create(parent_impl_.data_uri_);
   output_ = parent_impl_.output_path_file_stream_provider_.CreateFileStream();

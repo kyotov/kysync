@@ -18,11 +18,6 @@ class HttpReader final : public Reader {
   std::string path_;
   std::unique_ptr<httplib::Client> client_;
 
-  // FIXME: httplib::Ranges
-  std::streamsize Read(
-      void *buffer,
-      std::vector<std::pair<ssize_t, ssize_t>> ranges);
-
 public:
   explicit HttpReader(const std::string &url);
 
@@ -34,9 +29,8 @@ public:
   Read(void *buffer, std::streamoff offset, std::streamsize size) override;
 
   std::streamsize Read(
-      void *buffer,
       std::vector<BatchRetrivalInfo> &batched_retrieval_infos,
-      const RetrievalCallback &retrieval_callback) override;
+      const ReadCallback &read_callback) override;
 };
 
 }  // namespace kysync
