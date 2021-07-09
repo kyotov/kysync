@@ -8,8 +8,6 @@ from experiments.pr151_posix_sequential import pr151_posix_sequential
 
 """
 TODO:
-* flask
-* exception handling
 * use disk images to start faster
 * make Stats know about with
 """
@@ -48,4 +46,3 @@ if __name__ == "__main__":
     logger = logging.getLogger()
 
     app.run(debug=True)
-    # init()

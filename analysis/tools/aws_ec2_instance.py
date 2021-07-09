@@ -19,7 +19,7 @@ from analysis.tools.test_instance import TestInstance
 # TODO: make these parameters!
 _INSTANCE_TYPE = "m5d.2xlarge"
 _LAUNCH_TEMPLATE_NAME = "test1"
-_SSH_KEY_FILE = pathlib.Path.home() / "Downloads" / "kp2.pem"
+_SSH_KEY_FILE = pathlib.Path.home() / "Downloads" / "kp1.pem"
 
 _index = itertools.count()
 
