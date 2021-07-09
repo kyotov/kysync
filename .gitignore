@@ -3,3 +3,5 @@
 .vscode/
 Testing/
 build/
+**/__pycache__
+/venv/
