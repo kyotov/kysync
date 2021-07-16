@@ -60,9 +60,11 @@ class SyncCommandImpl final : virtual public ky::observability::Observable,
     std::streamoff seed_offset{kInvalidOffset};
   };
 
-  static constexpr auto k4Gb = 0x100000000LL;
+  static constexpr auto WCS_SET_MASK_BIT_COUNT = 26;
+  static constexpr auto WCS_SET_SIZE = (1l << WCS_SET_MASK_BIT_COUNT);
+  static constexpr auto WCS_SET_MASK = WCS_SET_SIZE - 1;
 
-  std::unique_ptr<std::bitset<k4Gb>> set_;
+  std::unique_ptr<std::bitset<WCS_SET_SIZE>> wcs_set_;
   std::unordered_map<uint32_t, WcsMapData> analysis_;
   std::vector<std::streamoff> seed_offsets_;
 
@@ -239,7 +241,7 @@ void SyncCommandImpl::ReadMetadata() {
   seed_offsets_.resize(block_count_, kInvalidOffset);
 
   for (auto index = 0; index < block_count_; index++) {
-    (*set_)[weak_checksums_[index]] = true;
+    (*wcs_set_)[weak_checksums_[index] & WCS_SET_MASK] = true;
     analysis_[weak_checksums_[index]] = {index, kInvalidOffset};
   }
 }
@@ -268,10 +270,19 @@ void SyncCommandImpl::AnalyzeSeedChunk(
        * https://github.com/kyotov/ksync/blob/2d98f83cd1516066416e8319fbfa995e3f49f3dd/commands/SyncCommand.cpp#L128-L132
        */
       if (--warmup < 0 && seed_offset + offset + block_size_ <= seed_size &&
-          (*set_)[wcs])
+          (*wcs_set_)[wcs & WCS_SET_MASK])
       {
+        auto itr = analysis_.find(wcs);
+        if (itr == analysis_.end())
+          return;
+        auto &data = itr->second;
+
+        if (data.seed_offset != kInvalidOffset) {
+          warmup = block_size_ - 1;
+          return;
+        }
+
         weak_checksum_matches_++;
-        auto &data = analysis_[wcs];
 
         auto source_digest = strong_checksums_[data.index];
         auto seed_digest =
@@ -280,7 +291,6 @@ void SyncCommandImpl::AnalyzeSeedChunk(
         // there was a verification here in previous versions...
         // restore if needed for debugging by running blame on this line.
         if (source_digest == seed_digest) {
-          (*set_)[wcs] = false;
           warmup = block_size_ - 1;
           strong_checksum_matches_++;
           data.seed_offset = seed_offset + offset;
@@ -550,7 +560,7 @@ SyncCommandImpl::SyncCommandImpl(
       compression_disabled_(compression_disabled),
       blocks_per_batch_(num_blocks_in_batch),
       threads_(threads),
-      set_(std::make_unique<std::bitset<k4Gb>>()) {}
+      wcs_set_(std::make_unique<std::bitset<WCS_SET_SIZE>>()) {}
 
 int SyncCommandImpl::Run() {
   ReadMetadata();
