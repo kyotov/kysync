@@ -18,23 +18,4 @@ uint32_t WeakChecksum(const void *buffer, std::streamsize size) {
   return b << 16 | a;
 }
 
-uint32_t WeakChecksum(
-    const void *buffer,
-    std::streamsize size,
-    uint32_t running_checksum,
-    const WeakChecksumCallback &callback) {
-  const auto *data = static_cast<const char *>(buffer);
-
-  auto a = static_cast<uint16_t>(running_checksum & 0xFFFF);
-  auto b = static_cast<uint16_t>(running_checksum >> 16);
-
-  for (std::streamsize i = 0; i < size; i++) {
-    a += data[i] - data[i - size];
-    b += a - size * data[i - size];
-    callback(i + 1 - size, b << 16 | a);
-  }
-
-  return b << 16 | a;
-}
-
 }  // namespace kysync
