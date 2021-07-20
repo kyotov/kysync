@@ -32,8 +32,8 @@ private:
   std::string name_;
 
   bool is_monitored_;
-  bool is_ready_for_next_phase_;
 
+  std::atomic<bool> is_ready_for_next_phase_;
   std::atomic<int> phase_;
   std::atomic<ValueType> progress_;
   std::atomic<ValueType> total_;
