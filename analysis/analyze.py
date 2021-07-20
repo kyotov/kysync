@@ -204,6 +204,12 @@ def compare_all(df1, df2):
     return dfs
 
 
+def compare_files(file1, file2):
+    df1 = analyze(file1)
+    df2 = analyze(file2)
+    dfs = compare_all(filter_for_ksync(df1), filter_for_ksync(df2))
+
+
 if len(sys.argv) == 1:
     df = analyze(LOG_FILENAME)
     plot(df)
@@ -211,6 +217,4 @@ elif len(sys.argv) == 2:
     df = analyze(sys.argv[1])
     compare_all(filter_for_ksync(df), filter_for_zsync(df))
 elif len(sys.argv) == 3:
-    df1 = analyze(sys.argv[1])
-    df2 = analyze(sys.argv[2])
-    dfs = compare_all(filter_for_ksync(df1), filter_for_ksync(df2))
+    compare_files(sys.argv[1], sys.argv[2])
