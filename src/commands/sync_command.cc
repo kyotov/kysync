@@ -267,7 +267,7 @@ void SyncCommandImpl::AnalyzeSeedChunk(
       /* The `set` seems to improve performance. Previously the code was:
        * https://github.com/kyotov/ksync/blob/2d98f83cd1516066416e8319fbfa995e3f49f3dd/commands/SyncCommand.cpp#L128-L132
        */
-      if (--warmup < 0 && seed_offset + offset + block_size_ <= seed_size &&
+      if (--warmup < 0 && seed_offset + offset < seed_size &&
           (*set_)[wcs])
       {
         weak_checksum_matches_++;
