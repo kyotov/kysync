@@ -1,7 +1,8 @@
-from analysis.analyze import compare_files
-from analysis.ec2_manager import Ec2Manager
+from utils import compare_files
+from ec2_manager import Ec2Instance
 import pathlib
 import tempfile
+import logging
 
 SSH_KEY_FILE = pathlib.Path.home() / "Downloads" / "kp1.pem"
 TEMPLATE = "lt-017255c3b589b1f63"
@@ -30,18 +31,20 @@ class PerfComparator:
         self._b.print_info()
 
     def run_perf_comparison(self):
-        with Ec2Manager(SSH_KEY_FILE, TEMPLATE,
-                        GITHUB_USERNAME, GITHUB_PASSWORD) as ec2mgr:
-            instance = ec2mgr.create_instance()
+        with Ec2Instance(SSH_KEY_FILE, TEMPLATE,
+                         GITHUB_USERNAME, GITHUB_PASSWORD) as ec2inst:
+            ec2inst.create_instance()
             log_files = []
             with tempfile.TemporaryDirectory() as tmp_dir:
                 for config in [self._a, self._b]:
-                    destination_file = f'{tmp_dir.name}/perf_log_{config.instance_tag}.log'
-                    ec2mgr.build(instance, config.git_tag)
-                    ec2mgr.run_perf_tests(instance, config, self.num_trials, destination_file)
+                    destination_file = (f'{tmp_dir}/'
+                                        f'perf_log_{config.instance_tag}.log')
+                    ec2inst.build(ec2inst, config.git_tag)
+                    ec2inst.run_perf_tests(
+                        ec2inst, config, self._num_trials, destination_file)
                     log_files.append(destination_file)
                 assert len(log_files) == 2
-                compare_files(log_files[0], log_files[1])
+                return compare_files(log_files[0], log_files[1])
 
 
 class RunConfig:
@@ -71,6 +74,12 @@ a = RunConfig('head_20210720', 'e626f10f0b11aa6c8956dec18ef962c2277c79e2',
 b = RunConfig('baseline_20210701', '0f0c33c448c9f4443e4fdde1dabe35774e8c649a',
               data_size, data_similarity, num_threads, block_size)
 
-with PerfComparator(10, a, b) as pc:
-    print(pc)
+with PerfComparator(2, a, b) as pc:
     pc.show_info()
+    dfs = pc.run_perf_comparison()
+    logger = logging.getLogger()
+    for config in [a, b]:
+        logger.info(f'Mean for {config.instance_tag}: '
+                    f'{dfs.loc[0, config.instance_tag + "_mean"]}')
+    logger.info(f'Diff (a-b): {dfs.loc[0, "diff"]} at '
+                f'pvalue {dfs.loc[0, "pvalue"]}')
