@@ -47,8 +47,7 @@ def run_ladder():
 
     ladder_config = LadderOverrideConfig(data_sizes, data_similarities)
     with PerfComparator(2, a, b, ladder_config) as pc:
-        dfs = pc.run_perf_comparison()
-        print(dfs)
+        pc.run_perf_comparison()
         pc.show_info()
 
 
