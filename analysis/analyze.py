@@ -10,5 +10,3 @@ elif len(sys.argv) == 2:
     utils.compare_all(utils.filter_for_ksync(df), utils.filter_for_zsync(df))
 elif len(sys.argv) == 3:
     dfs = utils.compare_files(sys.argv[1], sys.argv[2])
-    print(f'prev mean: {dfs.loc[0, "p6_mean"]}')
-    print(f'diff: {dfs.loc[5, "diff"]}')

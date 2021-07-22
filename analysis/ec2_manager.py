@@ -58,6 +58,7 @@ class Ec2Instance:
         self._logger = logging.getLogger()
         self._ec2: ServiceResource = boto3.resource('ec2')
         self._client: Client = boto3.client('ec2')
+        self._perf_log_filename = '~/nvme/kysync/build/log/perf.log'
         self._instance_id = ''
         self._public_ip = ''
         self._shell = None
@@ -132,10 +133,9 @@ class Ec2Instance:
             'download/v3.20.5/cmake-3.20.5-linux-x86_64.tar.gz')
         self._shell.execute('tar xvf cmake-3.20.5-linux-x86_64.tar.gz')
         self._shell.execute('mv cmake-3.20.5-linux-x86_64 cmake')
-        self._shell.execute('sudo apt-get update', retry=10, retry_delay=10)
+        self._shell.execute('sudo apt-get update')
         self._shell.execute(
-            'sudo apt-get --assume-yes install ninja-build make g++',
-            retry=10, retry_delay=10)
+            'sudo apt-get --assume-yes install ninja-build make g++')
         self._shell.execute(
             'git clone '
             f'https://{self._github_username}:{self._github_password}@'
@@ -150,7 +150,7 @@ class Ec2Instance:
         self._shell.execute(
             'cmake/bin/cmake --build ~/nvme/kysync/build --config Release')
 
-    def build(self, instance, git_tag):
+    def build(self, git_tag):
         self._shell.execute(f'cd ~/nvme/kysync && git checkout {git_tag}')
         self._shell.execute(
             'cmake/bin/cmake -S ~/nvme/kysync -B ~/nvme/kysync/build '
@@ -158,9 +158,7 @@ class Ec2Instance:
         self._shell.execute(
             'cmake/bin/cmake --build ~/nvme/kysync/build --config Release')
 
-    def run_perf_tests(self, instance, config, num_trials, destination_file):
-        log_filename = '~/nvme/kysync/build/log/perf.log'
-        self._shell.execute(f'rm -f {log_filename}', check=False)
+    def run_perf_test(self, config, num_trials):
         self._shell.execute('cd ~/nvme/kysync')
         command = (f'TEST_TAG={config.instance_tag}'
                    f' TEST_THREADS={config.num_threads}'
@@ -171,10 +169,15 @@ class Ec2Instance:
                    f' --gtest_repeat={num_trials}')
         self._logger.info(f'Running {command}')
         self._shell.execute(command)
+
+    def clear_perf_log(self):
+        self._shell.execute(f'rm -f {self._perf_log_filename}', check=False)
+
+    def download_perf_log(self, destination_file):
         command = (f'scp -i {self._ssh_key_file}'
                    f' -o StrictHostKeyChecking=no'
                    f' -o UserKnownHostsFile=/dev/null'
-                   f' ubuntu@{self._public_ip}:{log_filename}'
+                   f' ubuntu@{self._public_ip}:{self._perf_log_filename}'
                    f' {destination_file}')
         result = os.system(command)
         self._logger.info(f'Got command return code: {result}')
