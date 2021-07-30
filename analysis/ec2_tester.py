@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 
 from flask import Flask
 
@@ -47,5 +48,22 @@ if __name__ == "__main__":
         format="%(asctime)s %(process)d:%(thread)d %(filename)s:%(funcName)s:%(lineno)d\n\t%(levelname)s: %(message)s")
     logger = logging.getLogger()
 
-    app.run(debug=True)
+    # app.run(debug=True)
     # init()
+
+    instance_id = "i-0ea15a6900efe464f"
+    timestamp = time.time_ns()
+
+    logger.info(f"timestamp: {timestamp}")
+
+    from analysis.tools.aws_ec2_instance import EC2Instance, Stats
+    from analysis.experiments.flush_caches import flush_caches
+
+    # s = Stats()
+    # ec2 = EC2Instance(s, instance_id=instance_id, keep_alive=True)
+    # ec2.wait_for_ready()
+    #
+    # for ti in flush_caches().get_test_instances():
+    #     ec2.execute(ti, timestamp)
+
+    flush_caches().analyze("1627666422772095000-flush_caches")
