@@ -52,6 +52,8 @@ struct PerformanceTestProfile final {
   bool http;
   // NOLINTNEXTLINE(misc-non-private-member-variables-in-classes)
   bool zsync;
+  // NOLINTNEXTLINE(misc-non-private-member-variables-in-classes)
+  bool flush_caches;
 
   PerformanceTestProfile(
       std::string tag,
@@ -65,7 +67,8 @@ struct PerformanceTestProfile final {
       bool compression,
       bool identity_reconstruction,
       bool http,
-      bool zsync)
+      bool zsync,
+      bool flush_caches)
       : tag(std::move(tag)),
         data_size(data_size),
         seed_data_size(seed_data_size),
@@ -77,7 +80,8 @@ struct PerformanceTestProfile final {
         compression(compression),
         identity_reconstruction(identity_reconstruction),
         http(http),
-        zsync(zsync) {}
+        zsync(zsync),
+        flush_caches(flush_caches) {}
 
   PerformanceTestProfile()
       : PerformanceTestProfile(
@@ -92,7 +96,8 @@ struct PerformanceTestProfile final {
             Fixture::GetEnv("TEST_COMPRESSION", false),
             Fixture::GetEnv("TEST_IDENTITY_RECONSTRUCTION", false),
             Fixture::GetEnv("TEST_HTTP", false),
-            Fixture::GetEnv("TEST_ZSYNC", false)) {}
+            Fixture::GetEnv("TEST_ZSYNC", false),
+            Fixture::GetEnv("TEST_FLUSH_CACHES", true)) {}
 };
 
 class PerformanceTestExecution {
@@ -131,7 +136,8 @@ class PerformanceTestExecution {
               << PERFLOG(profile_.compression)              //
               << PERFLOG(profile_.identity_reconstruction)  //
               << PERFLOG(profile_.http)                     //
-              << PERFLOG(profile_.zsync);
+              << PERFLOG(profile_.zsync)                    //
+              << PERFLOG(profile_.flush_caches);
   }
 
 protected:
@@ -144,6 +150,7 @@ protected:
   }
 
   void SnapshotMetrics(GenDataCommand &c) {}
+
   void SnapshotMetrics(SystemCommand &c) {}
 
   template <typename C>
@@ -199,6 +206,7 @@ protected:
   }
 
   virtual void Prepare() = 0;
+
   virtual void Sync() = 0;
 
   virtual bool IsProfileSupported() { return true; };
@@ -247,11 +255,24 @@ public:
     });
   }
 
+  void FlushCaches() const {
+    if (profile_.flush_caches) {
+      //#ifdef __linux__
+      LOG(INFO)
+          << "cache flush result: "
+          << system(
+                 "sudo sh -c \"/usr/bin/echo 3 > /proc/sys/vm/drop_caches\"");
+      //#endif
+    }
+  }
+
   void Execute() {
     if (IsProfileSupported()) {
       DumpContext();
       GenData();
+      FlushCaches();
       Prepare();
+      FlushCaches();
       Sync();
     } else {
       LOG(WARNING) << "profile not supported!";
