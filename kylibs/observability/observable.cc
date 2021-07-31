@@ -5,7 +5,7 @@ namespace ky::observability {
 Observable::Observable(std::string name)
     : name_(std::move(name)),
       is_monitored_(false),
-      is_ready_for_next_phase_(true),
+      is_ready_for_next_phase_(false),
       phase_(0),
       progress_(0),
       total_(1) {}
@@ -14,7 +14,10 @@ const std::string& Observable::GetName() const { return name_; }
 
 int Observable::GetPhase() const { return phase_; }
 
-void Observable::AdvancePhase() { phase_++; }
+void Observable::AdvancePhase() {
+  is_ready_for_next_phase_ = false;
+  phase_++;
+}
 
 bool Observable::IsReadyForNextPhase() const {
   return is_ready_for_next_phase_;
@@ -42,7 +45,6 @@ void Observable::StartNextPhase(Observable::ValueType total) {
     AdvancePhase();
   }
 
-  is_ready_for_next_phase_ = false;
   progress_ = 0;
   total_ = total;
 }

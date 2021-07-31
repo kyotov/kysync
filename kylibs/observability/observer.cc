@@ -37,13 +37,12 @@ void Observer::Update() {
   std::cout.flush();
 
   if (observable_.IsReadyForNextPhase()) {
-    if (observable_.GetPhase() > 0) {
-      LOG(INFO) << ss.str();
+    LOG(INFO) << ss.str();
 
-      phases_.emplace_back();
-      phases_.back().bytes = processed_bytes;
-      phases_.back().ms = ky::timer::DeltaMs(ts_phase_begin_, now);
-    }
+    phases_.emplace_back();
+    phases_.back().bytes = processed_bytes;
+    phases_.back().ms = ky::timer::DeltaMs(ts_phase_begin_, now);
+
     observable_.AdvancePhase();
     ts_phase_begin_ = now;
   }
@@ -53,6 +52,7 @@ int Observer::Run(const std::function<int(void)>& task) {
   observable_.EnableMonitor();
 
   ts_total_begin_ = std::chrono::high_resolution_clock::now();
+  ts_phase_begin_ = ts_total_begin_;
 
   auto result = std::async(task);
 
@@ -74,11 +74,11 @@ void Observer::SnapshotPhases(
         callback) {
   int phase_index = 0;
   for (auto& phase : phases_) {
-    phase_index++;
     auto phase_key_prefix = std::string("//") + observable_.GetName() +
                             "/phase_" + std::to_string(phase_index);
     callback(phase_key_prefix + "_bytes", phase.bytes);
     callback(phase_key_prefix + "_ms", phase.ms);
+    phase_index++;
   }
 }
 
