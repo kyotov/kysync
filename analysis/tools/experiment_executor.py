@@ -83,6 +83,8 @@ class ExperimentExecutor(object):
             self._stats.log("execution", time.time_ns() - start_ns)
 
     def _execute_experiment(self, experiment: Experiment):
+        self._logger.info(f"starting experiment with {self._num_instances} machines")
+        
         try:
             fs = []
             for _ in range(self._num_instances):
