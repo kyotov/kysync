@@ -30,17 +30,16 @@ def shutdown_on_future_completion(future):
     os._exit(0)
 
 
-@app.before_first_request
-def init():
-    future = run_async()
-
-    th = threading.Thread(target=shutdown_on_future_completion, args=(future,))
-    th.start()
-
-
 def run():
     future = run_async()
     future.result()  # will throw propagated exception
+
+
+def run_async_with_termination():
+    future = run_async()
+
+    th = threading.Thread(target=shutdown_on_future_completion, args=(future,), daemon=True)
+    th.start()
 
 
 def run_async():
@@ -74,5 +73,12 @@ if __name__ == "__main__":
         format="%(asctime)s %(process)d:%(thread)d %(filename)s:%(funcName)s:%(lineno)d\n\t%(levelname)s: %(message)s")
     logger = logging.getLogger()
 
-    app.run(debug=True)
-    #run()
+    run_with_flask = True
+    
+    if run_with_flask:
+        run_async_with_termination()
+        # use_reloader=False otherwise __main__ runs multiple times and the expirment runs multipe times
+        # and also when it restarts it messes up the running test
+        app.run(debug=True, use_reloader=False)
+    else:
+        run()
