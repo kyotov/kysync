@@ -2,6 +2,7 @@ import io
 import itertools
 import logging
 import pathlib
+import threading
 import time
 from typing import Optional, Dict, Iterable
 
@@ -19,15 +20,22 @@ from analysis.tools.test_instance import TestInstance
 # TODO: make these parameters!
 _INSTANCE_TYPE = "m5d.2xlarge"
 _LAUNCH_TEMPLATE_NAME = "test1"
-_SSH_KEY_FILE = pathlib.Path.home() / "Downloads" / "kp2.pem"
+_SSH_KEY_FILE = pathlib.Path.home() / "kysync-test.pem"
 
 _index = itertools.count()
 
 
 class EC2Instance(object):
+    boto3_lock: threading.Lock = threading.Lock()
     def __init__(self, stats: Stats, instance_id: str = None, keep_alive: bool = False):
-        ec2cli: ec2.Client = boto3.client("ec2")
-        ec2res: ec2.ServiceResource = boto3.resource("ec2")
+        try:
+            # when multiple threads create these things at the same time, boto3 complains for some reason
+            # ex: https://github.com/boto/boto3/issues/1592
+            EC2Instance.boto3_lock.acquire()
+            ec2cli: ec2.Client = boto3.client("ec2")
+            ec2res: ec2.ServiceResource = boto3.resource("ec2")
+        finally:
+            EC2Instance.boto3_lock.release()
 
         self._stats = stats
         self._start_ns = time.time_ns()
@@ -53,11 +61,17 @@ class EC2Instance(object):
 
         for _ in range(10):
             try:
+                self._logger.info(f"connecting to {self._instance.public_dns_name} using ssh key file {str(_SSH_KEY_FILE)}")
                 self._ssh = SshClient(self._instance.public_dns_name, str(_SSH_KEY_FILE))
                 break
             except:
-                self._logger.info("ssh not ready... retrying!")
+                self._logger.info(f"ssh not ready for host {self._instance.public_dns_name} ssh key file {str(_SSH_KEY_FILE)}... retrying!")
                 time.sleep(3)
+
+        if not self._ssh:
+            str_err = f"error, instance {self._instance.instance_id} / {self._instance.public_dns_name} took too long to be available for ssh."
+            self._logger.info(str_err)
+            raise Exception(str_err)
 
         setup_nvme(self._ssh)
         setup_cmake(self._ssh)
@@ -79,7 +93,8 @@ class EC2Instance(object):
 
     def terminate(self):
         self._logger.info(f"terminating {self._instance.instance_id}...")
-        self._ssh.execute("echo terminate")
+        if self._ssh:
+            self._ssh.execute("echo terminate")
         self._stats.log("instance", time.time_ns() - self._start_ns)
         self._instance.terminate()
 
@@ -110,11 +125,13 @@ class EC2Instance(object):
 
         partitions = set()
         for o in perf_log_parser(self.get_file_object("nvme/kysync/build/log/perf.log")):
-            partition_key = f"{timestamp}-{o['tag'].split('-')[0]}"
+            tag = o['tag']
+            partition_key = f"{timestamp}-{tag.split('-')[0]}"
             partitions.add(partition_key)
 
-            o["id"] = f"{timestamp}-{next(_index)}-{o['tag']}"
+            o["id"] = f"{timestamp}-{next(_index)}-{tag}"
             o["tag"] = partition_key
+            o["tag_full"] = tag
 
             o.update(self.get_metadata())
             table.put_item(Item=o)

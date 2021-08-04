@@ -33,17 +33,17 @@ class ExperimentExecutor(object):
         self._stats = Stats()
         self._timestamp = time.time_ns()
         self._tags = set()
+        self._experiment = experiment
+        self._terminated = False
 
         self._test_instances: Dict[TestInstance, TestInstanceStatus] = defaultdict(lambda: TestInstanceStatus())
         self._instances = []
         self._free_instances = queue.SimpleQueue()
+        self._num_instances = num_instances
 
         self._pool = ThreadPoolExecutor(max_workers=100)
-        self._pool.submit(self.execute_experiment, experiment)
-        for _ in range(num_instances):
-            self._pool.submit(self.create_instance)
 
-    def create_instance(self):
+    def _create_instance(self):
         start_ns = time.time_ns()
         instance = EC2Instance(self._stats)
         self._instances.append(instance)
@@ -51,13 +51,21 @@ class ExperimentExecutor(object):
         self._free_instances.put(instance)
         self._stats.log("bootstrap", time.time_ns() - start_ns)
 
-    def execute_test_instance(self, ti: TestInstance):
+    def _execute_test_instance(self, ti: TestInstance):
         self._test_instances[ti].total += 1
         self._test_instances[ti].queued += 1
 
         start_ns = time.time_ns()
-        instance = self._free_instances.get()
+        while True:
+            try:
+                instance = self._free_instances.get(timeout=1)
+                break
+            except queue.Empty:
+                if self._terminated:
+                    return
         self._stats.log("waiting", time.time_ns() - start_ns)
+
+        self._logger.info(f"{ti} execution starting...")
 
         start_ns = time.time_ns()
         try:
@@ -67,36 +75,47 @@ class ExperimentExecutor(object):
             self._test_instances[ti].running -= 1
             self._test_instances[ti].done += 1
             self._tags.add(tag)
+            self._logger.info(f"{ti} execution completed...")
         except Exception as e:
             self._logger.error(e)
         finally:
             self._free_instances.put(instance)
             self._stats.log("execution", time.time_ns() - start_ns)
 
-    def execute_experiment(self, experiment: Experiment):
+    def _execute_experiment(self, experiment: Experiment):
         try:
             fs = []
+            for _ in range(self._num_instances):
+                fs.append(self._pool.submit(self._create_instance))
+                
             for ti in experiment.get_test_instances():
                 count = ti._gtest_repeat
                 ti._gtest_repeat = 1
                 for _ in range(count):
-                    fs.append(self._pool.submit(self.execute_test_instance, ti))
+                    fs.append(self._pool.submit(self._execute_test_instance, ti))
 
             self._logger.info("all tests scheduled, waiting for completion...")
-            wait(fs, return_when=ALL_COMPLETED)
+            while fs:
+                done_futures = [x for x in fs if x.done()]
+                fs = [x for x in fs if not x in done_futures]
+                [x.result() for x in done_futures]  # will throw any exception propagated from future
+                time.sleep(1)
             self._logger.info("all tests completed")
+
+            self._stats.dump()
+
+            assert 1 == len(self._tags)
+            tag = list(self._tags)[0]
+            filename = experiment.analyze(tag)
+            self._logger.info(f"done for tag={tag}, results in {filename}")
         finally:
             for instance in self._instances:
                 instance.terminate()
+            self._terminated = True
 
-        self._stats.dump()
 
-        assert 1 == len(self._tags)
-        tag = list(self._tags)[0]
-        filename = experiment.analyze(tag)
-        self._logger.info(f"done for tag={tag}, results in {filename}")
-
-        exit(0)
+    def run_async(self):
+        return self._pool.submit(self._execute_experiment, self._experiment)
 
     def status(self):
         return dict(
