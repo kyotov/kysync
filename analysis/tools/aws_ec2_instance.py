@@ -2,6 +2,7 @@ import io
 import itertools
 import logging
 import pathlib
+import threading
 import time
 from typing import Optional, Dict, Iterable
 
@@ -25,21 +26,56 @@ _index = itertools.count()
 
 
 class EC2Instance(object):
+    boto3_lock: threading.Lock = threading.Lock()
     def __init__(self, stats: Stats, instance_id: str = None, keep_alive: bool = False):
-        ec2cli: ec2.Client = boto3.client("ec2")
-        ec2res: ec2.ServiceResource = boto3.resource("ec2")
+        self._is_terminated = False
+
+        try:
+            # when multiple threads create these things at the same time, boto3 complains for some reason
+            # ex: https://github.com/boto/boto3/issues/1592
+            EC2Instance.boto3_lock.acquire()
+            ec2cli: ec2.Client = boto3.client("ec2")
+            ec2res: ec2.ServiceResource = boto3.resource("ec2")
+        finally:
+            EC2Instance.boto3_lock.release()
 
         self._stats = stats
         self._start_ns = time.time_ns()
 
         if instance_id is None:
+            terminate_script = '''#!/bin/bash
+            HEARTBEAT_FILE=/tmp/heartbeat_file
+            echo "Using heartbeat file at ${HEARTBEAT_FILE}"
+            touch ${HEARTBEAT_FILE}
+            ls --full-time ${HEARTBEAT_FILE}
+            while true
+            do
+                sleep 10
+
+                date
+                ls --full-time ${HEARTBEAT_FILE}
+
+                TERMINATE_TIMEOUT=120
+                CURTIME=$(date +%s)
+                FILETIME=$(stat ${HEARTBEAT_FILE} -c %Y)
+                TIMEDIFF=$(expr ${CURTIME} - ${FILETIME})
+                if [ ${TIMEDIFF} -gt ${TERMINATE_TIMEOUT} ]; then
+                    date
+                    echo "Terminating instance due to stale ${HEARTBEAT_FILE}, updated last at ${FILETIME}, ${TIMEDIFF} seconds ago"
+                    sleep 1  # so can tail the log for debugging
+                    shutdown -h now
+                fi
+            done
+            '''
             t = ec2cli.run_instances(MinCount=1, MaxCount=1,
                                      LaunchTemplate=dict(LaunchTemplateName=_LAUNCH_TEMPLATE_NAME),
-                                     InstanceType=_INSTANCE_TYPE)
+                                     InstanceType=_INSTANCE_TYPE,
+                                     InstanceInitiatedShutdownBehavior="terminate",
+                                     UserData=terminate_script)
             instance_id = t['Instances'][0]['InstanceId']
-            self._terminate = not keep_alive
+            self._should_terminate = not keep_alive
         else:
-            self._terminate = False
+            self._should_terminate = False
 
         self._logger = logging.getLogger(instance_id)
         self._instance = ec2res.Instance(instance_id)
@@ -49,19 +85,37 @@ class EC2Instance(object):
         self._logger.info(f"waiting for {self._instance.instance_id} to become ready...")
         self._instance.wait_until_running()
         self._instance.reload()
-        self._logger.info(f"{self._instance.instance_id} is ready!")
+        self._logger.info(f"{self._instance.instance_id} / {self._instance.public_dns_name} is ready!")
 
         for _ in range(10):
             try:
+                self._logger.info(f"connecting to {self._instance.public_dns_name} using ssh key file {str(_SSH_KEY_FILE)}")
                 self._ssh = SshClient(self._instance.public_dns_name, str(_SSH_KEY_FILE))
                 break
             except:
-                self._logger.info("ssh not ready... retrying!")
+                self._logger.info(f"ssh not ready for host {self._instance.public_dns_name} ssh key file {str(_SSH_KEY_FILE)}... retrying!")
                 time.sleep(3)
 
+        if not self._ssh:
+            str_err = f"error, instance {self._instance.instance_id} / {self._instance.public_dns_name} took too long to be available for ssh."
+            self._logger.info(str_err)
+            raise Exception(str_err)
+
+        if self._should_terminate:
+            self._spawn_heartbeat_thread()
         setup_nvme(self._ssh)
         setup_cmake(self._ssh)
         setup_packages(self._ssh)
+
+    def _spawn_heartbeat_thread(self):
+        th = threading.Thread(target=self._run_heartbeat_thread, daemon=True)
+        th.start()
+
+    def _run_heartbeat_thread(self):
+        heartbeat_ssh = SshClient(self._instance.public_dns_name, str(_SSH_KEY_FILE))
+        while not self._is_terminated:
+            heartbeat_ssh.execute("touch /tmp/heartbeat_file")
+            time.sleep(30)
 
     def execute(self, ti: TestInstance, timestamp: int) -> str:
         self._logger.info(f"executing on {self._instance.instance_id}")
@@ -78,8 +132,10 @@ class EC2Instance(object):
         return self.upload_results(timestamp)
 
     def terminate(self):
+        self._is_terminated = True
         self._logger.info(f"terminating {self._instance.instance_id}...")
-        self._ssh.execute("echo terminate")
+        if self._ssh:
+            self._ssh.execute("echo terminate")
         self._stats.log("instance", time.time_ns() - self._start_ns)
         self._instance.terminate()
 
@@ -110,11 +166,13 @@ class EC2Instance(object):
 
         partitions = set()
         for o in perf_log_parser(self.get_file_object("nvme/kysync/build/log/perf.log")):
-            partition_key = f"{timestamp}-{o['tag'].split('-')[0]}"
+            tag = o['tag']
+            partition_key = f"{timestamp}-{tag.split('-')[0]}"
             partitions.add(partition_key)
 
-            o["id"] = f"{timestamp}-{next(_index)}-{o['tag']}"
+            o["id"] = f"{timestamp}-{next(_index)}-{tag}"
             o["tag"] = partition_key
+            o["tag_full"] = tag
 
             o.update(self.get_metadata())
             table.put_item(Item=o)

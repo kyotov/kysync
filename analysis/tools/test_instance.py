@@ -6,6 +6,7 @@ class TestInstance(object):
                  data_size: int = 1_000_000,
                  similarity: int = 90,
                  threads: int = 32,
+                 flush_caches: bool = True,
                  gtest_command: str = None,
                  gtest_filter: str = None,
                  gtest_repeat: int = 1):
@@ -23,6 +24,7 @@ class TestInstance(object):
         self._data_size = data_size
         self._similarity = similarity
         self._threads = threads
+        self._flush_caches = flush_caches
         self._gtest_command = gtest_command
         self._gtest_filter = gtest_filter
         self._gtest_repeat = gtest_repeat
@@ -38,4 +40,5 @@ class TestInstance(object):
                f"TEST_DATA_SIZE={self._data_size} " \
                f"TEST_SIMILARITY={self._similarity} " \
                f"TEST_THREADS={self._threads} " \
+               f"TEST_FLUSH_CACHES={1 if self._flush_caches else 0  } " \
                f"{self._gtest_command} {self._gtest_filter} --gtest_repeat={self._gtest_repeat}"
