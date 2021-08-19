@@ -1,9 +1,10 @@
 import logging
 import queue
-import time
 from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor, wait, ALL_COMPLETED
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict
+
+import time
 
 from analysis.tools.aws_ec2_instance import EC2Instance
 from analysis.tools.experiment import Experiment
@@ -84,12 +85,12 @@ class ExperimentExecutor(object):
 
     def _execute_experiment(self, experiment: Experiment):
         self._logger.info(f"starting experiment with {self._num_instances} machines")
-        
+
         try:
             fs = []
             for _ in range(self._num_instances):
                 fs.append(self._pool.submit(self._create_instance))
-                
+
             for ti in experiment.get_test_instances():
                 count = ti._gtest_repeat
                 ti._gtest_repeat = 1
@@ -106,7 +107,7 @@ class ExperimentExecutor(object):
 
             self._stats.dump()
 
-            assert 1 == len(self._tags)
+            assert 1 == len(self._tags), self._tags
             tag = list(self._tags)[0]
             filename = experiment.analyze(tag)
             self._logger.info(f"done for tag={tag}, results in {filename}")
@@ -114,7 +115,6 @@ class ExperimentExecutor(object):
             for instance in self._instances:
                 instance.terminate()
             self._terminated = True
-
 
     def run_async(self):
         return self._pool.submit(self._execute_experiment, self._experiment)

@@ -2,13 +2,14 @@ import json
 import logging
 import os
 import threading
-import time
 import traceback
 
 from flask import Flask
 
+from analysis.experiments.flush_caches import flush_caches
 from analysis.tools.experiment_executor import ExperimentExecutor
-from experiments.pr151_posix_sequential import pr151_posix_sequential
+
+_NUM_INSTANCES = 1
 
 """
 TODO:
@@ -25,6 +26,7 @@ def shutdown_on_future_completion(future):
     except:
         traceback.print_exc()
 
+    # https://stackoverflow.com/questions/9591350/what-is-difference-between-sys-exit0-and-os-exit0
     os._exit(0)
 
 
@@ -41,11 +43,12 @@ def run_async_with_termination():
 
 
 def run_async():
-    e = pr151_posix_sequential()
+    # e = pr151_posix_sequential()
     # e = pr152_wcs_set_size()
     # e = pr153_weakchecksum_inline()
     # e = ashish_zsync_ladder()
-    app.ee = ExperimentExecutor(e, num_instances=4)
+    e = flush_caches()
+    app.ee = ExperimentExecutor(e, num_instances=_NUM_INSTANCES)
     future = app.ee.run_async()
     return future
 
@@ -72,7 +75,7 @@ if __name__ == "__main__":
     logger = logging.getLogger()
 
     run_with_flask = True
-    
+
     if run_with_flask:
         run_async_with_termination()
         # use_reloader=False otherwise __main__ runs multiple times and the expirment runs multipe times

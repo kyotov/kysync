@@ -5,6 +5,7 @@ _SECRET_NAME = "kysync_test"
 
 _GITHUB_USERNAME = "github_username"
 _GITHUB_TOKEN = "github_token"
+_GITHUB_REPO = "github_repo"
 
 
 def checkout(ssh: SshClient, commitish: str):
@@ -14,7 +15,8 @@ def checkout(ssh: SshClient, commitish: str):
         secrets = get_secrets(_SECRET_NAME)
         u = secrets[_GITHUB_USERNAME]
         t = secrets[_GITHUB_TOKEN]
+        r = secrets[_GITHUB_REPO]
 
-        ssh.execute(f"git clone --recurse-submodules https://{u}:{t}@github.com/chaimmintz/ksync.git ~/nvme/kysync")
+        ssh.execute(f"git clone --recurse-submodules https://{u}:{t}@github.com/{r} ~/nvme/kysync")
 
     ssh.execute(f"cd nvme/kysync && git checkout {commitish} --recurse-submodules")

@@ -1,14 +1,14 @@
 import io
-import itertools
 import logging
 import pathlib
 import threading
-import time
 from typing import Optional, Dict, Iterable
 
 import boto3
 import boto3_type_annotations.dynamodb as dynamodb
 import boto3_type_annotations.ec2 as ec2
+import itertools
+import time
 
 from analysis.tools.aws_setup import setup_nvme, setup_cmake, setup_packages
 from analysis.tools.git import checkout
@@ -18,7 +18,8 @@ from analysis.tools.stats import Stats
 from analysis.tools.test_instance import TestInstance
 
 # TODO: make these parameters!
-_INSTANCE_TYPE = "m5d.2xlarge"
+_INSTANCE_TYPE = "m5d.metal"
+# _INSTANCE_TYPE = "m5d.2xlarge"
 _LAUNCH_TEMPLATE_NAME = "test1"
 _SSH_KEY_FILE = pathlib.Path.home() / "Downloads" / "kp1.pem"
 
@@ -27,6 +28,7 @@ _index = itertools.count()
 
 class EC2Instance(object):
     boto3_lock: threading.Lock = threading.Lock()
+
     def __init__(self, stats: Stats, instance_id: str = None, keep_alive: bool = False):
         self._is_terminated = False
 
@@ -89,11 +91,13 @@ class EC2Instance(object):
 
         for _ in range(10):
             try:
-                self._logger.info(f"connecting to {self._instance.public_dns_name} using ssh key file {str(_SSH_KEY_FILE)}")
+                self._logger.info(
+                    f"connecting to {self._instance.public_dns_name} using ssh key file {str(_SSH_KEY_FILE)}")
                 self._ssh = SshClient(self._instance.public_dns_name, str(_SSH_KEY_FILE))
                 break
             except:
-                self._logger.info(f"ssh not ready for host {self._instance.public_dns_name} ssh key file {str(_SSH_KEY_FILE)}... retrying!")
+                self._logger.info(
+                    f"ssh not ready for host {self._instance.public_dns_name} ssh key file {str(_SSH_KEY_FILE)}... retrying!")
                 time.sleep(3)
 
         if not self._ssh:

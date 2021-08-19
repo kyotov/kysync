@@ -26,7 +26,7 @@ def flush_caches() -> Experiment:
 
     tag = "flush_caches"
     data_size = 1_000_000_000
-    repeat = 10
+    repeat = 3
     pattern = "Performance.KySync"
     similarity = 100
     threads = 32
