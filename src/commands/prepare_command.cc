@@ -23,8 +23,7 @@ namespace fs = std::filesystem;
 class KySyncTest;
 
 // NOLINTNEXTLINE(fuchsia-multiple-inheritance,fuchsia-virtual-inheritance)
-class PrepareCommandImpl final : virtual public ky::observability::Observable,
-                                 public PrepareCommand {
+class PrepareCommandImpl final : public PrepareCommand {
   friend class KySyncTest;
   friend class ChunkPreparer;
 
@@ -100,7 +99,7 @@ std::unique_ptr<PrepareCommand> PrepareCommand::Create(
       threads);
 }
 
-PrepareCommand::PrepareCommand() = default;
+PrepareCommand::PrepareCommand() : KySyncCommand("prepare") {}
 
 const std::vector<uint32_t> &PrepareCommandImpl::GetWeakChecksums() const {
   return weak_checksums_;
@@ -187,8 +186,7 @@ PrepareCommandImpl::PrepareCommandImpl(
     std::filesystem::path output_compressed_file_path,
     std::streamsize block_size,
     int threads)
-    : Observable("prepare"),
-      input_file_path_(std::move(input_file_path)),
+    : input_file_path_(std::move(input_file_path)),
       output_ksync_file_path_(std::move(output_ksync_file_path)),
       output_compressed_file_stream_provider_(
           std::move(output_compressed_file_path)),

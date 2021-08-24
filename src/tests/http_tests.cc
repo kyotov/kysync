@@ -12,6 +12,7 @@
 #include <sstream>
 
 #include "fixture.h"
+#include "test_environment.h"
 
 namespace kysync {
 
@@ -181,8 +182,9 @@ void CheckGet(const fs::path& path, Client& client) {
 
 TEST_F(HttpTests, HttpsServer) {  // NOLINT
   auto tmp = ky::TempPath();
-  auto cert_path = fs::path(
-      GetEnv("TEST_DATA_DIR", (CMAKE_SOURCE_DIR / "test_data").string()));
+  auto cert_path = fs::path(TestEnvironment::GetEnv(
+      "TEST_DATA_DIR",
+      (CMAKE_SOURCE_DIR / "test_data").string()));
   auto server = HttpServer(cert_path, tmp.GetPath(), true);
   auto client = httplib::SSLClient("localhost", server.GetPort());
   client.enable_server_certificate_verification(false);
@@ -255,12 +257,9 @@ void HttpReaderMultirangeTest(
       [&concat_buffer, &size_consumed](
           std::streamoff begin_offset,
           std::streamoff end_offset,
-          const char *read_buffer) {
+          const char* read_buffer) {
         auto size = end_offset - begin_offset + 1;
-        memcpy(
-            concat_buffer.data() + size_consumed,
-            read_buffer,
-            size);
+        memcpy(concat_buffer.data() + size_consumed, read_buffer, size);
         // NOLINTNEXTLINE(cppcoreguidelines-narrowing-conversions)
         size_consumed += size;
       });

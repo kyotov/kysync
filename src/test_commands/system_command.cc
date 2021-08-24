@@ -7,7 +7,7 @@
 namespace kysync {
 
 SystemCommand::SystemCommand(std::string name, std::string command)
-    : Observable(std::move(name)),
+    : Command(std::move(name)),
       command_(std::move(command)) {}
 
 int SystemCommand::Run() {
@@ -17,5 +17,7 @@ int SystemCommand::Run() {
   StartNextPhase(0);
   return result;
 }
+
+void SystemCommand::Accept(ky::metrics::MetricVisitor &visitor) {}
 
 }  // namespace kysync

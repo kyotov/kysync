@@ -1,6 +1,8 @@
 add_subdirectory(pb)
 
 add_library(kysync_commands
+        command.cc
+        kysync_command.cc
         prepare_command.cc
         sync_command.cc)
 target_link_libraries(kysync_commands

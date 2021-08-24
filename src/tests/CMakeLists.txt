@@ -1,5 +1,8 @@
 add_library(test_common
+        test_environment.cc
         fixture.cc
+        performance_test_fixture.cc
+        performance_test_profile.cc
         expectation_check_metrics_visitor.cc)
 target_link_libraries(test_common
         PUBLIC
@@ -36,12 +39,12 @@ target_link_libraries(basic_tests
         PRIVATE Boost::headers)
 gtest_discover_tests(basic_tests)
 
-add_executable(perf_tests
-        perf_tests.cc)
-target_link_libraries(perf_tests
+add_executable(performance_tests
+        performance_tests.cc)
+target_link_libraries(performance_tests
         PRIVATE test_common
         PRIVATE ky_observability)
-gtest_discover_tests(perf_tests)
+gtest_discover_tests(performance_tests)
 
 add_executable(http_tests
         http_tests.cc)
@@ -50,5 +53,11 @@ target_link_libraries(http_tests
         PRIVATE kysync_readers
         PRIVATE httplib::httplib)
 gtest_discover_tests(http_tests)
+
+add_executable(linux_cache_tests
+        linux_cache_tests.cc)
+target_link_libraries(linux_cache_tests
+        PRIVATE test_common)
+gtest_discover_tests(linux_cache_tests)
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/log)
