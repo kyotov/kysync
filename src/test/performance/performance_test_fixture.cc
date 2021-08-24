@@ -1,8 +1,8 @@
+#include "performance_test_fixture.h"
+
 #include <glog/logging.h>
 #include <ky/observability/observer.h>
-
-#include "performance_test_fixture.h"
-#include "test_environment.h"
+#include <kysync/test_common/test_environment.h>
 
 namespace kysync {
 

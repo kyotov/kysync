@@ -1,9 +1,7 @@
-#include "fixture.h"
-
 #include <glog/logging.h>
 #include <kysync/path_config.h>
-
-#include "test_environment.h"
+#include <kysync/test_common/test_fixture.h>
+#include <kysync/test_common/test_environment.h>
 
 namespace kysync {
 

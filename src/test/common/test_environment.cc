@@ -1,7 +1,6 @@
-#include "test_environment.h"
-
 #include <glog/logging.h>
 #include <kysync/path_config.h>
+#include <kysync/test_common/test_environment.h>
 
 namespace kysync {
 
@@ -32,9 +31,7 @@ void TestEnvironment::TearDown() {
   Environment::TearDown();
 }
 
-std::ofstream &TestEnvironment::GetPerfLog() {
-  return perf_log_;
-}
+std::ofstream& TestEnvironment::GetPerfLog() { return perf_log_; }
 
 std::filesystem::path TestEnvironment::GetTmpRoot() {
   return TestEnvironment::GetEnv("TEST_ROOT_DIR", CMAKE_BINARY_DIR / "tmp");

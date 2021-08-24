@@ -9,16 +9,16 @@
 #include <kysync/path_config.h>
 #include <kysync/test_commands/gen_data_command.h>
 #include <kysync/test_commands/system_command.h>
+#include <kysync/test_common/test_fixture.h>
+#include <kysync/test_common/test_environment.h>
 #include <kysync/test_http_servers/http_server.h>
 #include <kysync/test_http_servers/nginx_server.h>
 
 #include <chrono>
 #include <fstream>
 
-#include "fixture.h"
 #include "performance_test_fixture.h"
 #include "performance_test_profile.h"
-#include "test_environment.h"
 
 // with inspiration from
 // https://www.sandordargo.com/blog/2019/04/24/parameterized-testing-with-gtest
@@ -149,7 +149,7 @@ public:
       server_ = std::make_unique<NginxServer>(scratch_path_, 8000);
     }
 
-//    std::filesystem::current_path(scratch_path_);
+    //    std::filesystem::current_path(scratch_path_);
   }
 
   virtual ~PerformanceTestExecution() {

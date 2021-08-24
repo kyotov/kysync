@@ -2,12 +2,11 @@
 #define KSYNC_SRC_TESTS_PERFORMANCE_TEST_FIXTURE_H
 
 #include <ky/temp_path.h>
+#include <kysync/commands/command.h>
+#include <kysync/test_common/test_fixture.h>
 
 #include <filesystem>
 #include <fstream>
-
-#include "fixture.h"
-#include "kysync/commands/command.h"
 
 namespace kysync {
 

@@ -1,6 +1,6 @@
 #include "performance_test_profile.h"
 
-#include "test_environment.h"
+#include <kysync/test_common/test_environment.h>
 
 namespace kysync {
 

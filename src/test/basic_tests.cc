@@ -9,6 +9,9 @@
 #include <kysync/path_config.h>
 #include <kysync/readers/file_reader.h>
 #include <kysync/readers/memory_reader.h>
+#include <kysync/test_common/expectation_check_metrics_visitor.h>
+#include <kysync/test_common/test_environment.h>
+#include <kysync/test_common/test_fixture.h>
 #include <zstd.h>
 
 #include <filesystem>
@@ -16,10 +19,6 @@
 
 #include <boost/asio/post.hpp>
 #include <boost/asio/thread_pool.hpp>
-
-#include "expectation_check_metrics_visitor.h"
-#include "fixture.h"
-#include "test_environment.h"
 
 namespace kysync {
 

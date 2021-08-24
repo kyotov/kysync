@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include <kysync/test_commands/system_command.h>
+#include <kysync/test_common/test_environment.h>
 
 #include "performance_test_fixture.h"
-#include "test_environment.h"
 
 namespace kysync {
 
