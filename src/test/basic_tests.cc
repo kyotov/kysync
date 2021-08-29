@@ -9,6 +9,9 @@
 #include <kysync/path_config.h>
 #include <kysync/readers/file_reader.h>
 #include <kysync/readers/memory_reader.h>
+#include <kysync/test_common/expectation_check_metrics_visitor.h>
+#include <kysync/test_common/test_environment.h>
+#include <kysync/test_common/test_fixture.h>
 #include <zstd.h>
 
 #include <filesystem>
@@ -16,9 +19,6 @@
 
 #include <boost/asio/post.hpp>
 #include <boost/asio/thread_pool.hpp>
-
-#include "expectation_check_metrics_visitor.h"
-#include "fixture.h"
 
 namespace kysync {
 
@@ -47,7 +47,9 @@ std::streamsize Size(const T &v) {
 class Tests : public Fixture {
 protected:
   static std::string GetTestDataPath() {
-    return GetEnv("TEST_DATA_DIR", (CMAKE_SOURCE_DIR / "test_data").string());
+    return TestEnvironment::GetEnv(
+        "TEST_DATA_DIR",
+        (CMAKE_SOURCE_DIR / "test_data").string());
   }
 
   static constexpr int kThreads = 32;
@@ -652,10 +654,10 @@ TEST(SyncCommand, ThreadPool) {  // NOLINT
   boost::asio::thread_pool pool(num_threads);
   std::atomic<int> value(0);
   for (int i = 0; i < num_threads * 2; i++) {
-    boost::asio::post(pool, [&value]() { 
+    boost::asio::post(pool, [&value]() {
       LOG(INFO) << "Incrementing value";
       value += 1;
-    } );
+    });
   }
   pool.join();
   EXPECT_EQ(value, num_threads * 2);

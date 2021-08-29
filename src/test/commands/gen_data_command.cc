@@ -21,7 +21,7 @@ GenDataCommand::GenDataCommand(
     std::streamsize seed_data_size,
     std::streamsize fragment_size,
     int similarity)
-    : Observable("gen_data"),
+    : Command("gen_data"),
       path_(output_path),
       data_file_path_(output_path / "data.bin"),
       seed_data_file_path_(output_path / "seed_data.bin"),
@@ -116,5 +116,7 @@ int GenDataCommand::Run() {
 
   return 0;
 }
+
+void GenDataCommand::Accept(ky::metrics::MetricVisitor &visitor) {}
 
 }  // namespace kysync

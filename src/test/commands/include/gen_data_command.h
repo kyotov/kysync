@@ -2,13 +2,14 @@
 #define KSYNC_SRC_TESTS_COMMANDS_GEN_DATA_COMMAND_H
 
 #include <ky/observability/observable.h>
+#include <kysync/commands/command.h>
 
 #include <filesystem>
 #include <utility>
 
 namespace kysync {
 
-class GenDataCommand final : public ky::observability::Observable {
+class GenDataCommand final : public Command {
   std::filesystem::path path_;
   std::filesystem::path data_file_path_;
   std::filesystem::path seed_data_file_path_;
@@ -27,7 +28,9 @@ public:
       std::streamsize fragment_size,
       int similarity);
 
-  int Run();
+  int Run() override;
+
+  void Accept(ky::metrics::MetricVisitor &visitor) override;
 };
 
 }  // namespace kysync
