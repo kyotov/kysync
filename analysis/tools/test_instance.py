@@ -11,7 +11,7 @@ class TestInstance(object):
                  gtest_filter: str = None,
                  gtest_repeat: int = 1):
         if gtest_command is None:
-            gtest_command = "src/tests/perf_tests"
+            gtest_command = "src/test/performance/performance_tests"
         if gtest_filter is not None:
             gtest_filter = f"--gtest_filter={gtest_filter}"
         else:

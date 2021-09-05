@@ -34,7 +34,7 @@ def flush_caches() -> Experiment:
     return Experiment([
         TestInstance(
             tag=f"{tag}-after",
-            commitish='a170cd4bb281c8fede073b32d1e85aedd437a501',
+            commitish='6d7141ec5e8593186b0eb6a850f8a7a0b36f45e0',
             data_size=data_size,
             similarity=similarity,
             threads=threads,
@@ -44,7 +44,7 @@ def flush_caches() -> Experiment:
         ),
         TestInstance(
             tag=f"{tag}-before",
-            commitish='a170cd4bb281c8fede073b32d1e85aedd437a501',
+            commitish='6d7141ec5e8593186b0eb6a850f8a7a0b36f45e0',
             data_size=data_size,
             similarity=similarity,
             threads=threads,

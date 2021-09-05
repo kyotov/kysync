@@ -169,9 +169,13 @@ public:
     if (IsProfileSupported()) {
       DumpContext();
       GenData();
-      PerformanceTestFixture::FlushCaches();
+      if (profile_.flush_caches) {
+        PerformanceTestFixture::FlushCaches();
+      }
       Prepare();
-      PerformanceTestFixture::FlushCaches();
+      if (profile_.flush_caches) {
+        PerformanceTestFixture::FlushCaches();
+      }
       Sync();
     } else {
       LOG(WARNING) << "profile not supported!";
