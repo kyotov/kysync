@@ -18,8 +18,8 @@ from analysis.tools.stats import Stats
 from analysis.tools.test_instance import TestInstance
 
 # TODO: make these parameters!
-_INSTANCE_TYPE = "m5d.metal"
-# _INSTANCE_TYPE = "m5d.2xlarge"
+# _INSTANCE_TYPE = "m5d.metal"
+_INSTANCE_TYPE = "m5d.2xlarge"
 _LAUNCH_TEMPLATE_NAME = "test1"
 _SSH_KEY_FILE = pathlib.Path.home() / "Downloads" / "kp1.pem"
 
@@ -69,13 +69,13 @@ class EC2Instance(object):
                 fi
             done
             '''
+            self._should_terminate = not keep_alive
             t = ec2cli.run_instances(MinCount=1, MaxCount=1,
                                      LaunchTemplate=dict(LaunchTemplateName=_LAUNCH_TEMPLATE_NAME),
                                      InstanceType=_INSTANCE_TYPE,
                                      InstanceInitiatedShutdownBehavior="terminate",
-                                     UserData=terminate_script)
+                                     UserData=terminate_script if self._should_terminate else '')
             instance_id = t['Instances'][0]['InstanceId']
-            self._should_terminate = not keep_alive
         else:
             self._should_terminate = False
 
