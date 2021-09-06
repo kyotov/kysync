@@ -7,6 +7,7 @@ import traceback
 from flask import Flask
 
 from analysis.experiments.flush_caches import flush_caches
+from analysis.experiments.perf import perf
 from analysis.experiments.pr152_wcs_set_size import pr152_wcs_set_size
 from analysis.tools.experiment_executor import ExperimentExecutor
 
@@ -33,10 +34,11 @@ def shutdown_on_future_completion(future):
 
 def run_async():
     # e = pr151_posix_sequential()
-    e = pr152_wcs_set_size()
+    # e = pr152_wcs_set_size()
     # e = pr153_weakchecksum_inline()
     # e = ashish_zsync_ladder()
     # e = flush_caches()
+    e = perf()
     app.ee = ExperimentExecutor(e, num_instances=_NUM_INSTANCES)
     future = app.ee.run_async()
     return future
