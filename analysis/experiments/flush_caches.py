@@ -30,11 +30,12 @@ def flush_caches() -> Experiment:
     pattern = "Performance.KySync"
     similarity = 100
     threads = 32
+    commitish = 'a0b70531fb56e467bd94175d317830184a4cba52'
 
     return Experiment([
         TestInstance(
             tag=f"{tag}-after",
-            commitish='a170cd4bb281c8fede073b32d1e85aedd437a501',
+            commitish=commitish,
             data_size=data_size,
             similarity=similarity,
             threads=threads,
@@ -44,7 +45,7 @@ def flush_caches() -> Experiment:
         ),
         TestInstance(
             tag=f"{tag}-before",
-            commitish='a170cd4bb281c8fede073b32d1e85aedd437a501',
+            commitish=commitish,
             data_size=data_size,
             similarity=similarity,
             threads=threads,

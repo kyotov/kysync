@@ -21,7 +21,7 @@ from analysis.tools.test_instance import TestInstance
 _INSTANCE_TYPE = "m5d.metal"
 # _INSTANCE_TYPE = "m5d.2xlarge"
 _LAUNCH_TEMPLATE_NAME = "test1"
-_SSH_KEY_FILE = pathlib.Path.home() / "Downloads" / "kp1.pem"
+_SSH_KEY_FILE = pathlib.Path.home() / "Downloads" / "kp2.pem"
 
 _index = itertools.count()
 
@@ -36,8 +36,8 @@ class EC2Instance(object):
             # when multiple threads create these things at the same time, boto3 complains for some reason
             # ex: https://github.com/boto/boto3/issues/1592
             EC2Instance.boto3_lock.acquire()
-            ec2cli: ec2.Client = boto3.client("ec2")
-            ec2res: ec2.ServiceResource = boto3.resource("ec2")
+            ec2cli: ec2.Client = boto3.client("ec2", region_name='us-east-1')
+            ec2res: ec2.ServiceResource = boto3.resource("ec2", region_name='us-east-1')
         finally:
             EC2Instance.boto3_lock.release()
 
@@ -69,13 +69,13 @@ class EC2Instance(object):
                 fi
             done
             '''
+            self._should_terminate = not keep_alive
             t = ec2cli.run_instances(MinCount=1, MaxCount=1,
                                      LaunchTemplate=dict(LaunchTemplateName=_LAUNCH_TEMPLATE_NAME),
                                      InstanceType=_INSTANCE_TYPE,
                                      InstanceInitiatedShutdownBehavior="terminate",
-                                     UserData=terminate_script)
+                                     UserData=terminate_script if self._should_terminate else '')
             instance_id = t['Instances'][0]['InstanceId']
-            self._should_terminate = not keep_alive
         else:
             self._should_terminate = False
 
@@ -87,21 +87,22 @@ class EC2Instance(object):
         self._logger.info(f"waiting for {self._instance.instance_id} to become ready...")
         self._instance.wait_until_running()
         self._instance.reload()
-        self._logger.info(f"{self._instance.instance_id} / {self._instance.public_dns_name} is ready!")
+        self._logger.info(f"{self._instance.instance_id} / {self._instance.public_ip_address} is ready!")
 
         for _ in range(10):
             try:
                 self._logger.info(
-                    f"connecting to {self._instance.public_dns_name} using ssh key file {str(_SSH_KEY_FILE)}")
-                self._ssh = SshClient(self._instance.public_dns_name, str(_SSH_KEY_FILE))
+                    # NOTE: self._instance.public_dns_name is not always there ... use ip instead.
+                    f"connecting to {self._instance.public_ip_address} using ssh key file {str(_SSH_KEY_FILE)}")
+                self._ssh = SshClient(self._instance.public_ip_address, str(_SSH_KEY_FILE))
                 break
             except:
                 self._logger.info(
-                    f"ssh not ready for host {self._instance.public_dns_name} ssh key file {str(_SSH_KEY_FILE)}... retrying!")
+                    f"ssh not ready for host {self._instance.public_ip_address} ssh key file {str(_SSH_KEY_FILE)}... retrying!")
                 time.sleep(3)
 
         if not self._ssh:
-            str_err = f"error, instance {self._instance.instance_id} / {self._instance.public_dns_name} took too long to be available for ssh."
+            str_err = f"error, instance {self._instance.instance_id} / {self._instance.public_ip_address} took too long to be available for ssh."
             self._logger.info(str_err)
             raise Exception(str_err)
 
@@ -116,7 +117,7 @@ class EC2Instance(object):
         th.start()
 
     def _run_heartbeat_thread(self):
-        heartbeat_ssh = SshClient(self._instance.public_dns_name, str(_SSH_KEY_FILE))
+        heartbeat_ssh = SshClient(self._instance.public_ip_address, str(_SSH_KEY_FILE))
         while not self._is_terminated:
             heartbeat_ssh.execute("touch /tmp/heartbeat_file")
             time.sleep(30)

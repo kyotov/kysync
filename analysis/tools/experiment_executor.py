@@ -27,6 +27,14 @@ class TestInstanceStatus(object):
             done=self.done
         )
 
+    def __add__(self, other):
+        result = TestInstanceStatus()
+        result.total = self.total + other.total
+        result.queued = self.queued + other.queued
+        result.running = self.running + other.running
+        result.done = self.done + other.done
+        return result
+
 
 class ExperimentExecutor(object):
     def __init__(self, experiment: Experiment, num_instances: int = 1):
@@ -42,7 +50,7 @@ class ExperimentExecutor(object):
         self._free_instances = queue.SimpleQueue()
         self._num_instances = num_instances
 
-        self._pool = ThreadPoolExecutor(max_workers=100)
+        self._pool = ThreadPoolExecutor(max_workers=5000)
 
     def _create_instance(self):
         start_ns = time.time_ns()
@@ -66,7 +74,7 @@ class ExperimentExecutor(object):
                     return
         self._stats.log("waiting", time.time_ns() - start_ns)
 
-        self._logger.info(f"{ti} execution starting...")
+        self._logger.info(f"{ti.get_test_tag()} execution starting...")
 
         start_ns = time.time_ns()
         try:
@@ -120,8 +128,15 @@ class ExperimentExecutor(object):
         return self._pool.submit(self._execute_experiment, self._experiment)
 
     def status(self):
+        tests = []
+        status_total = TestInstanceStatus()
+        for (ti, tis) in self._test_instances.items():
+            status_total += tis
+            tests.append((ti.get_test_tag(), tis.status()))
+
         return dict(
             stats=self._stats.to_dict(),
             instances=dict([instance.status() for instance in self._instances]),
-            tests=dict([(ti.get_test_tag(), tis.status()) for (ti, tis) in self._test_instances.items()])
+            tests_status_total=status_total.status(),
+            tests=[(ti.get_test_tag(), tis.status()) for (ti, tis) in self._test_instances.items()]
         )

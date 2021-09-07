@@ -5,8 +5,8 @@
 #include <kysync/path_config.h>
 #include <kysync/readers/batch_retrieval_info.h>
 #include <kysync/readers/reader.h>
-#include <kysync/test_common/test_fixture.h>
 #include <kysync/test_common/test_environment.h>
+#include <kysync/test_common/test_fixture.h>
 #include <kysync/test_http_servers/http_server.h>
 
 #include <array>

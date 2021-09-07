@@ -7,9 +7,11 @@ import traceback
 from flask import Flask
 
 from analysis.experiments.flush_caches import flush_caches
+from analysis.experiments.perf import perf
+from analysis.experiments.pr152_wcs_set_size import pr152_wcs_set_size
 from analysis.tools.experiment_executor import ExperimentExecutor
 
-_NUM_INSTANCES = 1
+_NUM_INSTANCES = 10
 
 """
 TODO:
@@ -30,6 +32,18 @@ def shutdown_on_future_completion(future):
     os._exit(0)
 
 
+def run_async():
+    # e = pr151_posix_sequential()
+    # e = pr152_wcs_set_size()
+    # e = pr153_weakchecksum_inline()
+    # e = ashish_zsync_ladder()
+    # e = flush_caches()
+    e = perf()
+    app.ee = ExperimentExecutor(e, num_instances=_NUM_INSTANCES)
+    future = app.ee.run_async()
+    return future
+
+
 def run():
     future = run_async()
     future.result()  # will throw propagated exception
@@ -37,20 +51,8 @@ def run():
 
 def run_async_with_termination():
     future = run_async()
-
     th = threading.Thread(target=shutdown_on_future_completion, args=(future,), daemon=True)
     th.start()
-
-
-def run_async():
-    # e = pr151_posix_sequential()
-    # e = pr152_wcs_set_size()
-    # e = pr153_weakchecksum_inline()
-    # e = ashish_zsync_ladder()
-    e = flush_caches()
-    app.ee = ExperimentExecutor(e, num_instances=_NUM_INSTANCES)
-    future = app.ee.run_async()
-    return future
 
 
 @app.route("/")

@@ -6,11 +6,12 @@
 
 namespace kysync {
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
 extern TestEnvironment *test_environment;
 
 void PerformanceTestFixture::FlushCaches() {
   LOG(INFO) << "cache flush result: "
-            << system(
+            << system(  // NOLINT(cert-env33-c, concurrency-mt-unsafe)
                    "sudo sh -c \"/usr/bin/echo 3 > /proc/sys/vm/drop_caches\"");
 }
 

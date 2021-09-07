@@ -12,7 +12,7 @@ namespace kysync {
 
 class PerformanceTestFixture : public Fixture {
 protected:
-  void Run(Command &&command);
+  static void Run(Command &&command);
 
 public:
   static void FlushCaches();

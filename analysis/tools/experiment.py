@@ -28,14 +28,25 @@ class Experiment(object):
 
     def analyze(self, tag: str) -> str:
         pd.set_option("display.width", 1000)
-        pd.set_option("display.max_rows", 10)
+        pd.set_option("display.max_rows", 1000)
         pd.set_option("display.max_columns", 100)
 
         db: ddb.ServiceResource = boto3.resource("dynamodb")
         table = db.Table("kysync_perf_log")
 
-        response = table.query(KeyConditionExpression=Key("tag").eq(tag))
-        df = DataFrame.from_records(response["Items"])
+        items = []
+        done = False
+        last_evaluated_key = None
+        while not done:
+            if last_evaluated_key is None:
+                response = table.query(KeyConditionExpression=Key("tag").eq(tag))
+            else:
+                response = table.query(KeyConditionExpression=Key("tag").eq(tag), ExclusiveStartKey=last_evaluated_key)
+            last_evaluated_key = response.get('LastEvaluatedKey', None)
+            done = last_evaluated_key is None
+            items += response['Items']
+
+        df = DataFrame.from_records(items)
 
         df["when"] = df["id"].apply(lambda x: _when(x))
 
