@@ -25,8 +25,8 @@
 
 namespace kysync {
 
-TestEnvironment *test_environment = dynamic_cast<TestEnvironment *>(
-    testing::AddGlobalTestEnvironment(new TestEnvironment()));
+TestEnvironment *test_environment = dynamic_cast<TestEnvironment *>(  // NOLINT
+    testing::AddGlobalTestEnvironment(new TestEnvironment()));        // NOLINT
 
 // NOTE: using #X so macro is necessary
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
@@ -260,9 +260,9 @@ protected:
     auto tmp = GetScratchPath();
     if (profile.zsync) {
       return std::make_unique<ZsyncPerformanceTestExecution>(profile, tmp);
-    } else {
-      return std::make_unique<KySyncPerformanceTestExecution>(profile, tmp);
     }
+    // else... (i.e. kysync)
+    return std::make_unique<KySyncPerformanceTestExecution>(profile, tmp);
   }
 };
 
