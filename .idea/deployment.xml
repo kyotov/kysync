@@ -8,16 +8,24 @@
             <mapping deploy="/tmp/tmp.6NMos0eUiR" local="$PROJECT_DIR$" />
           </mappings>
           <excludedPaths>
-            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-mac" />
             <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-visual-studio" />
-            <excludedPath local="true" path="$PROJECT_DIR$/deps/Debug" />
             <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-oldbam" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-oldbam-clangtidy" />
             <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-mac" />
             <excludedPath local="true" path="$PROJECT_DIR$/build" />
-            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release" />
-            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-oldbam" />
             <excludedPath local="true" path="$PROJECT_DIR$/deps/RelWithDebInfo" />
+            <excludedPath local="true" path="$PROJECT_DIR$/kydeps/build" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-oldbam-clangtidy" />
             <excludedPath local="true" path="$PROJECT_DIR$/deps/Release" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-visual-studio" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release" />
+            <excludedPath local="true" path="$PROJECT_DIR$/deps/Debug" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-oldbam" />
+            <excludedPath local="true" path="$PROJECT_DIR$/build" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-oldbam" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-release" />
           </excludedPaths>
         </serverdata>
       </paths>
