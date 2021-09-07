@@ -3,6 +3,8 @@ add_subdirectory(common)
 add_subdirectory(http_servers)
 add_subdirectory(performance)
 
+# FIXME: temporarily disabling boost as a dependency for lighter release
+#
 #add_executable(dependency_tests
 #        dependency_tests.cc)
 #target_link_libraries(dependency_tests

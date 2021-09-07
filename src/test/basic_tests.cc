@@ -17,9 +17,6 @@
 #include <filesystem>
 #include <fstream>
 
-//#include <boost/asio/post.hpp>
-//#include <boost/asio/thread_pool.hpp>
-
 namespace kysync {
 
 namespace fs = std::filesystem;
@@ -648,19 +645,5 @@ TEST(SyncCommand, GetTempPath) {  // NOLINT
   auto p_2 = ky::TempPath();
   EXPECT_NE(p_1.GetPath(), p_2.GetPath());
 }
-
-//TEST(SyncCommand, ThreadPool) {  // NOLINT
-//  int num_threads = 4;
-//  boost::asio::thread_pool pool(num_threads);
-//  std::atomic<int> value(0);
-//  for (int i = 0; i < num_threads * 2; i++) {
-//    boost::asio::post(pool, [&value]() {
-//      LOG(INFO) << "Incrementing value";
-//      value += 1;
-//    });
-//  }
-//  pool.join();
-//  EXPECT_EQ(value, num_threads * 2);
-//}
 
 }  // namespace kysync
