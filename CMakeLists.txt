@@ -16,13 +16,14 @@ include(GTest)
 include(zstd)
 include(httplib)
 include(xxHash)
-include(llvm)
 include(nginx)
-include(Boost)
+#include(Boost)
 
 option(USE_CLANG_TIDY "run clang-tidy on the project" OFF)
 
 if (USE_CLANG_TIDY)
+    include(llvm)
+
     string(REGEX REPLACE "[\\\\|/]" "[\\\\/]" HEADERS "${CMAKE_BINARY_DIR}/../.*")
     set(CMAKE_CXX_CLANG_TIDY
             "${CLANG_TIDY}"

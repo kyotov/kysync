@@ -2,10 +2,7 @@ add_subdirectory(checksums)
 add_subdirectory(commands)
 add_subdirectory(readers)
 add_subdirectory(streams)
-add_subdirectory(test_commands)
-add_subdirectory(test_http_servers)
-
-add_subdirectory(tests)
+add_subdirectory(test)
 
 add_executable(kysync
         main.cc)

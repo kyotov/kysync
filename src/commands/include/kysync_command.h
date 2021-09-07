@@ -4,20 +4,20 @@
 #include <ky/metrics/metrics.h>
 #include <ky/observability/observable.h>
 #include <kysync/checksums/strong_checksum.h>
+#include <kysync/commands/command.h>
 
 #include <vector>
 
 namespace kysync {
 
-class KySyncCommand : virtual public ky::observability::Observable,
-                      public ky::metrics::MetricContainer {
+class KySyncCommand : public Command {
   friend class KySyncTest;
 
   virtual const std::vector<uint32_t> &GetWeakChecksums() const = 0;
   virtual const std::vector<StrongChecksum> &GetStrongChecksums() const = 0;
 
 public:
-  virtual int Run() = 0;
+  KySyncCommand(std::string name);
 };
 
 }  // namespace kysync

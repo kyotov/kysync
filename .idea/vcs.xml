@@ -4,28 +4,5 @@
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/kydeps" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/kydeps/install" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/build2/deps/src/gflags/doc" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/build3/deps/src/gflags" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/build3/deps/src/gflags/doc" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/build3/deps/src/glog" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/build3/deps/src/googletest" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/build3/deps/src/httplib" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/build3/deps/src/xxhash" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/build3/deps/src/zstd" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/deps/Debug/src/gflags" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/deps/Debug/src/gflags/doc" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/deps/Debug/src/glog" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/deps/Debug/src/googletest" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/deps/Debug/src/xxhash" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/deps/RelWithDebInfo/src/gflags" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/deps/RelWithDebInfo/src/gflags/doc" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/deps/RelWithDebInfo/src/glog" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/deps/RelWithDebInfo/src/googletest" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/deps/RelWithDebInfo/src/xxhash" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/deps/Release/src/gflags" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/deps/Release/src/gflags/doc" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/deps/Release/src/glog" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/deps/Release/src/googletest" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/deps/Release/src/xxhash" vcs="Git" />
   </component>
 </project>

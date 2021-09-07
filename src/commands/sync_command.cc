@@ -23,8 +23,7 @@
 namespace kysync {
 
 // NOLINTNEXTLINE(fuchsia-multiple-inheritance,fuchsia-virtual-inheritance)
-class SyncCommandImpl final : virtual public ky::observability::Observable,
-                              public SyncCommand {
+class SyncCommandImpl final : public SyncCommand {
   std::string data_uri_;
   std::string metadata_uri_;
   std::string seed_uri_;
@@ -267,9 +266,7 @@ void SyncCommandImpl::AnalyzeSeedChunk(
       /* The `set` seems to improve performance. Previously the code was:
        * https://github.com/kyotov/ksync/blob/2d98f83cd1516066416e8319fbfa995e3f49f3dd/commands/SyncCommand.cpp#L128-L132
        */
-      if (--warmup < 0 && seed_offset + offset < seed_size &&
-          (*set_)[wcs])
-      {
+      if (--warmup < 0 && seed_offset + offset < seed_size && (*set_)[wcs]) {
         weak_checksum_matches_++;
         auto &data = analysis_[wcs];
 
@@ -532,7 +529,7 @@ void SyncCommandImpl::ReconstructSource() {
   StartNextPhase(0);
 }
 
-SyncCommand::SyncCommand() = default;
+SyncCommand::SyncCommand() : KySyncCommand("sync") {}
 
 SyncCommandImpl::SyncCommandImpl(
     std::string data_uri,
@@ -542,8 +539,7 @@ SyncCommandImpl::SyncCommandImpl(
     bool compression_disabled,
     int num_blocks_in_batch,
     int threads)
-    : Observable("sync"),
-      data_uri_(std::move(data_uri)),
+    : data_uri_(std::move(data_uri)),
       metadata_uri_(std::move(metadata_uri)),
       seed_uri_(std::move(seed_uri)),
       output_path_file_stream_provider_(std::move(output_path)),

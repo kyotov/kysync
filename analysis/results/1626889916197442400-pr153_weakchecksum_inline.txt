@@ -1,0 +1,5 @@
+       //sync/phase_2_ms                           
+                     min     max    mean        std
+when                                               
+after             6006.0  6106.0  6086.0  42.163702
+before            8708.0  8809.0  8738.4  48.719606
