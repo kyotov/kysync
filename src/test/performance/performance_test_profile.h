@@ -1,6 +1,7 @@
 #ifndef KSYNC_SRC_TESTS_PERFORMANCE_TEST_PROFILE_H
 #define KSYNC_SRC_TESTS_PERFORMANCE_TEST_PROFILE_H
 
+#include <iostream>
 #include <string>
 
 namespace kysync {
