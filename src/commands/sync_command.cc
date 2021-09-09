@@ -292,13 +292,6 @@ void SyncCommandImpl::AnalyzeSeedChunk(
     auto count = seed_reader->Read(buffer, seed_offset, block_size_);
     memset(buffer + count, 0, block_size_ - count);
 
-    /* I tried to "optimize" the following by manually inlining `weakChecksum`
-     * and then unrolling the inner loop. To my surprise this did not help...
-     * The MSVC compiler must be already doing it...
-     * We should verify that other compilers do reasonably well before we
-     * abandon the idea completely.
-     * https://github.com/kyotov/ksync/blob/2d98f83cd1516066416e8319fbfa995e3f49f3dd/commands/SyncCommand.cpp#L166-L220
-     */
     running_wcs = WeakChecksum(buffer, block_size_, running_wcs, callback);
 
     AdvanceProgress(block_size_);
