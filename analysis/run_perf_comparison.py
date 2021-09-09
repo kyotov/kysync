@@ -9,12 +9,12 @@ def run_comparison():
     block_size = 1024
 
     # 7/6 master tag
-    a = RunConfig('head_20210720',
+    a = RunConfig('a',
                   'e626f10f0b11aa6c8956dec18ef962c2277c79e2',
                   data_size, data_similarity, num_threads, block_size)
 
     # 7/1 baseline tag
-    b = RunConfig('baseline_20210701',
+    b = RunConfig('b',
                   '0f0c33c448c9f4443e4fdde1dabe35774e8c649a',
                   data_size, data_similarity, num_threads, block_size)
 
@@ -30,8 +30,8 @@ def run_comparison():
 
 
 def run_ladder():
-    data_sizes = [250_000_000, 1_000_000_000]
-    data_similarities = [100, 95]
+    data_sizes = [250_000_000, 100_000_000]
+    data_similarities = [100, 99]
     num_threads = 32
     block_size = 1024
 
@@ -49,6 +49,8 @@ def run_ladder():
     with PerfComparator(2, a, b, ladder_config) as pc:
         pc.run_perf_comparison()
         pc.show_info()
+        print('With overrides:')
+        print(ladder_config)
 
 
 # run_comparison()

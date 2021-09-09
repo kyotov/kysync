@@ -151,7 +151,7 @@ class Ec2Instance:
             'cmake/bin/cmake --build ~/nvme/kysync/build --config Release')
 
     def build(self, git_tag):
-        self._shell.execute(f'cd ~/nvme/kysync && git checkout {git_tag}')
+        self._shell.execute(f'cd ~/nvme/kysync && git checkout {git_tag} --recurse-submodules')
         self._shell.execute(
             'cmake/bin/cmake -S ~/nvme/kysync -B ~/nvme/kysync/build '
             '-D CMAKE_BUILD_TYPE=Release -G Ninja')
