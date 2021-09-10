@@ -142,6 +142,7 @@ HttpReader::HttpReader(const std::string &url) {
 
   client_ = std::make_unique<httplib::Client>(host_.c_str());
   client_->set_keep_alive(true);
+  client_->enable_server_certificate_verification(false);
 }
 
 HttpReader::~HttpReader() = default;
@@ -169,10 +170,7 @@ HttpReader::Read(void *buffer, std::streamoff offset, std::streamsize size) {
           std::streamoff begin_offset,
           std::streamoff end_offset,
           const char *read_buffer) {
-        memcpy(
-            buffer,
-            read_buffer,
-            end_offset - begin_offset + 1);
+        memcpy(buffer, read_buffer, end_offset - begin_offset + 1);
       });
   return count;
 }
@@ -189,7 +187,8 @@ std::streamsize HttpReader::Read(
   // TODO(kyotov): maybe make httplib contribution to pass ranges by const ref
   auto range_header = httplib::make_range_header(std::move(ranges));
   auto res = client_->Get(path_.c_str(), {range_header});
-  CHECK(res.error() == httplib::Error::Success) << path_;
+  CHECK(res.error() == httplib::Error::Success)
+      << path_ << " Error: " << res.error();
   CHECK(res->status == 206 || res->status == 200)
       << path_ << " " << res->status;
   std::streamsize count = 0;
