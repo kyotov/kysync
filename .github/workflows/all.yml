@@ -23,6 +23,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Setup Ninja
+        uses: ashutoshvarma/setup-ninja@master
+        with:
+          version: 1.10.0
+
       - name: Build Dependencies
         shell: bash
         working-directory: ${{github.workspace}}/kydeps
