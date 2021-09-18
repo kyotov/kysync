@@ -29,6 +29,7 @@ jobs:
           version: 1.10.0
 
       - name: Build Dependencies
+        uses: ashutoshvarma/action-cmake-build@master
         shell: bash
         working-directory: ${{github.workspace}}/kydeps
         run: cmake -DKYDEPS_CONFIG_FILE=../kydeps.config.cmake -P build.cmake
