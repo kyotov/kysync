@@ -23,13 +23,9 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Ninja
-        uses: ashutoshvarma/setup-ninja@master
-        with:
-          version: 1.10.0
+      - uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Build Dependencies
-        uses: ashutoshvarma/action-cmake-build@master
         shell: bash
         working-directory: ${{github.workspace}}/kydeps
         run: cmake -DKYDEPS_CONFIG_FILE=../kydeps.config.cmake -P build.cmake
