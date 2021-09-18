@@ -34,8 +34,6 @@ int main(int argc, char **argv) {
   ky::NoExcept([&argc, &argv]() {
     google::InitGoogleLogging(argv[0]);
 
-    FLAGS_helpon = "main";
-
     gflags::SetUsageMessage("--command=[prepare|sync] ...");
     gflags::SetVersionString("v0.1");
     gflags::ParseCommandLineFlags(&argc, &argv, true);
