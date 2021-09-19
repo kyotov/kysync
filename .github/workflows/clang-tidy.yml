@@ -1,4 +1,4 @@
-name: Linux
+name: ClangTidy
 
 on:
   pull_request:
