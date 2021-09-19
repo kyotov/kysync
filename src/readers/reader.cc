@@ -1,5 +1,6 @@
 #include <glog/logging.h>
 #include <kysync/readers/file_reader.h>
+#include <kysync/readers/posix_sequential_file_reader.h>
 #include <kysync/readers/http_reader.h>
 #include <kysync/readers/memory_reader.h>
 #include <kysync/readers/reader.h>
@@ -62,7 +63,7 @@ std::unique_ptr<Reader> Reader::Create(const std::string &uri) {
       throw std::invalid_argument(uri);
     }
 
-    return std::make_unique<FileReader>(path);
+    return std::make_unique<PosixSequentialFileReader>(path);
   }
 
   std::string memory = "memory://";
