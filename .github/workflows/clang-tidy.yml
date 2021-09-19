@@ -20,6 +20,13 @@ jobs:
         with:
           submodules: recursive
 
+      - uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Build Dependencies
+        shell: bash
+        working-directory: ${{github.workspace}}/kydeps
+        run: cmake -DKYDEPS_CONFIG_FILE=../kydeps.config.cmake -P build.cmake
+
       - name: Create Build Environment
         run: cmake -E make_directory ${{github.workspace}}/build
 
