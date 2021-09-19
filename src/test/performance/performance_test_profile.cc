@@ -43,6 +43,6 @@ PerformanceTestProfile::PerformanceTestProfile()
           TestEnvironment::GetEnv("TEST_COMPRESSION", false),
           TestEnvironment::GetEnv("TEST_HTTP", false),
           TestEnvironment::GetEnv("TEST_ZSYNC", false),
-          TestEnvironment::GetEnv("TEST_FLUSH_CACHES", true)) {}
+          TestEnvironment::GetEnv("TEST_FLUSH_CACHES", false)) {}
 
 }  // namespace kysync

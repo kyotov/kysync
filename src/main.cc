@@ -33,13 +33,13 @@ DECLARE_string(helpon);  // NOLINT
 int main(int argc, char **argv) {
   ky::NoExcept([&argc, &argv]() {
     google::InitGoogleLogging(argv[0]);
+
+    gflags::SetUsageMessage("--command=[prepare|sync] ...");
+    gflags::SetVersionString("v0.1");
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     FLAGS_logtostderr = true;
     FLAGS_colorlogtostderr = true;
-
-    gflags::SetUsageMessage("--command=[prepare|sync] ...");
-    gflags::SetVersionString("v0.1");
 
     if (FLAGS_command == "prepare") {
       if (FLAGS_output_kysync_filename.empty()) {
