@@ -1,4 +1,5 @@
 import os
+import re
 from typing import List, Tuple, Callable
 
 import boto3
@@ -11,11 +12,11 @@ from analysis.tools.test_instance import TestInstance
 
 
 def _when(value):
-    if "after" in value:
-        return "after"
-    if "before" in value:
-        return "before"
-    return ""
+    m = re.search(r"-(after|before|([kz]sync[^-]*))-", value)
+    if m:
+        return m.group(1)
+    else:
+        return ""
 
 
 class Experiment(object):

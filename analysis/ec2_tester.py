@@ -8,6 +8,7 @@ from flask import Flask
 
 from analysis.experiments.flush_caches import flush_caches
 from analysis.experiments.perf import perf
+from analysis.experiments.perf_1_1 import perf_1_1
 from analysis.experiments.pr152_wcs_set_size import pr152_wcs_set_size
 from analysis.tools.experiment_executor import ExperimentExecutor
 
@@ -38,7 +39,7 @@ def run_async():
     # e = pr153_weakchecksum_inline()
     # e = ashish_zsync_ladder()
     # e = flush_caches()
-    e = perf()
+    e = perf_1_1()
     app.ee = ExperimentExecutor(e, num_instances=_NUM_INSTANCES)
     future = app.ee.run_async()
     return future

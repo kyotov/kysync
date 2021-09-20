@@ -272,8 +272,9 @@ void SyncCommandImpl::AnalyzeSeedChunk(
           (*wcs_set_)[wcs & WCS_SET_MASK])
       {
         auto itr = analysis_.find(wcs);
-        if (itr == analysis_.end())
+        if (itr == analysis_.end()) {
           return;
+        }
         auto &data = itr->second;
 
         if (data.seed_offset != kInvalidOffset) {
